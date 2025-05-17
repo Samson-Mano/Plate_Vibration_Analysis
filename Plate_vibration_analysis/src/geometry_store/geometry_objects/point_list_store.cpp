@@ -27,10 +27,10 @@ void point_list_store::init(geom_parameters* geom_param_ptr)
 	clear_points();
 }
 
-void point_list_store::add_point(const int& point_id, const double& x_coord, const double& y_coord)
+void point_list_store::add_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord)
 {
 	// Add to the list
-	pointMap.insert({ point_count, {point_id, x_coord, y_coord} });
+	pointMap.insert({ point_count, {point_id, x_coord, y_coord, z_coord} });
 
 	// Add to the point id map
 	pointId_Map.insert({ point_id, point_count });
@@ -39,7 +39,7 @@ void point_list_store::add_point(const int& point_id, const double& x_coord, con
 	point_count++;
 }
 
-void point_list_store::update_point(const int& point_id, const double& x_coord, const double& y_coord)
+void point_list_store::update_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord)
 {
 	// Get the point associated with the point_id
 	point_store* pt = get_point(point_id);
@@ -50,6 +50,7 @@ void point_list_store::update_point(const int& point_id, const double& x_coord, 
 		// Update the point's coordinates
 		pt->x_coord = x_coord;
 		pt->y_coord = y_coord;
+		pt->z_coord = z_coord;
 	}
 	else
 	{
@@ -95,10 +96,10 @@ void point_list_store::set_buffer()
 	}
 
 	VertexBufferLayout node_layout;
-	node_layout.AddFloat(2);  // Node center
+	node_layout.AddFloat(3);  // Node center
 
-	// Define the node vertices of the model for a node (2 position) 
-	const unsigned int point_vertex_count = 2 * point_count;
+	// Define the node vertices of the model for a node (3 position) 
+	const unsigned int point_vertex_count = 3 * point_count;
 	unsigned int point_vertex_size = point_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the point dynamic buffers
@@ -150,8 +151,8 @@ void point_list_store::paint_dynamic_points()
 
 void point_list_store::update_buffer()
 {
-	// Define the node vertices of the model for a node (2 position) 
-	const unsigned int point_vertex_count = 2 * point_count;
+	// Define the node vertices of the model for a node (3 position) 
+	const unsigned int point_vertex_count = 3 * point_count;
 	float* point_vertices = new float[point_vertex_count];
 
 	unsigned int point_v_index = 0;
@@ -219,9 +220,10 @@ void point_list_store::get_point_vertex_buffer(point_store& pt, float* point_ver
 	// Point location
 	point_vertices[point_v_index + 0] = pt.x_coord;
 	point_vertices[point_v_index + 1] = pt.y_coord;
+	point_vertices[point_v_index + 2] = pt.z_coord;
 
 	// Iterate
-	point_v_index = point_v_index + 2;
+	point_v_index = point_v_index + 3;
 
 }
 

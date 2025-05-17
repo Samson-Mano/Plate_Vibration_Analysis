@@ -79,10 +79,10 @@ void line_list_store::set_buffer()
 	}
 
 	VertexBufferLayout line_pt_layout;
-	line_pt_layout.AddFloat(2);  // Node center
+	line_pt_layout.AddFloat(3);  // Node center
 
-	// Define the node vertices of the model for a node (2 position) 
-	const unsigned int line_vertex_count = 2 * 2 * line_count;
+	// Define the line vertices of the model for a point 2 * (3 position) 
+	const unsigned int line_vertex_count = 2 * 3 * line_count;
 	unsigned int line_vertex_size = line_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the line dynamic buffers
@@ -133,8 +133,8 @@ void line_list_store::paint_dynamic_lines()
 void line_list_store::update_buffer()
 {
 
-	// Define the line vertices of the model for a point 2 * (2 position) 
-	const unsigned int line_vertex_count = 2 * 2 * line_count;
+	// Define the line vertices of the model for a point 2 * (3 position) 
+	const unsigned int line_vertex_count = 2 * 3 * line_count;
 	float* line_vertices = new float[line_vertex_count];
 
 	unsigned int line_v_index = 0;
@@ -204,17 +204,19 @@ void line_list_store::get_line_vertex_buffer(line_store& ln, float* line_vertice
 	// Point location
 	line_vertices[line_v_index + 0] = ln.start_pt->x_coord;
 	line_vertices[line_v_index + 1] = ln.start_pt->y_coord;
+	line_vertices[line_v_index + 2] = ln.start_pt->z_coord;
 
 	// Iterate
-	line_v_index = line_v_index + 2;
+	line_v_index = line_v_index + 3;
 
 	// End Point
 	// Point location
 	line_vertices[line_v_index + 0] = ln.end_pt->x_coord;
 	line_vertices[line_v_index + 1] = ln.end_pt->y_coord;
+	line_vertices[line_v_index + 2] = ln.end_pt->z_coord;
 
 	// Iterate
-	line_v_index = line_v_index + 2;
+	line_v_index = line_v_index + 3;
 
 }
 

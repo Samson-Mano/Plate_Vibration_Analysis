@@ -10,10 +10,11 @@ struct point_store
 	int point_id = -1; // Point ID
 	double x_coord = 0.0; // x coordinate
 	double y_coord = 0.0; // y coordinate
+	double z_coord = 0.0; // z coordinate
 
-	glm::vec2 pt_coord() const
+	glm::vec3 pt_coord() const
 	{
-		return glm::vec2(x_coord, y_coord);
+		return glm::vec3(x_coord, y_coord, z_coord);
 	}
 };
 
@@ -29,10 +30,10 @@ public:
 	point_list_store();
 	~point_list_store();
 	void init(geom_parameters* geom_param_ptr);
-	void add_point(const int& point_id, const double& x_coord, const double& y_coord );
+	void add_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord);
 	point_store* get_point(const int& point_id);
 
-	void update_point(const int& point_id, const double& x_coord, const double& y_coord);
+	void update_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord);
 
 	void set_buffer();
 	void update_buffer();

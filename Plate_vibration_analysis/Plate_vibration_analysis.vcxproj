@@ -174,9 +174,11 @@
     <ClCompile Include="src\geometry_store\geometry_buffers\VertexArray.cpp" />
     <ClCompile Include="src\geometry_store\geometry_buffers\VertexBuffer.cpp" />
     <ClCompile Include="src\geometry_store\geometry_buffers\VertexBufferLayout.cpp" />
+    <ClCompile Include="src\geometry_store\geometry_objects\dynamic_selrectangle_store.cpp" />
     <ClCompile Include="src\geometry_store\geometry_objects\line_list_store.cpp" />
     <ClCompile Include="src\geometry_store\geometry_objects\obj_mesh_data.cpp" />
     <ClCompile Include="src\geometry_store\geometry_objects\point_list_store.cpp" />
+    <ClCompile Include="src\geometry_store\geometry_objects\quad_list_store.cpp" />
     <ClCompile Include="src\geometry_store\geometry_objects\text_list_store.cpp" />
     <ClCompile Include="src\geometry_store\geometry_objects\tri_list_store.cpp" />
     <ClCompile Include="src\geometry_store\geom_parameters.cpp" />
@@ -204,6 +206,8 @@
     <None Include="resources\shaders\default_vert_shader.vert" />
     <None Include="resources\shaders\graph_frag_shader.frag" />
     <None Include="resources\shaders\graph_vert_shader.vert" />
+    <None Include="resources\shaders\selrect_frag_shader.frag" />
+    <None Include="resources\shaders\selrect_vert_shader.vert" />
     <None Include="resources\shaders\texture_frag_shader.frag" />
     <None Include="resources\shaders\texture_vert_shader.vert" />
     <None Include="resources\shaders\text_frag_shader.frag" />
@@ -254,9 +258,11 @@
     <ClInclude Include="src\geometry_store\geometry_buffers\VertexArray.h" />
     <ClInclude Include="src\geometry_store\geometry_buffers\VertexBuffer.h" />
     <ClInclude Include="src\geometry_store\geometry_buffers\VertexBufferLayout.h" />
+    <ClInclude Include="src\geometry_store\geometry_objects\dynamic_selrectangle_store.h" />
     <ClInclude Include="src\geometry_store\geometry_objects\line_list_store.h" />
     <ClInclude Include="src\geometry_store\geometry_objects\obj_mesh_data.h" />
     <ClInclude Include="src\geometry_store\geometry_objects\point_list_store.h" />
+    <ClInclude Include="src\geometry_store\geometry_objects\quad_list_store.h" />
     <ClInclude Include="src\geometry_store\geometry_objects\text_list_store.h" />
     <ClInclude Include="src\geometry_store\geometry_objects\tri_list_store.h" />
     <ClInclude Include="src\geometry_store\geom_parameters.h" />

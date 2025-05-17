@@ -16,8 +16,12 @@ void nodes_list_store::init(geom_parameters* geom_param_ptr)
 	this->geom_param_ptr = geom_param_ptr;
 
 	// Set the geometry parameters for the labels (and clear the labels)
-	node_points.init(geom_param_ptr);
-	selected_node_points.init(geom_param_ptr);
+	node_objs.init(geom_param_ptr, true, false, false);
+	selected_node_objs.init(geom_param_ptr, true, false, false);
+
+
+	//node_points.init(geom_param_ptr);
+	//selected_node_points.init(geom_param_ptr);
 
 	// Clear the nodes
 	node_count = 0;
@@ -68,6 +72,29 @@ void nodes_list_store::add_selection_nodes(const std::vector<int>& selected_node
 
 	selected_node_points.set_buffer();
 }
+
+
+void nodes_list_store::set_node_geometry()
+{
+	for (const auto& nd : nodeMap)
+	{
+		node_store temp_node = nd.second;
+
+		// Add to the drawing object
+		node_objs.add_mesh_point(temp_node.node_id, temp_node.node_pt.x, temp_node.node_pt.y);
+
+		// mesh color
+		glm::vec3 point_color = geom_param_ptr->geom_colors.node_color;
+		glm::vec3 line_color = glm::vec3(0); // Not used
+		glm::vec3 tri_color = glm::vec3(0); // Not used
+
+		node_objs.update_mesh_color(point_color, line_color, tri_color, 1.0);
+
+	}
+
+}
+
+
 
 void nodes_list_store::set_buffer()
 {
@@ -135,11 +162,10 @@ std::vector<int> nodes_list_store::is_node_selected(const glm::vec2& corner_pt1,
 }
 
 
-void nodes_list_store::update_geometry_matrices(bool set_modelmatrix, bool set_pantranslation, bool set_rotatetranslation,
-	bool set_zoomtranslation, bool set_transparency, bool set_deflscale)
+void nodes_list_store::update_geometry_matrices(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency)
 {
 	// Update model openGL uniforms
-	node_points.update_opengl_uniforms(set_modelmatrix, set_pantranslation, set_rotatetranslation, set_zoomtranslation, set_transparency, set_deflscale);
-	selected_node_points.update_opengl_uniforms(set_modelmatrix, set_pantranslation, set_rotatetranslation, set_zoomtranslation, set_transparency, set_deflscale);
+	node_objs.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
+	selected_node_objs.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
 
 }

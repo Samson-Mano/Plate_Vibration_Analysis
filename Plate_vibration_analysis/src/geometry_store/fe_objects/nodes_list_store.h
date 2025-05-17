@@ -3,9 +3,7 @@
 #include <glm/vec3.hpp>
 #include <unordered_map>
 #include "../geom_parameters.h"
-#include "../geometry_buffers/gBuffers.h"
-#include "../geometry_objects/label_list_store.h"
-#include "../geometry_objects/point_list_store.h"
+#include "../geometry_objects/obj_mesh_data.h"
 
 struct node_store
 {
@@ -27,18 +25,22 @@ public:
 	void init(geom_parameters* geom_param_ptr);
 	void add_node(int& node_id, glm::vec3& node_pt);
 	void add_selection_nodes(const std::vector<int>& selected_node_ids);
+	void set_node_geometry();
 	void set_buffer();
 	void paint_model_nodes();
 	void paint_selected_model_nodes();
 
 	std::vector<int> is_node_selected(const glm::vec2& corner_pt1, const glm::vec2& corner_pt2);
-	void update_geometry_matrices(bool set_modelmatrix, bool set_pantranslation, bool set_rotatetranslation,
-		bool set_zoomtranslation, bool set_transparency, bool set_deflscale);
+	void update_geometry_matrices(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency);
 
 private:
 	geom_parameters* geom_param_ptr = nullptr;
 
-	point_list_store node_points;
-	point_list_store selected_node_points;
+
+	obj_mesh_data node_objs;
+	obj_mesh_data selected_node_objs;
+
+	//point_list_store node_points;
+	//point_list_store selected_node_points;
 
 };

@@ -11,10 +11,12 @@
 
 struct geom_color_theme
 {
+	glm::vec3 point_color = glm::vec3(0);
 	glm::vec3 background_color = glm::vec3(0);
 	glm::vec3 node_color = glm::vec3(0);
 	glm::vec3 selection_color = glm::vec3(0);
 	glm::vec3 line_color = glm::vec3(0);
+	glm::vec3 edge_color = glm::vec3(0);
 	glm::vec3 line_length_color = glm::vec3(0);
 	glm::vec3 load_color = glm::vec3(0);
 	glm::vec3 triangle_color = glm::vec3(0);

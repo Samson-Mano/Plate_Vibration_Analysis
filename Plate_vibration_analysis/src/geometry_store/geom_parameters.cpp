@@ -30,7 +30,9 @@ void geom_parameters::init()
 	//geom_colors.node_color = glm::vec3(0.54509f, 0.0f, 0.4f); // Dark Red
 	//geom_colors.line_color = glm::vec3(1.0f, 0.54901f, 0.6f); // Dark Orange
 
+	geom_colors.point_color = glm::vec3(0.8f, 0.2f, 0.2f); // Light Red
 	geom_colors.node_color = glm::vec3(0.8f, 0.2f, 0.2f); // Light Red
+	geom_colors.edge_color = glm::vec3(1.0f, 0.54901f, 0.6f); // Dark Orange
 	geom_colors.line_color = glm::vec3(1.0f, 0.54901f, 0.6f); // Dark Orange
 	geom_colors.line_length_color = glm::vec3(1.0f, 0.54901f, 0.6f); //  Dark Orange
 

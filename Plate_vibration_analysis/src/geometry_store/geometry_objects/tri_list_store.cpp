@@ -83,11 +83,11 @@ void tri_list_store::set_buffer()
 	}
 
 	VertexBufferLayout tri_pt_layout;
-	tri_pt_layout.AddFloat(2);  // Node center
+	tri_pt_layout.AddFloat(3);  // Node center
 
 
-	// Define the tri vertices of the model for a node (2 position) 
-	const unsigned int tri_vertex_count = 2 * 3 * tri_count;
+	// Define the tri vertices of the model for a node 3 * (3 position) 
+	const unsigned int tri_vertex_count = 3 * 3 * tri_count;
 	unsigned int tri_vertex_size = tri_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the triangle dynamic buffers
@@ -136,8 +136,8 @@ void tri_list_store::paint_dynamic_triangles()
 void tri_list_store::update_buffer()
 {
 
-	// Define the tri vertices of the model for a point 3 * (2 position) 
-	const unsigned int tri_vertex_count = 2 * 3 * tri_count;
+	// Define the tri vertices of the model for a point 3 * (3 position) 
+	const unsigned int tri_vertex_count = 3 * 3 * tri_count;
 	float* tri_vertices = new float[tri_vertex_count];
 
 	unsigned int tri_v_index = 0;
@@ -206,25 +206,28 @@ void tri_list_store::get_tri_vertex_buffer(tri_store* tri, float* tri_vertices, 
 	// Point location
 	tri_vertices[tri_v_index + 0] = tri->edge1->start_pt->x_coord;
 	tri_vertices[tri_v_index + 1] = tri->edge1->start_pt->y_coord;
+	tri_vertices[tri_v_index + 2] = tri->edge1->start_pt->z_coord;
 
 	// Iterate
-	tri_v_index = tri_v_index + 2;
+	tri_v_index = tri_v_index + 3;
 
 	// Point 2
 	// Point location
 	tri_vertices[tri_v_index + 0] = tri->edge2->start_pt->x_coord;
 	tri_vertices[tri_v_index + 1] = tri->edge2->start_pt->y_coord;
+	tri_vertices[tri_v_index + 2] = tri->edge2->start_pt->z_coord;
 
 	// Iterate
-	tri_v_index = tri_v_index + 2;
+	tri_v_index = tri_v_index + 3;
 
 	// Point 3
 	// Point location
 	tri_vertices[tri_v_index + 0] = tri->edge3->start_pt->x_coord;
 	tri_vertices[tri_v_index + 1] = tri->edge3->start_pt->y_coord;
+	tri_vertices[tri_v_index + 2] = tri->edge3->start_pt->z_coord;
 
 	// Iterate
-	tri_v_index = tri_v_index + 2;
+	tri_v_index = tri_v_index + 3;
 }
 
 void tri_list_store::get_tri_index_buffer(unsigned int* tri_vertex_indices, unsigned int& tri_i_index)
