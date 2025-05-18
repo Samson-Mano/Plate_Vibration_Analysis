@@ -31,10 +31,10 @@ void line_list_store::init(geom_parameters* geom_param_ptr)
 
 
 
-void line_list_store::add_line(const int& line_id, point_store* start_pt, point_store* end_pt)
+void line_list_store::add_line(const int& line_id, point_store* start_pt, point_store* end_pt, const glm::vec3& line_normal)
 {
 	// Add to the list
-	lineMap.insert({ line_count,  {line_id, start_pt,end_pt, nullptr,nullptr,nullptr } });
+	lineMap.insert({ line_count,  {line_id, start_pt,end_pt, nullptr,nullptr,nullptr , line_normal} });
 
 	// Add to the line id map
 	lineId_Map.insert({ line_id, line_count });

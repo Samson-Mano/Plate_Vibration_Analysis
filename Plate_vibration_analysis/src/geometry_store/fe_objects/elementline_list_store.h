@@ -1,6 +1,5 @@
 #pragma once
 #include "nodes_list_store.h"
-#include "../geometry_objects/line_list_store.h"
 
 struct elementline_store
 {
@@ -18,15 +17,11 @@ public:
 
 	elementline_list_store();
 	~elementline_list_store();
-	void init(geom_parameters* geom_param_ptr);
+	void init(geom_parameters* geom_param_ptr, obj_mesh_data* mesh_data);
 	void add_elementline(int& line_id, node_store* startNode, node_store* endNode);
-	void set_buffer();
-	void paint_elementlines();
-
-	void update_geometry_matrices(bool set_modelmatrix, bool set_pantranslation, bool set_rotatetranslation,
-		bool set_zoomtranslation, bool set_transparency, bool set_deflscale);
 
 private:
 	geom_parameters* geom_param_ptr = nullptr;
-	line_list_store element_lines;
+	obj_mesh_data* mesh_data = nullptr;
+
 };

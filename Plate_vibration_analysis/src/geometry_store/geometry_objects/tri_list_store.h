@@ -12,6 +12,9 @@ struct tri_store
 	line_store* edge2 = nullptr; // Triangle edge 2
 	line_store* edge3 = nullptr; // Triangle edge 3
 
+	// face normal
+	glm::vec3 face_normal = glm::vec3(0); // Face normal of the triangle
+	glm::vec3 geom_center = glm::vec3(0); // Geometric center of the triangle
 };
 
 

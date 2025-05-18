@@ -99,7 +99,7 @@ void nodeload_list_store::set_buffer()
 	{
 		// No load to paint
 		// Set the load lables
-		load_value_labels.clear_labels();
+		load_value_labels.clear_texts();
 		return;
 	}
 
@@ -107,7 +107,7 @@ void nodeload_list_store::set_buffer()
 	// Load Max
 	load_max = 0.0;
 	// Set the load lables
-	load_value_labels.clear_labels();
+	load_value_labels.clear_texts();
 
 	// Find the load maximum
 	for (auto& loadx : loadMap)
@@ -135,7 +135,7 @@ void nodeload_list_store::set_buffer()
 				is_load_val_above = true;
 			}
 
-			load_value_labels.add_text(temp_str, load.load_loc, glm::vec3(0), temp_color, load_angle_rad, is_load_val_above, false);
+			load_value_labels.add_text(load.load_id, temp_str, load.load_loc, load_angle_rad, is_load_val_above);
 		}
 	}
 
@@ -189,56 +189,14 @@ void nodeload_list_store::paint_loads()
 void nodeload_list_store::paint_load_labels()
 {
 	// Paint load labels
-	load_value_labels.paint_text();
+	load_value_labels.paint_static_texts();
 }
 
-void nodeload_list_store::update_geometry_matrices(bool set_modelmatrix, bool set_pantranslation, bool set_rotatetranslation,
-	bool set_zoomtranslation, bool set_transparency, bool set_deflscale)
+void nodeload_list_store::update_geometry_matrices(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency)
 {
 	// Update the load value label uniforms
-	load_value_labels.update_opengl_uniforms(set_modelmatrix, set_pantranslation, set_rotatetranslation, set_zoomtranslation, set_transparency, set_deflscale);
+	load_value_labels.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
 
-	if (set_modelmatrix == true)
-	{
-		// set the model matrix
-		load_shader.setUniform("geom_scale", static_cast<float>(geom_param_ptr->geom_scale));
-		load_shader.setUniform("transparency", 1.0f);
-
-
-		load_shader.setUniform("projectionMatrix", geom_param_ptr->projectionMatrix, false);
-		load_shader.setUniform("viewMatrix", geom_param_ptr->viewMatrix, false);
-		load_shader.setUniform("modelMatrix", geom_param_ptr->modelMatrix, false);
-	}
-
-	if (set_pantranslation == true)
-	{
-		// set the pan translation
-		load_shader.setUniform("panTranslation", geom_param_ptr->panTranslation, false);
-	}
-
-	if (set_rotatetranslation == true)
-	{
-		// set the rotate translation
-		load_shader.setUniform("rotateTranslation", geom_param_ptr->rotateTranslation, false);
-	}
-
-	if (set_zoomtranslation == true)
-	{
-		// set the zoom translation
-		load_shader.setUniform("zoomscale", static_cast<float>(geom_param_ptr->zoom_scale));
-	}
-
-	if (set_transparency == true)
-	{
-		// set the alpha transparency
-		load_shader.setUniform("transparency", static_cast<float>(geom_param_ptr->geom_transparency));
-	}
-
-	if (set_deflscale == true)
-	{
-		// set the deflection scale
-		// load_shader.setUniform("deflscale", static_cast<float>(geom_param_ptr->defl_scale));
-	}
 }
 
 void nodeload_list_store::get_load_buffer(load_data& ld, float* load_vertices, unsigned int& load_v_index, unsigned int* load_indices, unsigned int& load_i_index)

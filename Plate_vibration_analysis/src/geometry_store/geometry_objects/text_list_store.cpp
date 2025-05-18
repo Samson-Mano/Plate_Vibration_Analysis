@@ -27,7 +27,7 @@ void text_list_store::init(geom_parameters* geom_param_ptr)
 	text_shader.setUniform("u_Texture", 0);
 
 	// Set vertex color
-	text_shader.setUniform("vertexColor", geom_param_ptr->geom_colors.text_color);
+	text_shader.setUniform("vertexColor", geom_param_ptr->geom_colors.load_color);
 
 	// Delete all the labels
 	text_labels.clear();
@@ -35,7 +35,7 @@ void text_list_store::init(geom_parameters* geom_param_ptr)
 	text_count = 0;
 }
 
-void text_list_store::add_text(const int& label_id, std::string& label, glm::vec2& label_loc,
+void text_list_store::add_text(const int& label_id, std::string& label, glm::vec3& label_loc,
 	double label_angle, bool above_point)
 {
 	// Create a temporary element
@@ -47,27 +47,6 @@ void text_list_store::add_text(const int& label_id, std::string& label, glm::vec
 
 	temp_label.label_angle = label_angle;
 	temp_label.label_above_loc = above_point;
-
-	//// Find the width an height of the label
-
-	//float font_scale = static_cast<float>(geom_param_ptr->font_size / geom_param_ptr->geom_scale);
-	//float total_label_width = 0.0f;
-	//float total_label_height = 0.0f;
-
-	//for (int i = 0; label[i] != '\0'; ++i)
-	//{
-	//	// get the atlas information
-	//	char ch = label[i];
-	//	Character ch_data = geom_param_ptr->main_font.ch_atlas[ch];
-
-	//	total_label_width += (ch_data.Advance >> 6) * font_scale;
-	//	total_label_height = std::max(total_label_height, ch_data.Size.y * font_scale);
-	//}
-
-	//temp_label.total_label_height = 0.0; //total_label_height;
-	//temp_label.total_label_width = 0.0; // total_label_width;
-
-
 
 	//___________________________________________________________________
 	// Add to the list
@@ -82,7 +61,7 @@ void text_list_store::add_text(const int& label_id, std::string& label, glm::vec
 
 
 
-void text_list_store::update_text(const int& label_id, std::string& label, glm::vec2& label_loc)
+void text_list_store::update_text(const int& label_id, std::string& label, glm::vec3& label_loc)
 {
 	// Find the label from id
 	// Check whether the text_id is already there
@@ -290,8 +269,8 @@ void text_list_store::get_label_vertex_buffer(text_store& txt, float* text_verti
 	}
 
 
-	// Store the x,y location
-	glm::vec2 loc = txt.label_loc;
+	// Store the x, y, z location
+	glm::vec3 loc = txt.label_loc;
 
 	float x = loc.x - (total_label_width * 0.5f);
 	float y = 0.0f;
@@ -305,7 +284,7 @@ void text_list_store::get_label_vertex_buffer(text_store& txt, float* text_verti
 		y = loc.y - (total_label_height + (total_label_height * 0.5f));
 	}
 
-	glm::vec2 rotated_pt = glm::vec2(0);
+	glm::vec3 rotated_pt = glm::vec3(0);
 
 	for (int i = 0; txt.label[i] != '\0'; ++i)
 	{
@@ -324,7 +303,7 @@ void text_list_store::get_label_vertex_buffer(text_store& txt, float* text_verti
 
 		// Point 1
 		// Vertices [0,0] // 0th point
-		rotated_pt = rotate_pt(loc, glm::vec2(xpos, ypos + h), txt.label_angle);
+		rotated_pt = rotate_pt(loc, glm::vec3(xpos, ypos + h, 0.0), txt.label_angle);
 
 		text_vertices[text_v_index + 0] = rotated_pt.x;
 		text_vertices[text_v_index + 1] = rotated_pt.y;
@@ -340,7 +319,7 @@ void text_list_store::get_label_vertex_buffer(text_store& txt, float* text_verti
 
 		// Point 2
 		// Vertices [0,1] // 1th point
-		rotated_pt = rotate_pt(loc, glm::vec2(xpos, ypos), txt.label_angle);
+		rotated_pt = rotate_pt(loc, glm::vec3(xpos, ypos, 0.0), txt.label_angle);
 
 		text_vertices[text_v_index + 0] = rotated_pt.x;
 		text_vertices[text_v_index + 1] = rotated_pt.y;
@@ -356,7 +335,7 @@ void text_list_store::get_label_vertex_buffer(text_store& txt, float* text_verti
 
 		// Point 3
 		// Vertices [1,1] // 2th point
-		rotated_pt = rotate_pt(loc, glm::vec2(xpos + w, ypos), txt.label_angle);
+		rotated_pt = rotate_pt(loc, glm::vec3(xpos + w, ypos, 0.0), txt.label_angle);
 
 		text_vertices[text_v_index + 0] = rotated_pt.x;
 		text_vertices[text_v_index + 1] = rotated_pt.y;
@@ -372,7 +351,7 @@ void text_list_store::get_label_vertex_buffer(text_store& txt, float* text_verti
 
 		// Point 4
 		// Vertices [1,0] // 3th point
-		rotated_pt = rotate_pt(loc, glm::vec2(xpos + w, ypos + h), txt.label_angle);
+		rotated_pt = rotate_pt(loc, glm::vec3(xpos + w, ypos + h, 0.0), txt.label_angle);
 
 		text_vertices[text_v_index + 0] = rotated_pt.x;
 		text_vertices[text_v_index + 1] = rotated_pt.y;
@@ -415,7 +394,7 @@ void text_list_store::get_label_index_buffer(unsigned int* text_vertex_indices, 
 
 
 
-glm::vec2 text_list_store::rotate_pt(glm::vec2& rotate_about, glm::vec2 pt, double& rotation_angle)
+glm::vec3 text_list_store::rotate_pt(glm::vec3& rotate_about, glm::vec3 pt, double& rotation_angle)
 {
 	// Return the rotation point
 	glm::vec2 translated_pt = pt - rotate_about;
@@ -436,8 +415,8 @@ glm::vec2 text_list_store::rotate_pt(glm::vec2& rotate_about, glm::vec2 pt, doub
 	double sin_theta = sin(radians);
 
 	// Rotated point of the corners
-	glm::vec2 rotated_pt = glm::vec2((translated_pt.x * cos_theta) - (translated_pt.y * sin_theta),
-		(translated_pt.x * sin_theta) + (translated_pt.y * cos_theta));
+	glm::vec3 rotated_pt = glm::vec3((translated_pt.x * cos_theta) - (translated_pt.y * sin_theta),
+		(translated_pt.x * sin_theta) + (translated_pt.y * cos_theta), 0.0);
 
 	return (rotated_pt + rotate_about);
 }

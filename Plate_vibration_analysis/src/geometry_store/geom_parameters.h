@@ -4,6 +4,8 @@
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <sstream>
+#include <vector>
+#include <set>
 #include "geometry_buffers/font_atlas.h"
 
 // Stopwatch
@@ -11,15 +13,13 @@
 
 struct geom_color_theme
 {
-	glm::vec3 point_color = glm::vec3(0);
 	glm::vec3 background_color = glm::vec3(0);
-	glm::vec3 node_color = glm::vec3(0);
-	glm::vec3 selection_color = glm::vec3(0);
-	glm::vec3 line_color = glm::vec3(0);
+	glm::vec3 point_color = glm::vec3(0);
 	glm::vec3 edge_color = glm::vec3(0);
-	glm::vec3 line_length_color = glm::vec3(0);
-	glm::vec3 load_color = glm::vec3(0);
 	glm::vec3 triangle_color = glm::vec3(0);
+
+	glm::vec3 selection_color = glm::vec3(0);
+	glm::vec3 load_color = glm::vec3(0);
 	glm::vec3 constraint_color = glm::vec3(0);
 	glm::vec3 ptmass_color = glm::vec3(0);
 	glm::vec3 inlcond_displ_color = glm::vec3(0);
@@ -142,6 +142,8 @@ public:
 
 	static	glm::vec3 findGeometricCenter(const std::vector<glm::vec3>& all_pts);
 
+	static	glm::vec3 findGeometricCenter(const glm::vec3& pt1, const glm::vec3& pt2, const glm::vec3& pt3);
+
 	static	glm::vec3 findGeometricCenter(const glm::vec3& pt1, const glm::vec3& pt2, const glm::vec3& pt3, const glm::vec3& pt4);
 
 	static std::pair<glm::vec3, glm::vec3> findMinMaxXY(const std::vector<glm::vec3>& all_pts);
@@ -162,6 +164,13 @@ public:
 
 	static double get_remap(const double& max_value, const double& min_value, const double& limit_max, 
 		const double& limit_min,		const double& value);
+
+
+	static double roundToSixDigits(const double& number);
+
+	static glm::vec3 get_face_normal(const glm::vec3& pt1, const glm::vec3& pt2, const glm::vec3& pt3);
+
+	static glm::vec3 get_face_normal(const glm::vec3& pt1, const glm::vec3& pt2, const glm::vec3& pt3, const glm::vec3& pt4);
 
 private:
 	static double HueToRGB(double v1, double v2, double vH);

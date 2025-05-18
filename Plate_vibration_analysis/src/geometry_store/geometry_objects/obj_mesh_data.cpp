@@ -10,47 +10,62 @@ obj_mesh_data::~obj_mesh_data()
 	// Empty destructor
 }
 
-void obj_mesh_data::init(geom_parameters* geom_param_ptr, bool is_paint_geom_pts, bool is_paint_geom_lines, bool is_paint_geom_tris)
+void obj_mesh_data::init(geom_parameters* geom_param_ptr)
 {
-	//// Reset the count
-	//this->pt_count = 0;
-	//this->line_count = 0;
-	//this->tri_count = 0;
+	// Initialize the geometry objects of the mesh
+	half_edge_count = 0;
+
+	// Delete dynamically allocated memory
+	for (auto ptr : mesh_half_edges)
+	{
+		delete ptr;
+	}
+
+	mesh_half_edges.clear(); // clear the half edge data
+
 
 	// Set the geometry parameters
 	this->geom_param_ptr = geom_param_ptr;
 
-	// Set the view state (whether the model is only surface, only lines or only pts or paint all?
-	this->is_paint_geom_pts = is_paint_geom_pts;
-	this->is_paint_geom_lines = is_paint_geom_lines;
-	this->is_paint_geom_tris = is_paint_geom_tris;
-
-	// Initialize the mesh objects (points, lines, surfaces)
+	// Nodes
 	this->mesh_points.init(geom_param_ptr);
-	this->mesh_lines.init(geom_param_ptr);
+	this->selected_node_points.init(geom_param_ptr);
+	this->selected_node_points.set_point_color(geom_param_ptr->geom_colors.selection_color);
+
+	// Mesh boundaries & mesh normals
+	this->mesh_boundaries.init(geom_param_ptr);
+	this->mesh_normals.init(geom_param_ptr);
+
+	// Mesh data
 	this->mesh_tris.init(geom_param_ptr);
+	this->mesh_quads.init(geom_param_ptr);
 
 }
 
-void obj_mesh_data::add_mesh_point(const int& point_id, const double& x_coord, const double& y_coord)
+void obj_mesh_data::add_mesh_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord)
 {
 	// add the points
-	this->mesh_points.add_point(point_id, x_coord, y_coord);
+	this->mesh_points.add_point(point_id, x_coord, y_coord, z_coord);
 
 }
 
-void obj_mesh_data::add_mesh_lines(const int& line_id, const int& start_pt_id, const int& end_pt_id)
+void obj_mesh_data::add_selected_points(const std::vector<int>& selected_points)
 {
-	// add the lines
-	// Get the start pt and end point
-	point_store* start_pt = this->mesh_points.get_point(start_pt_id);
-	point_store* end_pt = this->mesh_points.get_point(end_pt_id);
+	// Add the selected points
+	selected_node_points.clear_points();
 
-	// If points are not valid... exit
-	if (start_pt == nullptr || end_pt == nullptr)
-		return;
+	// Selected points id
+	int id = 0;
+	for (auto& pt_id : selected_points)
+	{
+		// get the node point
+		point_store* pt = this->mesh_points.get_point(pt_id);
 
-	this->mesh_lines.add_line(line_id, start_pt, end_pt);
+		selected_node_points.add_point(id, pt->x_coord, pt->y_coord, pt->z_coord);
+		id++;
+	}
+
+	selected_node_points.set_buffer();
 
 }
 
@@ -77,7 +92,7 @@ void obj_mesh_data::add_mesh_tris(const int& tri_id, const int& point_id1, const
 	line_id2 = add_half_edge(point_id2, point_id3);
 
 	// Point 3 not found
-	if(line_id2 == -1)
+	if (line_id2 == -1)
 	{
 		mesh_half_edges.pop_back(); // remove the last item which is edge 1
 		half_edge_count--;
@@ -110,10 +125,241 @@ void obj_mesh_data::add_mesh_tris(const int& tri_id, const int& point_id1, const
 
 }
 
-void obj_mesh_data::update_mesh_point(const int& point_id, const double& x_coord, const double& y_coord)
+void obj_mesh_data::add_mesh_quads(const int& quad_id, const int& point_id1, const int& point_id2, const int& point_id3, const int& point_id4)
+{
+
+	//    2____3     2____3      3
+	//    |   /|     |   /     / |  
+	//    | /  |     | /     /   |   
+	//    1____4     1      1____4   
+
+	// Add the quadrilaterals
+	// Add the 1st half triangle of the quadrilaterals
+	// Add three half edges
+	int line_id1, line_id2, line_id3;
+
+	// Add edge 1
+	line_id1 = add_half_edge(point_id1, point_id2);
+
+	// Add edge 2
+	line_id2 = add_half_edge(point_id2, point_id3);
+
+	// Add edge 3
+	line_id3 = add_half_edge(point_id3, point_id1);
+
+	// Set the half edges next line
+	mesh_half_edges[line_id1]->next_line = mesh_half_edges[line_id2];
+	mesh_half_edges[line_id2]->next_line = mesh_half_edges[line_id3];
+	mesh_half_edges[line_id3]->next_line = mesh_half_edges[line_id1];
+
+
+	// Add the 2nd half triangle of the quadrilaterals
+	// Add three half edges
+	int line_id4, line_id5, line_id6;
+
+	// Add edge 4
+	line_id4 = add_half_edge(point_id3, point_id4);
+
+	// Add edge 5
+	line_id5 = add_half_edge(point_id4, point_id1);
+
+	// Add edge 6
+	line_id6 = add_half_edge(point_id1, point_id3);
+
+
+	// Set the half edges next line
+	mesh_half_edges[line_id4]->next_line = mesh_half_edges[line_id5];
+	mesh_half_edges[line_id5]->next_line = mesh_half_edges[line_id6];
+	mesh_half_edges[line_id6]->next_line = mesh_half_edges[line_id4];
+
+
+	//________________________________________
+	// Add the mesh quadrilaterals
+	this->mesh_quads.add_quad(quad_id, mesh_half_edges[line_id1],
+		mesh_half_edges[line_id2],
+		mesh_half_edges[line_id3],
+		mesh_half_edges[line_id4],
+		mesh_half_edges[line_id5],
+		mesh_half_edges[line_id6]);
+
+	// Set the half edge face data 1st Half triangle of the quadrilateral
+	tri_store* temp_tri123 = this->mesh_quads.get_quadrilateral_face123(quad_id);
+
+	mesh_half_edges[line_id1]->face = temp_tri123;
+	mesh_half_edges[line_id2]->face = temp_tri123;
+	mesh_half_edges[line_id3]->face = temp_tri123;
+
+	// Set the half edge face data 2nd Half triangle of the quadrilateral
+	tri_store* temp_tri341 = this->mesh_quads.get_quadrilateral_face341(quad_id);
+
+	mesh_half_edges[line_id4]->face = temp_tri341;
+	mesh_half_edges[line_id5]->face = temp_tri341;
+	mesh_half_edges[line_id6]->face = temp_tri341;
+
+
+}
+
+
+void obj_mesh_data::set_mesh_wireframe()
+{
+	// Step 1: Set the twin of half edges
+	for (int i = 0; i < static_cast<int>(mesh_half_edges.size()); i++)
+	{
+		// If the twin_line is already set, continue to the next half-edge
+		if (mesh_half_edges[i]->twin_line != nullptr)
+			continue;
+
+		// Get the start and end points of the current half-edge
+		point_store* start_pt = mesh_half_edges[i]->start_pt;
+		point_store* end_pt = mesh_half_edges[i]->end_pt;
+
+		// Iterate through the remaining half-edges to find the twin
+		for (int j = i + 1; j < static_cast<int>(mesh_half_edges.size()); j++)
+		{
+			// Check if the current half-edge has the same start and end points as the twin
+			if (mesh_half_edges[j]->start_pt == end_pt && mesh_half_edges[j]->end_pt == start_pt)
+			{
+				// Set the twin_line for both half-edges
+				mesh_half_edges[i]->twin_line = mesh_half_edges[j];
+				mesh_half_edges[j]->twin_line = mesh_half_edges[i];
+				break; // Break the loop since twin has been found
+			}
+		}
+	}
+
+	//_________________________________________________________________________________________________
+	// Step 2: Set the mesh boundaries & mesh normals
+	mesh_boundaries.clear_lines();
+	mesh_normals.clear_lines();
+
+	std::set<std::pair<int, int>> seenLines;
+	int line_id = 0;
+
+	// Triangles
+	for (const auto& tri : this->mesh_tris.triMap)
+	{
+		// Edge 1
+		set_mesh_edge(tri->edge1, line_id, seenLines);
+
+		// Edge 2
+		set_mesh_edge(tri->edge2, line_id, seenLines);
+
+		// Edge 3
+		set_mesh_edge(tri->edge3, line_id, seenLines);
+
+		// Set the mesh normal
+		set_mesh_normal(tri);
+	}
+
+	// Quadrilaterals
+	for (const auto& quad : this->mesh_quads.quadMap)
+	{
+		// Edge 1
+		set_mesh_edge(quad->tri123->edge1, line_id, seenLines);
+
+		// Edge 2
+		set_mesh_edge(quad->tri123->edge2, line_id, seenLines);
+
+		// Edge 3
+		set_mesh_edge(quad->tri341->edge1, line_id, seenLines);
+
+		// Edge 4
+		set_mesh_edge(quad->tri341->edge2, line_id, seenLines);
+
+		// Set the mesh normal
+		set_mesh_normal(quad);
+	}
+
+}
+
+
+void obj_mesh_data::set_mesh_edge(line_store* edge, int& line_id, std::set<std::pair<int, int>>& seenLines)
+{
+	// Ensure the start point ID is smaller than the end point ID
+	int smaller_id = std::min(edge->start_pt->point_id, edge->end_pt->point_id);
+	int larger_id = std::max(edge->start_pt->point_id, edge->end_pt->point_id);
+	std::pair<int, int> lineEndpoint_ids = std::make_pair(smaller_id, larger_id);
+
+	// If the line is not already seen in the opposite direction, add it to the unique lines
+	if (seenLines.find(lineEndpoint_ids) == seenLines.end())
+	{
+		glm::vec3 line_normal = glm::vec3(0);
+
+		// get the light and right face normal
+		glm::vec3 left_face_normal = edge->face->face_normal;
+
+		if (edge->twin_line != nullptr)
+		{
+			glm::vec3 right_face_normal = edge->twin_line->face->face_normal;
+			// Compute the average normal only if twin_line is not nullptr
+			line_normal = glm::normalize(left_face_normal + right_face_normal);
+		}
+		else
+		{
+			// Handle the case where twin_line is nullptr
+			line_normal = glm::normalize(left_face_normal);
+		}
+
+		edge->line_normal = line_normal;
+
+		// Create the mesh boundary
+		mesh_boundaries.add_line(line_id,
+			mesh_points.get_point(smaller_id),
+			mesh_points.get_point(larger_id), line_normal);
+
+		line_id++;
+
+		// Add to the seen lines
+		seenLines.insert(lineEndpoint_ids);
+	}
+}
+
+void obj_mesh_data::set_mesh_normal(tri_store* tri)
+{
+	// Get the geometric center of the triangle
+	point_store* pt1 = new point_store;
+	pt1->x_coord = tri->geom_center.x;
+	pt1->y_coord = tri->geom_center.y;
+	pt1->z_coord = tri->geom_center.z;
+
+	// Get the face normal of the triangle
+	point_store* pt2 = new point_store;
+	pt2->x_coord = tri->geom_center.x + 10.0 * tri->face_normal.x;
+	pt2->y_coord = tri->geom_center.y + 10.0 * tri->face_normal.y;
+	pt2->z_coord = tri->geom_center.z + 10.0 * tri->face_normal.z;
+
+	int normal_id = mesh_normals.line_count;
+	mesh_normals.add_line(normal_id, pt1, pt2, tri->face_normal);
+
+}
+
+
+void obj_mesh_data::set_mesh_normal(quad_store* quad)
+{
+	// Get the geometric center of the triangle
+	point_store* pt1 = new point_store;
+	pt1->x_coord = quad->geom_center.x;
+	pt1->y_coord = quad->geom_center.y;
+	pt1->z_coord = quad->geom_center.z;
+
+	// Get the face normal of the triangle
+	point_store* pt2 = new point_store;
+	pt2->x_coord = quad->geom_center.x + 10.0 * quad->face_normal.x;
+	pt2->y_coord = quad->geom_center.y + 10.0 * quad->face_normal.y;
+	pt2->z_coord = quad->geom_center.z + 10.0 * quad->face_normal.z;
+
+	int normal_id = mesh_normals.line_count;
+	mesh_normals.add_line(normal_id, pt1, pt2, quad->face_normal);
+
+}
+
+
+
+
+void obj_mesh_data::update_mesh_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord)
 {
 	// Update the point with new - coordinates
-	this->mesh_points.update_point(point_id, x_coord, y_coord);
+	this->mesh_points.update_point(point_id, x_coord, y_coord, z_coord);
 
 }
 
@@ -121,7 +367,7 @@ void obj_mesh_data::update_mesh_buffer()
 {
 	// Update the mesh point buffer
 	this->mesh_points.update_buffer();
-	this->mesh_lines.update_buffer();
+	this->mesh_boundaries.update_buffer();
 
 }
 
@@ -129,87 +375,94 @@ void obj_mesh_data::update_mesh_color(const glm::vec3& point_color, const glm::v
 {
 	// Set the color of the mesh
 	this->mesh_points.set_point_color(point_color);
-	this->mesh_lines.set_line_color(line_color);
+	this->mesh_boundaries.set_line_color(line_color);
 	this->mesh_tris.set_tri_color(tri_color, transparency);
+	this->mesh_quads.set_quad_color(tri_color, transparency);
 
 }
 
 void obj_mesh_data::set_buffer()
 {
 	// Set the buffer
-	this->mesh_tris.set_buffer();
-	this->mesh_lines.set_buffer();
 	this->mesh_points.set_buffer();
+
+	this->mesh_normals.set_buffer();
+	this->mesh_boundaries.set_buffer();
+
+	this->mesh_tris.set_buffer();
+	this->mesh_quads.set_buffer();
 
 }
 
 void obj_mesh_data::clear_mesh()
 {
 	// Clear the mesh
-	this->mesh_tris.clear_triangles();
-	this->mesh_half_edges.clear();
-	this->mesh_lines.clear_lines();
-	this->mesh_points.clear_points();
+		// Half edge
+	half_edge_count = 0;
+
+	// Delete dynamically allocated memory
+	for (auto ptr : mesh_half_edges)
+	{
+		delete ptr;
+	}
+
+	mesh_half_edges.clear(); // clear the half edges
+
+	// Nodes
+	mesh_points.clear_points();
+	selected_node_points.clear_points();
+
+	// Mesh boundaries & mesh normals
+	mesh_normals.clear_lines();
+	mesh_boundaries.clear_lines();
+
+	// Mesh data
+	mesh_tris.clear_triangles();
+	mesh_quads.clear_quadrilaterals();
 
 }
 
 void obj_mesh_data::paint_static_mesh()
 {
 	// Paint the static mesh (mesh which are fixed)
-	if (is_paint_geom_tris == true)
-	{
 		// Paint the mesh triangles
-		this->mesh_tris.paint_static_triangles();
+	this->mesh_tris.paint_static_triangles();
+	this->mesh_quads.paint_static_quadrilaterals();
 
-	}
+	// Paint the mesh boundaries
+	this->mesh_boundaries.paint_static_lines();
 
-	if (is_paint_geom_lines == true)
-	{
-		// Paint the mesh lines
-		this->mesh_lines.paint_static_lines();
+	// Paint the mesh points
+	this->mesh_points.paint_static_points();
 
-	}
-
-	if (is_paint_geom_pts == true)
-	{
-		// Paint the mesh points
-		this->mesh_points.paint_static_points();
-
-	}
 
 }
 
 void obj_mesh_data::paint_dynamic_mesh()
 {
 	// Paint the dynamic mesh (mesh which are not-fixed but variable)
-	if (is_paint_geom_tris == true)
-	{
 		// Paint the mesh triangles
-		this->mesh_tris.paint_dynamic_triangles();
+	this->mesh_tris.paint_dynamic_triangles();
+	this->mesh_quads.paint_dynamic_quadrilaterals();
 
-	}
+	// Paint the mesh lines
+	this->mesh_boundaries.paint_dynamic_lines();
 
-	if (is_paint_geom_lines == true)
-	{
-		// Paint the mesh lines
-		this->mesh_lines.paint_dynamic_lines();
-
-	}
-
-	if (is_paint_geom_pts == true)
-	{
-		// Paint the mesh points
-		this->mesh_points.paint_dynamic_points();
-
-	}
+	// Paint the mesh points
+	this->mesh_points.paint_dynamic_points();
 
 }
 
 void obj_mesh_data::update_opengl_uniforms(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency)
 {
 	// Update the openGl uniform matrices
+	this->mesh_quads.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, false); // do not use default transparency 
 	this->mesh_tris.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, false); // do not use default transparency 
-	this->mesh_lines.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
+
+	this->mesh_normals.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
+	this->mesh_boundaries.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
+
+	this->selected_node_points.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
 	this->mesh_points.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
 
 }

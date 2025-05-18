@@ -135,30 +135,6 @@
     <ClCompile Include="src\geometry_store\geometry_buffers\VertexBufferLayout.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\geometry_store\result_objects\modal_elementline_list_store.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\geometry_store\result_objects\modal_elementquad_list_store.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\geometry_store\result_objects\modal_elementtri_list_store.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\geometry_store\result_objects\modal_nodes_list_store.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\geometry_store\result_objects\pulse_elementline_list_store.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\geometry_store\result_objects\pulse_elementquad_list_store.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\geometry_store\result_objects\pulse_elementtri_list_store.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\geometry_store\result_objects\pulse_node_list_store.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\geometry_store\geometry_objects\line_list_store.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -180,6 +156,18 @@
     <ClCompile Include="src\geometry_store\geometry_objects\quad_list_store.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\geometry_store\result_objects\rslt_elementline_list_store.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\geometry_store\result_objects\rslt_elementquad_list_store.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\geometry_store\result_objects\rslt_elementtri_list_store.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\geometry_store\result_objects\rslt_nodes_list_store.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\dlls\freetype.dll" />
@@ -187,14 +175,14 @@
     <None Include="resources\dlls\glfw3.dll" />
     <None Include="resources\shaders\default_frag_shader.frag" />
     <None Include="resources\shaders\default_vert_shader.vert" />
-    <None Include="resources\shaders\graph_frag_shader.frag" />
-    <None Include="resources\shaders\graph_vert_shader.vert" />
     <None Include="resources\shaders\text_frag_shader.frag" />
     <None Include="resources\shaders\text_vert_shader.vert" />
     <None Include="resources\shaders\texture_frag_shader.frag" />
     <None Include="resources\shaders\texture_vert_shader.vert" />
     <None Include="resources\shaders\selrect_frag_shader.frag" />
     <None Include="resources\shaders\selrect_vert_shader.vert" />
+    <None Include="resources\shaders\dynfrag_shader.frag" />
+    <None Include="resources\shaders\dynvert_shader.vert" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="resources\fonts\CanadaDBNormal.ttf" />
@@ -337,30 +325,6 @@
     <ClInclude Include="src\geometry_store\geometry_buffers\VertexBufferLayout.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\geometry_store\result_objects\modal_elementline_list_store.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\geometry_store\result_objects\modal_elementquad_list_store.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\geometry_store\result_objects\modal_elementtri_list_store.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\geometry_store\result_objects\modal_nodes_list_store.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\geometry_store\result_objects\pulse_elementline_list_store.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\geometry_store\result_objects\pulse_elementquad_list_store.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\geometry_store\result_objects\pulse_elementtri_list_store.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\geometry_store\result_objects\pulse_node_list_store.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\geometry_store\geometry_objects\line_list_store.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -380,6 +344,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\geometry_store\geometry_objects\quad_list_store.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\geometry_store\result_objects\rslt_elementline_list_store.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\geometry_store\result_objects\rslt_elementquad_list_store.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\geometry_store\result_objects\rslt_elementtri_list_store.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\geometry_store\result_objects\rslt_nodes_list_store.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

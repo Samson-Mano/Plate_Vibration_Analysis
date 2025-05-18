@@ -12,7 +12,7 @@ struct text_store
 	// Store the individual label
 	int label_id = -1;
 	std::string label = "";
-	glm::vec2 label_loc = glm::vec2(0);
+	glm::vec3 label_loc = glm::vec3(0);
 	int label_char_count = 0;
 
 	double label_angle = 0.0;
@@ -35,9 +35,9 @@ public:
 	~text_list_store();
 
 	void init(geom_parameters* geom_param_ptr);
-	void add_text(const int& label_id, std::string& label, glm::vec2& label_loc,
+	void add_text(const int& label_id, std::string& label, glm::vec3& label_loc,
 		double label_angle, bool above_point);
-	void update_text(const int& label_id, std::string& label, glm::vec2& label_loc);
+	void update_text(const int& label_id, std::string& label, glm::vec3& label_loc);
 
 	void set_buffer();
 	void update_buffer();
@@ -59,7 +59,7 @@ private:
 		
 	void get_label_index_buffer(unsigned int* text_vertex_indices, unsigned int& text_i_index);
 
-	glm::vec2 rotate_pt(glm::vec2& rotate_about, glm::vec2 pt, double& rotation_angle);
+	glm::vec3 rotate_pt(glm::vec3& rotate_about, glm::vec3 pt, double& rotation_angle);
 
 };
 

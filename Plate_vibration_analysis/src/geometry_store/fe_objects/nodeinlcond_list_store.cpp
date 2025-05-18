@@ -23,7 +23,7 @@ void nodeinlcond_list_store::init(geom_parameters* geom_param_ptr)
 	inlcond_count = 0;
 }
 
-void nodeinlcond_list_store::set_zero_condition(int inlcond_type,const int& model_type)
+void nodeinlcond_list_store::set_zero_condition(int inlcond_type, const int& model_type)
 {
 	this->inlcond_type = inlcond_type; // Initial condition type 0 - Displacement, 1 - Velocity
 	this->model_type = model_type; // Model type 0, 1 Line, 2,3 Circle
@@ -134,24 +134,24 @@ void nodeinlcond_list_store::set_buffer()
 		// int inlcond_sign = inlcond.inl_amplitude_z > 0 ? 1 : -1;
 
 		// initial condition point amplitude
-		double pt_amplitude = -10.0f * (inlcond.inl_amplitude_z / inlcond_max)*(geom_param_ptr->node_circle_radii / static_cast<float>(geom_param_ptr->geom_scale));
+		double pt_amplitude = -10.0f * (inlcond.inl_amplitude_z / inlcond_max) * (geom_param_ptr->node_circle_radii / static_cast<float>(geom_param_ptr->geom_scale));
 
 		// initial condition point
 		glm::vec3 inlcond_pt_start = glm::vec3(inlcond.inlcond_loc.x, inlcond.inlcond_loc.y, inlcond.inlcond_loc.z);
 		glm::vec3 inlcond_pt_end = glm::vec3(inlcond.inlcond_loc.x, inlcond.inlcond_loc.y, inlcond.inlcond_loc.z + pt_amplitude);
 
 		// Add the end point
-		inlcond_points.add_point(pt_id, inlcond_pt_start, temp_color);
+		inlcond_points.add_point(pt_id, inlcond_pt_start.x, inlcond_pt_start.y, inlcond_pt_start.z);
 
 		pt_id++;
 
 		// Add the end point
-		inlcond_points.add_point(pt_id, inlcond_pt_end, temp_color);
+		inlcond_points.add_point(pt_id, inlcond_pt_end.x, inlcond_pt_end.y, inlcond_pt_end.z);
 
 		pt_id++;
 
 		// Add the initial condition line
-		inlcond_lines.add_line(ln_id, inlcond_pt_start, inlcond_pt_end, temp_color, temp_color);
+		inlcond_lines.add_line(ln_id, inlcond_points.get_point(pt_id - 2), inlcond_points.get_point(pt_id - 1));
 
 		ln_id++;
 	}
@@ -165,8 +165,8 @@ void nodeinlcond_list_store::set_buffer()
 void nodeinlcond_list_store::paint_inlcond()
 {
 	// Paint the initial displacement points
-	inlcond_points.paint_points();
-	inlcond_lines.paint_lines();
+	inlcond_points.paint_static_points();
+	inlcond_lines.paint_static_lines();
 
 }
 
@@ -176,11 +176,10 @@ void nodeinlcond_list_store::paint_inlcond_label()
 	// inl_condition_labels.paint_text();
 }
 
-void nodeinlcond_list_store::update_geometry_matrices(bool set_modelmatrix, bool set_pantranslation, bool set_rotatetranslation,
-	bool set_zoomtranslation, bool set_transparency, bool set_deflscale)
+void nodeinlcond_list_store::update_geometry_matrices(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency)
 {
 	// Update model openGL uniforms
-	inlcond_points.update_opengl_uniforms(set_modelmatrix, set_pantranslation, set_rotatetranslation, set_zoomtranslation, set_transparency, set_deflscale);
-	inlcond_lines.update_opengl_uniforms(set_modelmatrix, set_pantranslation, set_rotatetranslation, set_zoomtranslation, set_transparency, set_deflscale);
-	
+	inlcond_points.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
+	inlcond_lines.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
+
 }

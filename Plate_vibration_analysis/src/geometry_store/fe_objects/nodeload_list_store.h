@@ -1,5 +1,6 @@
 #pragma once
 #include "nodes_list_store.h"
+#include "../geometry_objects/text_list_store.h"
 
 struct load_data
 {
@@ -31,13 +32,13 @@ public:
 	void set_buffer();
 	void paint_loads();
 	void paint_load_labels();
-	void update_geometry_matrices(bool set_modelmatrix, bool set_pantranslation, bool set_rotatetranslation,
-		bool set_zoomtranslation, bool set_transparency, bool set_deflscale);
+	void update_geometry_matrices(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency);
+
 private:
 	geom_parameters* geom_param_ptr = nullptr;
 	gBuffers load_buffer;
 	Shader load_shader;
-	label_list_store load_value_labels;
+	text_list_store load_value_labels;
 	double load_max = 0.0;
 	std::vector<int> all_load_ids;
 

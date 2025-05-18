@@ -37,6 +37,17 @@ void tri_list_store::add_tri(const int& tri_id, line_store* edge1, line_store* e
 	temp_tri->edge2 = edge2;
 	temp_tri->edge3 = edge3;
 
+	// Find the normal of the face
+	temp_tri->face_normal = geom_param_ptr->get_face_normal(edge1->start_pt->pt_coord(),
+		edge2->start_pt->pt_coord(),
+		edge3->start_pt->pt_coord());
+
+	// Find the geometric center of the face
+	temp_tri->geom_center = geom_param_ptr->findGeometricCenter(edge1->start_pt->pt_coord(),
+		edge2->start_pt->pt_coord(),
+		edge3->start_pt->pt_coord());
+
+
 	triMap.push_back(temp_tri);
 
 	// Add to the tri id map

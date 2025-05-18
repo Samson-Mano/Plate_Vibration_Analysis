@@ -136,35 +136,33 @@ tri_store* quad_list_store::get_quadrilateral_face341(const int& quad_id)
 
 void quad_list_store::set_buffer()
 {
-	// Define the quad vertices of the model for a node (3 position & 3 normal) 4 points
-	const unsigned int quad_vertex_count = 6 * 4 * quad_count;
-	float* quad_vertices = new float[quad_vertex_count];
 
 	unsigned int quad_indices_count = 6 * quad_count; // 6 indices to form a quadrilateral ( 3 + 3 triangles)
 	unsigned int* quad_vertex_indices = new unsigned int[quad_indices_count];
 
-	unsigned int quad_v_index = 0;
 	unsigned int quad_i_index = 0;
 
 	// Set the quad vertices
 	for (auto& quad : quadMap)
 	{
 		// Add quadrilateral buffers
-		get_quad_buffer(quad, quad_vertices, quad_v_index, quad_vertex_indices, quad_i_index);
+		get_quad_index_buffer(quad_vertex_indices, quad_i_index);
 	}
 
 	VertexBufferLayout quad_pt_layout;
 	quad_pt_layout.AddFloat(3);  // Node center
-	quad_pt_layout.AddFloat(3);  // Node normal
 
+	// Define the tri vertices of the model for a node 6 * (3 position) 
+	const unsigned int quad_vertex_count = 6 * 3 * quad_count;
 	unsigned int quad_vertex_size = quad_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the quadrilateral buffers
-	quad_buffer.CreateBuffers(quad_vertices, quad_vertex_size, quad_vertex_indices, quad_indices_count, quad_pt_layout);
+	quad_buffer.CreateDynamicBuffers(quad_vertex_size, quad_vertex_indices, quad_indices_count, quad_pt_layout);
 
 	// Delete the dynamic array
-	delete[] quad_vertices;
 	delete[] quad_vertex_indices;
+
+	update_buffer();
 
 }
 
@@ -179,12 +177,28 @@ void quad_list_store::set_quad_color(const glm::vec3& quad_color, const double& 
 
 void quad_list_store::paint_static_quadrilaterals()
 {
+	// Paint all the quadrilaterals
+	quad_shader.Bind();
+	quad_buffer.Bind();
+	glDrawElements(GL_TRIANGLES, (6 * quad_count), GL_UNSIGNED_INT, 0);
+	quad_buffer.UnBind();
+	quad_shader.UnBind();
 
 }
 
 
 void quad_list_store::paint_dynamic_quadrilaterals()
 {
+	// Paint all the quadrilaterals
+	quad_shader.Bind();
+	quad_buffer.Bind();
+
+	// Update the tri buffer data for dynamic drawing
+	update_buffer();
+
+	glDrawElements(GL_TRIANGLES, (6 * quad_count), GL_UNSIGNED_INT, 0);
+	quad_buffer.UnBind();
+	quad_shader.UnBind();
 
 }
 
@@ -192,26 +206,26 @@ void quad_list_store::paint_dynamic_quadrilaterals()
 void quad_list_store::update_buffer()
 {
 
-	// Define the tri vertices of the model for a point 3 * (3 position) 
-	const unsigned int tri_vertex_count = 3 * 3 * tri_count;
-	float* tri_vertices = new float[tri_vertex_count];
+	// Define the tri vertices of the model for a point 6 * (3 position) 
+	const unsigned int quad_vertex_count = 6 * 3 * quad_count;
+	float* quad_vertices = new float[quad_vertex_count];
 
-	unsigned int tri_v_index = 0;
+	unsigned int quad_v_index = 0;
 
-	// Set the tri vertex buffers
-	for (auto& tri : triMap)
+	// Set the quad vertex buffers
+	for (auto& quad : quadMap)
 	{
 		// Add vertex buffers
-		get_tri_vertex_buffer(tri, tri_vertices, tri_v_index);
+		get_quad_vertex_buffer(quad, quad_vertices, quad_v_index);
 	}
 
-	unsigned int tri_vertex_size = tri_vertex_count * sizeof(float); // Size of the tri_vertex
+	unsigned int quad_vertex_size = quad_vertex_count * sizeof(float); // Size of the quad_vertex
 
 	// Update the buffer
-	tri_buffer.UpdateDynamicVertexBuffer(tri_vertices, tri_vertex_size);
+	quad_buffer.UpdateDynamicVertexBuffer(quad_vertices, quad_vertex_size);
 
 	// Delete the dynamic vertices array
-	delete[] tri_vertices;
+	delete[] quad_vertices;
 
 
 }

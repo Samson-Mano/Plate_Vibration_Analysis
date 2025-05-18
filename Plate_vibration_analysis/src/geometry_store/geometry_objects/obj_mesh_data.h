@@ -2,37 +2,42 @@
 #include "point_list_store.h"
 #include "line_list_store.h"
 #include "tri_list_store.h"
+#include "quad_list_store.h"
 #include "text_list_store.h"
 
 class obj_mesh_data
 {
 public:
 
-
 	obj_mesh_data();
 	~obj_mesh_data();
 
-	void init(geom_parameters* geom_param_ptr, 
-			  bool is_paint_geom_pts,
-			  bool is_paint_geom_lines,
-			  bool is_paint_geom_tris);
+	void init(geom_parameters* geom_param_ptr);
 
 	void add_mesh_point(const int& point_id,
 		const double& x_coord,
-		const double& y_coord);
+		const double& y_coord,
+		const double& z_coord);
 
-	void add_mesh_lines(const int& line_id,
-		const int& start_pt_id,
-		const int& end_pt_id);
+	void add_selected_points(const std::vector<int>& selected_points);
 
 	void add_mesh_tris(const int& tri_id,
 		const int& point_id1,
 		const int& point_id2,
 		const int& point_id3);
 
+	void add_mesh_quads(const int& quad_id,
+		const int& point_id1,
+		const int& point_id2,
+		const int& point_id3,
+		const int& point_id4);
+
 	void update_mesh_point(const int& point_id,
 		const double& x_coord,
-		const double& y_coord);
+		const double& y_coord, 
+		const double& z_coord);
+
+	void set_mesh_wireframe();
 
 	void update_mesh_buffer();
 
@@ -43,28 +48,32 @@ public:
 	void clear_mesh();
 
 	void paint_static_mesh();
-
 	void paint_dynamic_mesh();
+	void paint_selected_points();
+	void paint_mesh_normals();
 
 	void update_opengl_uniforms(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency);
 
 private:
-	//unsigned int pt_count = 0;
-	//unsigned int line_count = 0;
-	//unsigned int tri_count = 0;
-
-	bool is_paint_geom_pts = false;
-	bool is_paint_geom_lines = false;
-	bool is_paint_geom_tris = false;
 
 	geom_parameters* geom_param_ptr = nullptr;
 
 	point_list_store mesh_points;
-	line_list_store mesh_lines;
+	point_list_store selected_node_points;
+	line_list_store mesh_boundaries;
+	line_list_store mesh_normals;
 	tri_list_store mesh_tris;
+	quad_list_store mesh_quads;
 
 	int half_edge_count = 0;
 	std::vector<line_store*> mesh_half_edges; // All the Half edge data
 
 	int add_half_edge(const int& startPt_id, const int& endPt_id);
+
+	void set_mesh_edge(line_store* edge, int& line_id, std::set<std::pair<int, int>>& seenLines);
+
+	void set_mesh_normal(tri_store* tri);
+
+	void set_mesh_normal(quad_store* quad);
+
 };

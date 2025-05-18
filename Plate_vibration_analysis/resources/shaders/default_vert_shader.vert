@@ -9,6 +9,7 @@ uniform float vertexTransparency; // Transparency of the mesh
 layout(location = 0) in vec3 vertex_position;
 
 out vec3 v_Color;
+// out vec3 v_Normal;
 out float v_Transparency;
 
 void main()
