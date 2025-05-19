@@ -183,6 +183,10 @@
     <None Include="resources\shaders\selrect_vert_shader.vert" />
     <None Include="resources\shaders\dynfrag_shader.frag" />
     <None Include="resources\shaders\dynvert_shader.vert" />
+    <None Include="resources\shaders\load_frag_shader.frag" />
+    <None Include="resources\shaders\load_vert_shader.vert" />
+    <None Include="resources\shaders\mesh_frag_shader.frag" />
+    <None Include="resources\shaders\mesh_vert_shader.vert" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="resources\fonts\CanadaDBNormal.ttf" />
@@ -192,6 +196,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\images\logo_ico_png.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resources\images\innx_icon.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
@@ -358,5 +365,13 @@
     <ClInclude Include="src\geometry_store\result_objects\rslt_nodes_list_store.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="example_model\circle_mesh.txt" />
+    <Text Include="example_model\circle_mesh_1.txt" />
+    <Text Include="example_model\circle_mesh_tri.txt" />
+    <Text Include="example_model\rect1_mesh.txt" />
+    <Text Include="example_model\rect2_mesh.txt" />
+    <Text Include="example_model\rect3_mesh.txt" />
   </ItemGroup>
 </Project>

@@ -39,7 +39,7 @@ public:
 
 	void set_mesh_wireframe();
 
-	void update_mesh_buffer();
+	// void update_mesh_buffer();
 
 	void update_mesh_color(const glm::vec3& point_color, const glm::vec3& line_color, const glm::vec3& tri_color, const double& transparency);
 
@@ -48,7 +48,13 @@ public:
 	void clear_mesh();
 
 	void paint_static_mesh();
+	void paint_static_mesh_boundaries();
+	void paint_static_mesh_points();
+	
 	void paint_dynamic_mesh();
+	void paint_dynamic_mesh_boundaries();
+	void paint_dynamic_mesh_points();
+
 	void paint_selected_points();
 	void paint_mesh_normals();
 
@@ -59,7 +65,7 @@ private:
 	geom_parameters* geom_param_ptr = nullptr;
 
 	point_list_store mesh_points;
-	point_list_store selected_node_points;
+	point_list_store selected_mesh_points;
 	line_list_store mesh_boundaries;
 	line_list_store mesh_normals;
 	tri_list_store mesh_tris;

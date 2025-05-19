@@ -18,8 +18,8 @@ void tri_list_store::init(geom_parameters* geom_param_ptr)
 	// Create the triangle shader
 	std::filesystem::path shadersPath = geom_param_ptr->resourcePath;
 
-	tri_shader.create_shader((shadersPath.string() + "/resources/shaders/default_vert_shader.vert").c_str(),
-		(shadersPath.string() + "/resources/shaders/default_frag_shader.frag").c_str());
+	tri_shader.create_shader((shadersPath.string() + "/resources/shaders/mesh_vert_shader.vert").c_str(),
+		(shadersPath.string() + "/resources/shaders/mesh_frag_shader.frag").c_str());
 
 	tri_shader.setUniform("vertexColor", geom_param_ptr->geom_colors.triangle_color);
 
@@ -95,10 +95,11 @@ void tri_list_store::set_buffer()
 
 	VertexBufferLayout tri_pt_layout;
 	tri_pt_layout.AddFloat(3);  // Node center
+	tri_pt_layout.AddFloat(3);  // Node normal
 
 
-	// Define the tri vertices of the model for a node 3 * (3 position) 
-	const unsigned int tri_vertex_count = 3 * 3 * tri_count;
+	// Define the tri vertices of the model for a node 3 * (3 position & 3 normal)  
+	const unsigned int tri_vertex_count = 3 * 6 * tri_count;
 	unsigned int tri_vertex_size = tri_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the triangle dynamic buffers
@@ -147,8 +148,8 @@ void tri_list_store::paint_dynamic_triangles()
 void tri_list_store::update_buffer()
 {
 
-	// Define the tri vertices of the model for a point 3 * (3 position) 
-	const unsigned int tri_vertex_count = 3 * 3 * tri_count;
+	// Define the tri vertices of the model for a point 3 * (3 position & 3 normal) 
+	const unsigned int tri_vertex_count = 3 * 6 * tri_count;
 	float* tri_vertices = new float[tri_vertex_count];
 
 	unsigned int tri_v_index = 0;
@@ -184,7 +185,10 @@ void tri_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_viewm
 	if (set_modelmatrix == true)
 	{
 		// set the transparency
-		// tri_shader.setUniform("vertexTransparency", 1.0f);
+		tri_shader.setUniform("vertexTransparency", 1.0f);
+
+		// set the projection matrix
+		tri_shader.setUniform("projectionMatrix", geom_param_ptr->projectionMatrix, false);
 
 		// set the model matrix
 		tri_shader.setUniform("modelMatrix", geom_param_ptr->modelMatrix, false);
@@ -196,7 +200,7 @@ void tri_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_viewm
 		glm::mat4 scalingMatrix = glm::mat4(1.0) * static_cast<float>(geom_param_ptr->zoom_scale);
 		scalingMatrix[3][3] = 1.0f;
 
-		glm::mat4 viewMatrix = glm::transpose(geom_param_ptr->panTranslation) * scalingMatrix;
+		glm::mat4 viewMatrix = glm::transpose(geom_param_ptr->panTranslation) * geom_param_ptr->rotateTranslation * scalingMatrix;
 
 		// set the pan translation
 		tri_shader.setUniform("viewMatrix", viewMatrix, false);
@@ -205,9 +209,10 @@ void tri_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_viewm
 
 	if (set_transparency == true)
 	{
-		// set the alpha transparency
-		// tri_shader.setUniform("vertexTransparency", static_cast<float>(geom_param_ptr->geom_transparency));
+		// set the alpha transparency  static_cast<float>(geom_param_ptr->geom_transparency)
+		tri_shader.setUniform("vertexTransparency", static_cast<float>(geom_param_ptr->geom_transparency));
 	}
+
 }
 
 void tri_list_store::get_tri_vertex_buffer(tri_store* tri, float* tri_vertices, unsigned int& tri_v_index)
@@ -219,8 +224,13 @@ void tri_list_store::get_tri_vertex_buffer(tri_store* tri, float* tri_vertices, 
 	tri_vertices[tri_v_index + 1] = tri->edge1->start_pt->y_coord;
 	tri_vertices[tri_v_index + 2] = tri->edge1->start_pt->z_coord;
 
+	// Point normal
+	tri_vertices[tri_v_index + 3] = tri->face_normal.x;
+	tri_vertices[tri_v_index + 4] = tri->face_normal.y;
+	tri_vertices[tri_v_index + 5] = tri->face_normal.z;
+
 	// Iterate
-	tri_v_index = tri_v_index + 3;
+	tri_v_index = tri_v_index + 6;
 
 	// Point 2
 	// Point location
@@ -228,8 +238,13 @@ void tri_list_store::get_tri_vertex_buffer(tri_store* tri, float* tri_vertices, 
 	tri_vertices[tri_v_index + 1] = tri->edge2->start_pt->y_coord;
 	tri_vertices[tri_v_index + 2] = tri->edge2->start_pt->z_coord;
 
+	// Point normal
+	tri_vertices[tri_v_index + 3] = tri->face_normal.x;
+	tri_vertices[tri_v_index + 4] = tri->face_normal.y;
+	tri_vertices[tri_v_index + 5] = tri->face_normal.z;
+
 	// Iterate
-	tri_v_index = tri_v_index + 3;
+	tri_v_index = tri_v_index + 6;
 
 	// Point 3
 	// Point location
@@ -237,8 +252,13 @@ void tri_list_store::get_tri_vertex_buffer(tri_store* tri, float* tri_vertices, 
 	tri_vertices[tri_v_index + 1] = tri->edge3->start_pt->y_coord;
 	tri_vertices[tri_v_index + 2] = tri->edge3->start_pt->z_coord;
 
+	// Point normal
+	tri_vertices[tri_v_index + 3] = tri->face_normal.x;
+	tri_vertices[tri_v_index + 4] = tri->face_normal.y;
+	tri_vertices[tri_v_index + 5] = tri->face_normal.z;
+
 	// Iterate
-	tri_v_index = tri_v_index + 3;
+	tri_v_index = tri_v_index + 6;
 }
 
 void tri_list_store::get_tri_index_buffer(unsigned int* tri_vertex_indices, unsigned int& tri_i_index)

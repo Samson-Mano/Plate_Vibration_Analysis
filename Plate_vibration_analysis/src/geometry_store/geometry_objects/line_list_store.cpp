@@ -18,8 +18,8 @@ void line_list_store::init(geom_parameters* geom_param_ptr)
 	// Create the point shader
 	std::filesystem::path shadersPath = geom_param_ptr->resourcePath;
 
-	line_shader.create_shader((shadersPath.string() + "/resources/shaders/default_vert_shader.vert").c_str(),
-		(shadersPath.string() + "/resources/shaders/default_frag_shader.frag").c_str());
+	line_shader.create_shader((shadersPath.string() + "/resources/shaders/mesh_vert_shader.vert").c_str(),
+		(shadersPath.string() + "/resources/shaders/mesh_frag_shader.frag").c_str());
 
 	// Default color
 	line_shader.setUniform("vertexColor", geom_param_ptr->geom_colors.edge_color);
@@ -80,9 +80,10 @@ void line_list_store::set_buffer()
 
 	VertexBufferLayout line_pt_layout;
 	line_pt_layout.AddFloat(3);  // Node center
+	line_pt_layout.AddFloat(3);  // Node normal
 
-	// Define the line vertices of the model for a point 2 * (3 position) 
-	const unsigned int line_vertex_count = 2 * 3 * line_count;
+	// Define the line vertices of the model for a point 2 * (3 position & 3 normal) 
+	const unsigned int line_vertex_count = 2 * 6 * line_count;
 	unsigned int line_vertex_size = line_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the line dynamic buffers
@@ -133,8 +134,8 @@ void line_list_store::paint_dynamic_lines()
 void line_list_store::update_buffer()
 {
 
-	// Define the line vertices of the model for a point 2 * (3 position) 
-	const unsigned int line_vertex_count = 2 * 3 * line_count;
+	// Define the line vertices of the model for a point 2 * (3 position & 3 normal) 
+	const unsigned int line_vertex_count = 2 * 6 * line_count;
 	float* line_vertices = new float[line_vertex_count];
 
 	unsigned int line_v_index = 0;
@@ -172,9 +173,11 @@ void line_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_view
 		// set the transparency
 		line_shader.setUniform("vertexTransparency", 1.0f);
 
+		// set the projection matrix
+		line_shader.setUniform("projectionMatrix", geom_param_ptr->projectionMatrix, false);
+
 		// set the model matrix
 		line_shader.setUniform("modelMatrix", geom_param_ptr->modelMatrix, false);
-
 	}
 
 	if (set_viewmatrix == true)
@@ -182,19 +185,20 @@ void line_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_view
 		glm::mat4 scalingMatrix = glm::mat4(1.0) * static_cast<float>(geom_param_ptr->zoom_scale);
 		scalingMatrix[3][3] = 1.0f;
 
-		glm::mat4 viewMatrix = glm::transpose(geom_param_ptr->panTranslation) * scalingMatrix;
+		glm::mat4 viewMatrix = glm::transpose(geom_param_ptr->panTranslation) * geom_param_ptr->rotateTranslation * scalingMatrix;
 
-		// set the view matrix
+		// set the pan translation
 		line_shader.setUniform("viewMatrix", viewMatrix, false);
 
 	}
 
+
 	if (set_transparency == true)
 	{
-		// set the alpha transparency  static_cast<float>(geom_param_ptr->geom_transparency)
+		// set the alpha transparency
 		line_shader.setUniform("vertexTransparency", static_cast<float>(geom_param_ptr->geom_transparency));
-
 	}
+
 }
 
 void line_list_store::get_line_vertex_buffer(line_store& ln, float* line_vertices, unsigned int& line_v_index)
@@ -206,8 +210,14 @@ void line_list_store::get_line_vertex_buffer(line_store& ln, float* line_vertice
 	line_vertices[line_v_index + 1] = ln.start_pt->y_coord;
 	line_vertices[line_v_index + 2] = ln.start_pt->z_coord;
 
+
+	// Point normal
+	line_vertices[line_v_index + 3] = ln.line_normal.x;
+	line_vertices[line_v_index + 4] = ln.line_normal.y;
+	line_vertices[line_v_index + 5] = ln.line_normal.z;
+
 	// Iterate
-	line_v_index = line_v_index + 3;
+	line_v_index = line_v_index + 6;
 
 	// End Point
 	// Point location
@@ -215,8 +225,13 @@ void line_list_store::get_line_vertex_buffer(line_store& ln, float* line_vertice
 	line_vertices[line_v_index + 1] = ln.end_pt->y_coord;
 	line_vertices[line_v_index + 2] = ln.end_pt->z_coord;
 
+	// Point normal
+	line_vertices[line_v_index + 3] = ln.line_normal.x;
+	line_vertices[line_v_index + 4] = ln.line_normal.y;
+	line_vertices[line_v_index + 5] = ln.line_normal.z;
+
 	// Iterate
-	line_v_index = line_v_index + 3;
+	line_v_index = line_v_index + 6;
 
 }
 

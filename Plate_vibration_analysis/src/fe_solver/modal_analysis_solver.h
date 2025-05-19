@@ -9,10 +9,10 @@
 #include "../geometry_store/fe_objects/elementquad_list_store.h"
 
 // FE Results Modal Analysis
-#include "../geometry_store/result_objects/modal_nodes_list_store.h"
-#include "../geometry_store/result_objects/modal_elementline_list_store.h"
-#include "../geometry_store/result_objects/modal_elementtri_list_store.h"
-#include "../geometry_store/result_objects/modal_elementquad_list_store.h"
+#include "../geometry_store/result_objects/rslt_nodes_list_store.h"
+#include "../geometry_store/result_objects/rslt_elementline_list_store.h"
+#include "../geometry_store/result_objects/rslt_elementtri_list_store.h"
+#include "../geometry_store/result_objects/rslt_elementquad_list_store.h"
 
 // Stop watch
 #include "../events_handler/Stopwatch_events.h"
@@ -51,29 +51,6 @@ typedef boost::math::policies::policy<
 	boost::math::policies::evaluation_error<boost::math::policies::ignore_error>
 > ignore_all_policy;
 
-struct quad_midnode_eigenvector_store
-{
-	int quad_id = 0;
-	glm::vec3 mid_pt = glm::vec3(0);
-	std::vector<glm::vec3> midpt_displ; // eigen vector at mid pt of quad
-	std::vector<double> midpt_displ_mag; // eigen vector magnitude at mid pt of quad
-};
-
-
-struct bessel_function_Frequency
-{
-	int mode_number = 0; // mode number
-	int m = 0; // Bessel function m order
-	int n = 0; // n th root
-	double root_value = 0.0; // Bessel function root value
-	double phase_pi = 0.0; // Used only for circular membrane (Not used for rectangular membrane)
-};
-
-// Comparator function for sorting based on root_value
-inline bool compareRootValues(const bessel_function_Frequency& a, const bessel_function_Frequency& b) 
-{
-	return a.root_value < b.root_value;
-}
 
 class modal_analysis_solver
 {
@@ -107,10 +84,11 @@ public:
 		const elementtri_list_store& model_trielements,
 		const elementquad_list_store& model_quadelements,
 		const material_data& mat_data,
-		modal_nodes_list_store& modal_result_nodes,
-		modal_elementline_list_store& modal_result_lineelements,
-		modal_elementtri_list_store& modal_result_trielements,
-		modal_elementquad_list_store& modal_result_quadelements);
+		rslt_nodes_list_store& modal_result_nodes,
+		rslt_elementline_list_store& modal_result_lineelements,
+		rslt_elementtri_list_store& modal_result_trielements,
+		rslt_elementquad_list_store& modal_result_quadelements);
+
 private:
 	const double m_pi = 3.14159265358979323846;
 	const double epsilon = 0.000001;
@@ -118,31 +96,6 @@ private:
 	Stopwatch_events stopwatch;
 	std::stringstream stopwatch_elapsed_str;
 
-	std::vector<bessel_function_Frequency> eigen_freq;
 
-	void modal_analysis_model_circular(const nodes_list_store& model_nodes,
-		const elementline_list_store& model_lineelements,
-		const elementtri_list_store& model_trielements,
-		const elementquad_list_store& model_quadelements,
-		const material_data& mat_data,
-		const double& c_radius,
-		modal_nodes_list_store& modal_result_nodes,
-		modal_elementline_list_store& modal_result_lineelements,
-		modal_elementtri_list_store& modal_result_trielements,
-		modal_elementquad_list_store& modal_result_quadelements);
-
-	double bessel_eigen_vec(const bessel_function_Frequency& bessel_root_i, const glm::vec3& nodept, const double& c_radius);
-
-	void modal_analysis_model_rectangular(const nodes_list_store& model_nodes,
-		const elementline_list_store& model_lineelements,
-		const elementquad_list_store& model_quadelements,
-		const material_data& mat_data,
-		const double& length_x,
-		const double& length_y,
-		modal_nodes_list_store& modal_result_nodes,
-		modal_elementline_list_store& modal_result_lineelements,
-		modal_elementquad_list_store& modal_result_quadelements);
-
-	double rect_eigen_vec(const bessel_function_Frequency& rect_freq_i, const glm::vec3& nodept, const double& length_x, const double& length_y);
 
 };

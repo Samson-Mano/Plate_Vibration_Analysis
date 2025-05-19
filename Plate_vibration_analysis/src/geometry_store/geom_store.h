@@ -59,7 +59,7 @@ public:
 	void fini();
 
 	// Load the geometry
-	void load_model(const int& model_type,std::vector<std::string> input_data);
+	void load_model(std::vector<std::string> data_lines);
 
 	// Functions to control the drawing area
 	void update_WindowDimension(const int& window_width, const int& window_height);

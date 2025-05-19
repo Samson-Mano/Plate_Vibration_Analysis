@@ -18,8 +18,8 @@ void point_list_store::init(geom_parameters* geom_param_ptr)
 	// Create the point shader
 	std::filesystem::path shadersPath = geom_param_ptr->resourcePath;
 
-	point_shader.create_shader((shadersPath.string() + "/resources/shaders/default_vert_shader.vert").c_str(),
-		(shadersPath.string() + "/resources/shaders/default_frag_shader.frag").c_str());
+	point_shader.create_shader((shadersPath.string() + "/resources/shaders/mesh_vert_shader.vert").c_str(),
+		(shadersPath.string() + "/resources/shaders/mesh_frag_shader.frag").c_str());
 
 	point_shader.setUniform("vertexColor", geom_param_ptr->geom_colors.point_color);
 
@@ -97,9 +97,10 @@ void point_list_store::set_buffer()
 
 	VertexBufferLayout node_layout;
 	node_layout.AddFloat(3);  // Node center
+	node_layout.AddFloat(3);  // Node normal
 
-	// Define the node vertices of the model for a node (3 position) 
-	const unsigned int point_vertex_count = 3 * point_count;
+	// Define the node vertices of the model for a node (3 position & 3 normal) 
+	const unsigned int point_vertex_count = 6 * point_count;
 	unsigned int point_vertex_size = point_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the point dynamic buffers
@@ -151,8 +152,8 @@ void point_list_store::paint_dynamic_points()
 
 void point_list_store::update_buffer()
 {
-	// Define the node vertices of the model for a node (3 position) 
-	const unsigned int point_vertex_count = 3 * point_count;
+	// Define the node vertices of the model for a node (3 position & 3 normal) 
+	const unsigned int point_vertex_count = 6 * point_count;
 	float* point_vertices = new float[point_vertex_count];
 
 	unsigned int point_v_index = 0;
@@ -188,6 +189,9 @@ void point_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_vie
 		// set the transparency
 		point_shader.setUniform("vertexTransparency", 1.0f);
 
+		// set the projection matrix
+		point_shader.setUniform("projectionMatrix", geom_param_ptr->projectionMatrix, false);
+
 		// set the model matrix
 		point_shader.setUniform("modelMatrix", geom_param_ptr->modelMatrix, false);
 
@@ -198,7 +202,7 @@ void point_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_vie
 		glm::mat4 scalingMatrix = glm::mat4(1.0) * static_cast<float>(geom_param_ptr->zoom_scale);
 		scalingMatrix[3][3] = 1.0f;
 
-		glm::mat4 viewMatrix = glm::transpose(geom_param_ptr->panTranslation) * scalingMatrix;
+		glm::mat4 viewMatrix = glm::transpose(geom_param_ptr->panTranslation) * geom_param_ptr->rotateTranslation * scalingMatrix;
 
 		// set the view matrix
 		point_shader.setUniform("viewMatrix", viewMatrix, false);
@@ -206,7 +210,7 @@ void point_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_vie
 
 	if (set_transparency == true)
 	{
-		// set the alpha transparency  static_cast<float>(geom_param_ptr->geom_transparency)
+		// set the alpha transparency 
 		point_shader.setUniform("vertexTransparency", static_cast<float>(geom_param_ptr->geom_transparency));
 
 	}
@@ -222,8 +226,15 @@ void point_list_store::get_point_vertex_buffer(point_store& pt, float* point_ver
 	point_vertices[point_v_index + 1] = pt.y_coord;
 	point_vertices[point_v_index + 2] = pt.z_coord;
 
+	// Point Normal (Normal to Geometry center)
+	glm::vec3 pt_normal = glm::normalize(pt.pt_coord());
+
+	point_vertices[point_v_index + 3] = pt_normal.x;
+	point_vertices[point_v_index + 4] = pt_normal.y;
+	point_vertices[point_v_index + 5] = pt_normal.z;
+
 	// Iterate
-	point_v_index = point_v_index + 3;
+	point_v_index = point_v_index + 6;
 
 }
 

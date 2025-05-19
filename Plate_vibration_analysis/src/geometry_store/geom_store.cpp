@@ -48,7 +48,7 @@ void geom_store::fini()
 	is_geometry_set = false;
 }
 
-void geom_store::load_model(const int& model_type, std::vector<std::string> input_data)
+void geom_store::load_model(std::vector<std::string> data_lines)
 {
 
 	// Create stopwatch
@@ -95,108 +95,24 @@ void geom_store::load_model(const int& model_type, std::vector<std::string> inpu
 
 	int node_count = 0;
 
-	// Process the lines
-	while (j < input_data.size())
-	{
-		std::string line = input_data[j];
-		std::string type = line.substr(0, 4);  // Extract the first 4 characters of the line
-
-		// Split the line into comma-separated fields
-		std::istringstream iss(line);
-		std::string field;
-		std::vector<std::string> fields;
-		while (std::getline(iss, field, ','))
-		{
-			fields.push_back(field);
-		}
-
-
-		if (fields[0] == "Tension")
-		{
-			// Tension
-			this->mat_data.line_tension = std::stod(fields[1]);
-
-		}
-		else if (fields[0] == "Density")
-		{
-			// Density
-			this->mat_data.material_density = std::stod(fields[1]);
-		}
-
-		// Material type
-		this->mat_data.model_type = model_type;
-
-		// Iterate line
-		j++;
-	}
-
+	
 	// Set the initial condition & loads
 
-	this->node_inldispl.set_zero_condition(0, model_type);
-	this->node_inlvelo.set_zero_condition(1, model_type);
-	this->node_loads.set_zero_condition(model_type);
+	this->node_inldispl.set_zero_condition(0, 0);
+	this->node_inlvelo.set_zero_condition(1, 0);
+	this->node_loads.set_zero_condition(0);
 
 
-	// read the model
-	//___________________________________________________________________________
-
-	std::ifstream model_file;
-
-	// Print current working directory
-	std::filesystem::path current_path = std::filesystem::current_path();
-	std::cout << "Current working directory: " << current_path << std::endl;
-
-
-	if (this->mat_data.model_type == 0)
-	{
-		// Circular
-		model_file = std::ifstream("sphere_32.txt", std::ifstream::in);
-	}
-	else if (this->mat_data.model_type == 1)
-	{
-		// Rectange 1:1
-		model_file = std::ifstream("sphere_32_tri.txt", std::ifstream::in);
-	}
-	else if (this->mat_data.model_type == 2)
-	{
-		// Rectangle 1:2
-		model_file = std::ifstream("sphere_64.txt", std::ifstream::in);
-	}
-	else if (this->mat_data.model_type == 3)
-	{
-		// Rectangle 1:3
-		model_file = std::ifstream("sphere_64_tri.txt", std::ifstream::in);
-	}
-	else if (this->mat_data.model_type == 4)
-	{
-		// Circular triangle
-		model_file = std::ifstream("sphere_128_tri.txt", std::ifstream::in);
-	}
-
-
-	// Read the Raw Data
-	// Read the entire file into a string
-	std::string file_contents((std::istreambuf_iterator<char>(model_file)),
-		std::istreambuf_iterator<char>());
-
-	// Split the string into lines
-	std::istringstream iss(file_contents);
-	std::string line;
-	std::vector<std::string> lines;
-	while (std::getline(iss, line))
-	{
-		lines.push_back(line);
-	}
-
+	
 	//________________________________________ Create the model
 
 	//Node Point list
 	std::vector<glm::vec3> node_pts_list;
 	j = 0;
 	// Process the lines
-	while (j < lines.size())
+	while (j < data_lines.size())
 	{
-		std::istringstream iss(lines[j]);
+		std::istringstream iss(data_lines[j]);
 
 		std::string inpt_type;
 		char comma;
@@ -205,9 +121,9 @@ void geom_store::load_model(const int& model_type, std::vector<std::string> inpu
 		if (inpt_type == "*NODE")
 		{
 			// Nodes
-			while (j < lines.size())
+			while (j < data_lines.size())
 			{
-				std::istringstream nodeIss(lines[j + 1]);
+				std::istringstream nodeIss(data_lines[j + 1]);
 
 				// Vector to store the split values
 				std::vector<std::string> splitValues;
@@ -245,9 +161,9 @@ void geom_store::load_model(const int& model_type, std::vector<std::string> inpu
 		if (inpt_type == "*ELEMENT,TYPE=S3")
 		{
 			// Triangle Element
-			while (j < lines.size())
+			while (j < data_lines.size())
 			{
-				std::istringstream elementIss(lines[j + 1]);
+				std::istringstream elementIss(data_lines[j + 1]);
 
 				// Vector to store the split values
 				std::vector<std::string> splitValues;
@@ -285,9 +201,9 @@ void geom_store::load_model(const int& model_type, std::vector<std::string> inpu
 		if (inpt_type == "*ELEMENT,TYPE=S4")
 		{
 			// Quad Element
-			while (j < lines.size())
+			while (j < data_lines.size())
 			{
-				std::istringstream elementIss(lines[j + 1]);
+				std::istringstream elementIss(data_lines[j + 1]);
 
 				// Vector to store the split values
 				std::vector<std::string> splitValues;
@@ -589,7 +505,7 @@ void geom_store::paint_geometry()
 		if (md_window->execute_create_model == true)
 		{
 			// Load a model
-			load_model(md_window->option_model_type, md_window->input_data);
+			load_model(md_window->data_lines);
 
 			md_window->execute_create_model = false;
 		}
@@ -632,6 +548,37 @@ void geom_store::paint_model()
 		}
 	}
 
+	//______________________________________________
+	// Paint the model
+	if (op_window->is_show_modelelements == true)
+	{
+		// Show the model elements
+		mesh_data.paint_static_mesh();
+
+	}
+
+	// Paint the wiremesh
+	if (op_window->is_show_modeledeges == true)
+	{
+		// Show the model edges
+		mesh_data.paint_static_mesh_boundaries();
+	}
+
+	if (op_window->is_show_modelnodes == true)
+	{
+		// Show the model nodes
+		mesh_data.paint_static_mesh_points();
+	}
+
+
+
+	if (op_window->is_show_meshnormals == true)
+	{
+		// Show the mesh normals
+		mesh_data.paint_mesh_normals();
+	}
+
+
 	if (op_window->is_show_inlcondition == true)
 	{
 		// Show the node initial condition
@@ -672,38 +619,7 @@ void geom_store::paint_model()
 		paint_node_load_operation();
 	}
 
-
-	if (op_window->is_show_modelnodes == true)
-	{
-		// Show the model nodes
-		mesh_data.paint_points();
-	}
-
-	// Paint the wiremesh
-	if (op_window->is_show_modeledeges == true)
-	{
-		// Show the model edges
-		mesh_data.paint_mesh_edges();
-	}
-
-	if (op_window->is_show_meshnormals == true)
-	{
-		// Show the mesh normals
-		mesh_data.paint_mesh_normals();
-	}
-
-
-	//______________________________________________
-// Paint the model
-	if (op_window->is_show_modelelements == true)
-	{
-		// Show the model elements
-		mesh_data.paint_triangles();
-		mesh_data.paint_quadrilaterals();
-	}
-
-
-
+	
 }
 
 void geom_store::paint_model_results()
@@ -720,269 +636,270 @@ void geom_store::paint_model_results()
 
 void geom_store::paint_modal_analysis_results()
 {
-	// Paint the modal analysis results
-	// Closing sequence for the modal analysis window
-	if (modal_solver_window->execute_modal_close == true)
-	{
-		// Execute the close sequence
-		if (modal_solver.is_modal_analysis_complete == true)
-		{
-			// Pulse response analysis is complete
-			update_model_transperency(false);
-		}
+	//// Paint the modal analysis results
+	//// Closing sequence for the modal analysis window
+	//if (modal_solver_window->execute_modal_close == true)
+	//{
+	//	// Execute the close sequence
+	//	if (modal_solver.is_modal_analysis_complete == true)
+	//	{
+	//		// Pulse response analysis is complete
+	//		update_model_transperency(false);
+	//	}
 
-		modal_solver_window->execute_modal_close = false;
-	}
+	//	modal_solver_window->execute_modal_close = false;
+	//}
 
-	// Check whether the modal analysis solver window is open or not
-	if (modal_solver_window->is_show_window == false)
-	{
-		return;
-	}
+	//// Check whether the modal analysis solver window is open or not
+	//if (modal_solver_window->is_show_window == false)
+	//{
+	//	return;
+	//}
 
-	// Paint the modal analysis results
-	if (modal_solver.is_modal_analysis_complete == true)
-	{
-		// Change the buffer depending on the selected mode
-		if (modal_solver_window->is_mode_selection_changed == true)
-		{
-			// Update the Drawing objects buffers (Depends on the selected)
-			mesh_modal_rslt_data.update_buffer(modal_solver_window->selected_modal_option);
+	//// Paint the modal analysis results
+	//if (modal_solver.is_modal_analysis_complete == true)
+	//{
+	//	// Change the buffer depending on the selected mode
+	//	if (modal_solver_window->is_mode_selection_changed == true)
+	//	{
+	//		// Update the Drawing objects buffers (Depends on the selected)
+	//		mesh_modal_rslt_data.update_buffer(modal_solver_window->selected_modal_option);
 
-			modal_solver_window->is_mode_selection_changed = false;
-		}
+	//		modal_solver_window->is_mode_selection_changed = false;
+	//	}
 
-		// Update the deflection scale
-		geom_param.normalized_defl_scale = std::abs(modal_solver_window->normailzed_defomation_scale);
-		geom_param.defl_scale = modal_solver_window->deformation_scale;
+	//	// Update the deflection scale
+	//	geom_param.normalized_defl_scale = std::abs(modal_solver_window->normailzed_defomation_scale);
+	//	geom_param.defl_scale = modal_solver_window->deformation_scale;
 
-		// Update the deflection scale
-		mesh_modal_rslt_data.update_opengl_uniforms(false, false, false, false, false, true);
+	//	// Update the deflection scale
+	//	mesh_modal_rslt_data.update_opengl_uniforms(false, false, false, false, false, true);
 
-		// ______________________________________________________________________________________
+	//	// ______________________________________________________________________________________
 
-		if (modal_solver_window->show_result_quads == true)
-		{
-			// Paint the modal tris/ quads 
-			mesh_modal_rslt_data.paint_triangles();
-			mesh_modal_rslt_data.paint_quadrilaterals();
-		}
+	//	if (modal_solver_window->show_result_quads == true)
+	//	{
+	//		// Paint the modal tris/ quads 
+	//		mesh_modal_rslt_data.paint_triangles();
+	//		mesh_modal_rslt_data.paint_quadrilaterals();
+	//	}
 
-		if (modal_solver_window->show_result_lines == true)
-		{
-			// Paint the modal lines (mesh boundaries)
-			mesh_modal_rslt_data.paint_mesh_edges();
+	//	if (modal_solver_window->show_result_lines == true)
+	//	{
+	//		// Paint the modal lines (mesh boundaries)
+	//		mesh_modal_rslt_data.paint_mesh_edges();
 
-		}
+	//	}
 
-		if (modal_solver_window->show_result_nodes == true)
-		{
-			// Paint the modal nodes
-			// mesh_modal_rslt_data.paint_points();
-		}
-	}
+	//	if (modal_solver_window->show_result_nodes == true)
+	//	{
+	//		// Paint the modal nodes
+	//		// mesh_modal_rslt_data.paint_points();
+	//	}
+	//}
 
-	// Open sequence for the modal analysis window
-	if (modal_solver_window->execute_modal_open == true)
-	{
-		// Execute the open sequence
-		if (modal_solver.is_modal_analysis_complete == true)
-		{
-			// update the modal window list box
-			modal_solver_window->mode_result_str = modal_solver.mode_result_str;
+	//// Open sequence for the modal analysis window
+	//if (modal_solver_window->execute_modal_open == true)
+	//{
+	//	// Execute the open sequence
+	//	if (modal_solver.is_modal_analysis_complete == true)
+	//	{
+	//		// update the modal window list box
+	//		modal_solver_window->mode_result_str = modal_solver.mode_result_str;
 
-			// Set the buffer
-			modal_solver_window->is_mode_selection_changed = true;
+	//		// Set the buffer
+	//		modal_solver_window->is_mode_selection_changed = true;
 
-			// Modal analysis is already complete so set the transparency for the model
-			update_model_transperency(true);
-		}
-		modal_solver_window->execute_modal_open = false;
-	}
+	//		// Modal analysis is already complete so set the transparency for the model
+	//		update_model_transperency(true);
+	//	}
+	//	modal_solver_window->execute_modal_open = false;
+	//}
 
-	// Modal Analysis 
-	if (modal_solver_window->execute_modal_analysis == true)
-	{
-		// reset the result mesh data
-		mesh_modal_rslt_data.clear_mesh();
-		mesh_pulse_rslt_data.clear_mesh();
+	//// Modal Analysis 
+	//if (modal_solver_window->execute_modal_analysis == true)
+	//{
+	//	// reset the result mesh data
+	//	mesh_modal_rslt_data.clear_mesh();
+	//	mesh_pulse_rslt_data.clear_mesh();
 
-		// reset the frequency response and pulse response solution
-		pulse_solver.clear_results();
+	//	// reset the frequency response and pulse response solution
+	//	pulse_solver.clear_results();
 
-		// Execute the Modal Analysis
-		modal_solver.modal_analysis_start(model_nodes,
-			model_trielements,
-			model_quadelements,
-			mat_data,
-			modal_result_nodes,
-			modal_result_trielements,
-			modal_result_quadelements);
-
-
-		// Check whether the modal analysis is complete or not
-		if (modal_solver.is_modal_analysis_complete == true)
-		{
-			// update the modal window list box
-			modal_solver_window->mode_result_str = modal_solver.mode_result_str;
-
-			mesh_modal_rslt_data.set_mesh_wireframe();
-
-			// Set the buffer (nodes, mesh boundaries, tria/ quad)
-			mesh_modal_rslt_data.set_buffer(); // Set the node buffer
-
-			std::cout << "Modal Analysis Complete" << std::endl;
-
-			modal_solver_window->is_mode_selection_changed = true;
-
-			// Modal analysis is already complete so set the transparency for the model
-			update_model_transperency(true);
-		}
+	//	// Execute the Modal Analysis
+	//	modal_solver.modal_analysis_start(model_nodes,
+	//		model_trielements,
+	//		model_quadelements,
+	//		mat_data,
+	//		modal_result_nodes,
+	//		modal_result_trielements,
+	//		modal_result_quadelements);
 
 
-		modal_solver_window->execute_modal_analysis = false;
-	}
+	//	// Check whether the modal analysis is complete or not
+	//	if (modal_solver.is_modal_analysis_complete == true)
+	//	{
+	//		// update the modal window list box
+	//		modal_solver_window->mode_result_str = modal_solver.mode_result_str;
+
+	//		mesh_modal_rslt_data.set_mesh_wireframe();
+
+	//		// Set the buffer (nodes, mesh boundaries, tria/ quad)
+	//		mesh_modal_rslt_data.set_buffer(); // Set the node buffer
+
+	//		std::cout << "Modal Analysis Complete" << std::endl;
+
+	//		modal_solver_window->is_mode_selection_changed = true;
+
+	//		// Modal analysis is already complete so set the transparency for the model
+	//		update_model_transperency(true);
+	//	}
+
+
+	//	modal_solver_window->execute_modal_analysis = false;
+	//}
 
 }
 
 
 void geom_store::paint_pulse_analysis_results()
 {
-	// Paint the pulse analysis results
-	// Check closing sequence for Pulse response analysis window
-	if (pulse_solver_window->execute_pulse_close == true)
-	{
-		// Execute the close sequence
-		if (pulse_solver.is_pulse_analysis_complete == true)
-		{
-			// Pulse response analysis is complete
-			update_model_transperency(false);
-		}
+	//// Paint the pulse analysis results
+	//// Check closing sequence for Pulse response analysis window
+	//if (pulse_solver_window->execute_pulse_close == true)
+	//{
+	//	// Execute the close sequence
+	//	if (pulse_solver.is_pulse_analysis_complete == true)
+	//	{
+	//		// Pulse response analysis is complete
+	//		update_model_transperency(false);
+	//	}
 
-		pulse_solver_window->execute_pulse_close = false;
-	}
+	//	pulse_solver_window->execute_pulse_close = false;
+	//}
 
-	// Check whether the modal analysis solver window is open or not
-	if (pulse_solver_window->is_show_window == false)
-	{
-		return;
-	}
-
-
-	// Paint the pulse analysis result
-	if (pulse_solver.is_pulse_analysis_complete == true)
-	{
-		// Update the buffer of the selected
-		mesh_pulse_rslt_data.update_buffer(pulse_solver_window->time_step);
-
-		// Update the deflection scale
-		geom_param.normalized_defl_scale = 1.0f;
-		geom_param.defl_scale = pulse_solver_window->deformation_scale_max;
-
-		// Update the deflection scale
-		mesh_pulse_rslt_data.update_opengl_uniforms(false, false, false, false, false, true);
-
-		// ______________________________________________________________________________________
-
-		if (pulse_solver_window->show_result_quads == true)
-		{
-			// Paint the pulse quads 
-			mesh_pulse_rslt_data.paint_triangles();
-			mesh_pulse_rslt_data.paint_quadrilaterals();
-
-		}
+	//// Check whether the modal analysis solver window is open or not
+	//if (pulse_solver_window->is_show_window == false)
+	//{
+	//	return;
+	//}
 
 
-		if (pulse_solver_window->show_result_lines == true)
-		{
-			// Paint the pulse lines (mesh boundaries)
-			mesh_pulse_rslt_data.paint_mesh_edges();
+	//// Paint the pulse analysis result
+	//if (pulse_solver.is_pulse_analysis_complete == true)
+	//{
+	//	// Update the buffer of the selected
+	//	mesh_pulse_rslt_data.update_buffer(pulse_solver_window->time_step);
 
-		}
+	//	// Update the deflection scale
+	//	geom_param.normalized_defl_scale = 1.0f;
+	//	geom_param.defl_scale = pulse_solver_window->deformation_scale_max;
 
-		if (pulse_solver_window->show_result_nodes == true)
-		{
-			// Paint the pulse nodes
-			mesh_pulse_rslt_data.paint_points();
+	//	// Update the deflection scale
+	//	mesh_pulse_rslt_data.update_opengl_uniforms(false, false, false, false, false, true);
 
-		}
+	//	// ______________________________________________________________________________________
 
-	}
+	//	if (pulse_solver_window->show_result_quads == true)
+	//	{
+	//		// Paint the pulse quads 
+	//		mesh_pulse_rslt_data.paint_triangles();
+	//		mesh_pulse_rslt_data.paint_quadrilaterals();
+
+	//	}
 
 
-	if (pulse_solver_window->execute_pulse_open == true)
-	{
-		// Execute the open sequence
-		if (modal_solver.is_modal_analysis_complete == false)
-		{
-			// Exit the window (when modal analysis is not complete)
-			pulse_solver_window->is_show_window = false;
-		}
-		else
-		{
-			// Modal analysis Results
-			// pulse_solver_window->number_of_modes = static_cast<int>(modal_solver.m_eigenvalues.size());
-			pulse_solver_window->modal_first_frequency = modal_solver.angular_freq_vector.coeff(0) / (2.0 * m_pi);
-			pulse_solver_window->modal_end_frequency = modal_solver.angular_freq_vector.coeff(modal_solver.matrix_size - 1) / (2.0 * m_pi);
-			pulse_solver_window->mode_result_str = modal_solver.mode_result_str;
+	//	if (pulse_solver_window->show_result_lines == true)
+	//	{
+	//		// Paint the pulse lines (mesh boundaries)
+	//		mesh_pulse_rslt_data.paint_mesh_edges();
 
-			// Modal analysis is complete (check whether frequency response analysis is complete or not)
-			if (pulse_solver.is_pulse_analysis_complete == true)
-			{
-				// Set the pulse response analysis result
-				pulse_solver_window->time_interval_atrun = pulse_solver.time_interval;
-				pulse_solver_window->time_step_count = pulse_solver.time_step_count;
+	//	}
 
-				// Pulse response analysis is complete
-				update_model_transperency(true);
-			}
+	//	if (pulse_solver_window->show_result_nodes == true)
+	//	{
+	//		// Paint the pulse nodes
+	//		mesh_pulse_rslt_data.paint_points();
 
-		}
-		pulse_solver_window->execute_pulse_open = false;
-	}
+	//	}
 
-	if (pulse_solver_window->execute_pulse_analysis == true)
-	{
-		mesh_pulse_rslt_data.clear_mesh();
+	//}
 
-		// Execute the Pulse response Analysis
-		pulse_solver.pulse_analysis_start(model_nodes,
-			model_trielements,
-			model_quadelements,
-			node_loads,
-			node_inldispl,
-			node_inlvelo,
-			mat_data,
-			modal_solver,
-			pulse_solver_window->total_simulation_time,
-			pulse_solver_window->time_interval,
-			pulse_solver_window->damping_ratio,
-			pulse_solver_window->selected_pulse_option,
-			pulse_result_nodes,
-			pulse_result_trielements,
-			pulse_result_quadelements);
 
-		// Check whether the modal analysis is complete or not
-		if (pulse_solver.is_pulse_analysis_complete == true)
-		{
-			// Set the pulse response analysis result
-			pulse_solver_window->time_interval_atrun = pulse_solver.time_interval;
-			pulse_solver_window->time_step_count = pulse_solver.time_step_count;
+	//if (pulse_solver_window->execute_pulse_open == true)
+	//{
+	//	// Execute the open sequence
+	//	if (modal_solver.is_modal_analysis_complete == false)
+	//	{
+	//		// Exit the window (when modal analysis is not complete)
+	//		pulse_solver_window->is_show_window = false;
+	//	}
+	//	else
+	//	{
+	//		// Modal analysis Results
+	//		// pulse_solver_window->number_of_modes = static_cast<int>(modal_solver.m_eigenvalues.size());
+	//		pulse_solver_window->modal_first_frequency = modal_solver.angular_freq_vector.coeff(0) / (2.0 * m_pi);
+	//		pulse_solver_window->modal_end_frequency = modal_solver.angular_freq_vector.coeff(modal_solver.matrix_size - 1) / (2.0 * m_pi);
+	//		pulse_solver_window->mode_result_str = modal_solver.mode_result_str;
 
-			mesh_pulse_rslt_data.set_mesh_wireframe();
+	//		// Modal analysis is complete (check whether frequency response analysis is complete or not)
+	//		if (pulse_solver.is_pulse_analysis_complete == true)
+	//		{
+	//			// Set the pulse response analysis result
+	//			pulse_solver_window->time_interval_atrun = pulse_solver.time_interval;
+	//			pulse_solver_window->time_step_count = pulse_solver.time_step_count;
 
-			// Reset the buffers for pulse result nodes, lines and quads/ tris
-			mesh_pulse_rslt_data.set_buffer();
+	//			// Pulse response analysis is complete
+	//			update_model_transperency(true);
+	//		}
 
-			std::cout << "Pulse analysis complete " << std::endl;
+	//	}
+	//	pulse_solver_window->execute_pulse_open = false;
+	//}
 
-			// Pulse response analysis is complete
-			update_model_transperency(true);
-		}
-		pulse_solver_window->execute_pulse_analysis = false;
-	}
+	//if (pulse_solver_window->execute_pulse_analysis == true)
+	//{
+	//	mesh_pulse_rslt_data.clear_mesh();
+
+	//	// Execute the Pulse response Analysis
+	//	pulse_solver.pulse_analysis_start(model_nodes,
+	//		model_trielements,
+	//		model_quadelements,
+	//		node_loads,
+	//		node_inldispl,
+	//		node_inlvelo,
+	//		mat_data,
+	//		modal_solver,
+	//		pulse_solver_window->total_simulation_time,
+	//		pulse_solver_window->time_interval,
+	//		pulse_solver_window->damping_ratio,
+	//		pulse_solver_window->selected_pulse_option,
+	//		pulse_result_nodes,
+	//		pulse_result_trielements,
+	//		pulse_result_quadelements);
+
+	//	// Check whether the modal analysis is complete or not
+	//	if (pulse_solver.is_pulse_analysis_complete == true)
+	//	{
+	//		// Set the pulse response analysis result
+	//		pulse_solver_window->time_interval_atrun = pulse_solver.time_interval;
+	//		pulse_solver_window->time_step_count = pulse_solver.time_step_count;
+
+	//		mesh_pulse_rslt_data.set_mesh_wireframe();
+
+	//		// Reset the buffers for pulse result nodes, lines and quads/ tris
+	//		mesh_pulse_rslt_data.set_buffer();
+
+	//		std::cout << "Pulse analysis complete " << std::endl;
+
+	//		// Pulse response analysis is complete
+	//		update_model_transperency(true);
+	//	}
+	//	pulse_solver_window->execute_pulse_analysis = false;
+	//}
 
 }
+
 
 void  geom_store::paint_node_load_operation()
 {
@@ -1018,7 +935,7 @@ void  geom_store::paint_node_load_operation()
 		for (int& id : nd_load_window->selected_nodes)
 		{
 			// Add to the load location
-			load_locs.push_back(model_nodes.nodeMap[id].node_pt());
+			load_locs.push_back(model_nodes.nodeMap[id].node_pt);
 
 		}
 
@@ -1099,9 +1016,9 @@ void geom_store::paint_node_inlcond_operation()
 					continue;
 				}
 
-				glm::vec3 node_pt = glm::vec3(model_nodes.nodeMap[id].x_coord,
-					model_nodes.nodeMap[id].y_coord,
-					model_nodes.nodeMap[id].z_coord);
+				glm::vec3 node_pt = glm::vec3(model_nodes.nodeMap[id].node_pt.x,
+					model_nodes.nodeMap[id].node_pt.y,
+					model_nodes.nodeMap[id].node_pt.z);
 
 				node_inldispl.add_inlcondition(id, node_pt, initial_displacement_z);
 
@@ -1116,9 +1033,9 @@ void geom_store::paint_node_inlcond_operation()
 					continue;
 				}
 
-				glm::vec3 node_pt = glm::vec3(model_nodes.nodeMap[id].x_coord,
-					model_nodes.nodeMap[id].y_coord,
-					model_nodes.nodeMap[id].z_coord);
+				glm::vec3 node_pt = glm::vec3(model_nodes.nodeMap[id].node_pt.x,
+					model_nodes.nodeMap[id].node_pt.y,
+					model_nodes.nodeMap[id].node_pt.z);
 
 				node_inlvelo.add_inlcondition(id, node_pt, initial_velocity_z);
 

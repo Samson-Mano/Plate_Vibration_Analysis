@@ -33,7 +33,7 @@ void app_window::init()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
 	// Create a window
-	window = glfwCreateWindow(window_width, window_height, "2D Membrane Vibration", nullptr, nullptr);
+	window = glfwCreateWindow(window_width, window_height, "Plate Vibration Analysis", nullptr, nullptr);
 
 	if (!window)
 	{

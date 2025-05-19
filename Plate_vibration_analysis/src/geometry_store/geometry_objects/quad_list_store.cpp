@@ -18,8 +18,8 @@ void quad_list_store::init(geom_parameters* geom_param_ptr)
 	// Create the quadrilateral shader
 	std::filesystem::path shadersPath = geom_param_ptr->resourcePath;
 
-	quad_shader.create_shader((shadersPath.string() + "/resources/shaders/default_vert_shader.vert").c_str(),
-		(shadersPath.string() + "/resources/shaders/default_frag_shader.frag").c_str());
+	quad_shader.create_shader((shadersPath.string() + "/resources/shaders/mesh_vert_shader.vert").c_str(),
+		(shadersPath.string() + "/resources/shaders/mesh_frag_shader.frag").c_str());
 
 	quad_shader.setUniform("vertexColor", geom_param_ptr->geom_colors.triangle_color);
 
@@ -151,9 +151,10 @@ void quad_list_store::set_buffer()
 
 	VertexBufferLayout quad_pt_layout;
 	quad_pt_layout.AddFloat(3);  // Node center
+	quad_pt_layout.AddFloat(3);  // Node normal
 
-	// Define the tri vertices of the model for a node 6 * (3 position) 
-	const unsigned int quad_vertex_count = 6 * 3 * quad_count;
+	// Define the tri vertices of the model for a node 6 * (3 position & 3 normal)  
+	const unsigned int quad_vertex_count = 6 * 6 * quad_count;
 	unsigned int quad_vertex_size = quad_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the quadrilateral buffers
@@ -206,8 +207,8 @@ void quad_list_store::paint_dynamic_quadrilaterals()
 void quad_list_store::update_buffer()
 {
 
-	// Define the tri vertices of the model for a point 6 * (3 position) 
-	const unsigned int quad_vertex_count = 6 * 3 * quad_count;
+	// Define the tri vertices of the model for a point 6 * (3 position & 3 normal)   
+	const unsigned int quad_vertex_count = 6 * 6 * quad_count;
 	float* quad_vertices = new float[quad_vertex_count];
 
 	unsigned int quad_v_index = 0;

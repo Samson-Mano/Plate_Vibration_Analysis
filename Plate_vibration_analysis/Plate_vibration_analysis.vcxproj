@@ -202,6 +202,10 @@
     <None Include="resources\shaders\default_vert_shader.vert" />
     <None Include="resources\shaders\dynfrag_shader.frag" />
     <None Include="resources\shaders\dynvert_shader.vert" />
+    <None Include="resources\shaders\load_frag_shader.frag" />
+    <None Include="resources\shaders\load_vert_shader.vert" />
+    <None Include="resources\shaders\mesh_frag_shader.frag" />
+    <None Include="resources\shaders\mesh_vert_shader.vert" />
     <None Include="resources\shaders\selrect_frag_shader.frag" />
     <None Include="resources\shaders\selrect_vert_shader.vert" />
     <None Include="resources\shaders\texture_frag_shader.frag" />
@@ -216,6 +220,7 @@
     <Font Include="resources\fonts\HyperFont.ttf" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="resources\images\innx_icon.png" />
     <Image Include="resources\images\logo_ico_png.png" />
   </ItemGroup>
   <ItemGroup>
@@ -273,6 +278,14 @@
     <ClInclude Include="src\tool_window\node_load_window.h" />
     <ClInclude Include="src\tool_window\options_window.h" />
     <ClInclude Include="src\tool_window\pulse_analysis_window.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="example_model\circle_mesh.txt" />
+    <Text Include="example_model\circle_mesh_1.txt" />
+    <Text Include="example_model\circle_mesh_tri.txt" />
+    <Text Include="example_model\rect1_mesh.txt" />
+    <Text Include="example_model\rect2_mesh.txt" />
+    <Text Include="example_model\rect3_mesh.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

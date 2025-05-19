@@ -29,8 +29,8 @@ void obj_mesh_data::init(geom_parameters* geom_param_ptr)
 
 	// Nodes
 	this->mesh_points.init(geom_param_ptr);
-	this->selected_node_points.init(geom_param_ptr);
-	this->selected_node_points.set_point_color(geom_param_ptr->geom_colors.selection_color);
+	this->selected_mesh_points.init(geom_param_ptr);
+	this->selected_mesh_points.set_point_color(geom_param_ptr->geom_colors.selection_color);
 
 	// Mesh boundaries & mesh normals
 	this->mesh_boundaries.init(geom_param_ptr);
@@ -52,7 +52,7 @@ void obj_mesh_data::add_mesh_point(const int& point_id, const double& x_coord, c
 void obj_mesh_data::add_selected_points(const std::vector<int>& selected_points)
 {
 	// Add the selected points
-	selected_node_points.clear_points();
+	selected_mesh_points.clear_points();
 
 	// Selected points id
 	int id = 0;
@@ -61,11 +61,11 @@ void obj_mesh_data::add_selected_points(const std::vector<int>& selected_points)
 		// get the node point
 		point_store* pt = this->mesh_points.get_point(pt_id);
 
-		selected_node_points.add_point(id, pt->x_coord, pt->y_coord, pt->z_coord);
+		selected_mesh_points.add_point(id, pt->x_coord, pt->y_coord, pt->z_coord);
 		id++;
 	}
 
-	selected_node_points.set_buffer();
+	selected_mesh_points.set_buffer();
 
 }
 
@@ -354,8 +354,6 @@ void obj_mesh_data::set_mesh_normal(quad_store* quad)
 }
 
 
-
-
 void obj_mesh_data::update_mesh_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord)
 {
 	// Update the point with new - coordinates
@@ -363,13 +361,13 @@ void obj_mesh_data::update_mesh_point(const int& point_id, const double& x_coord
 
 }
 
-void obj_mesh_data::update_mesh_buffer()
-{
-	// Update the mesh point buffer
-	this->mesh_points.update_buffer();
-	this->mesh_boundaries.update_buffer();
-
-}
+//void obj_mesh_data::update_mesh_buffer()
+//{
+//	// Update the mesh point buffer
+//	this->mesh_points.update_buffer();
+//	this->mesh_boundaries.update_buffer();
+//
+//}
 
 void obj_mesh_data::update_mesh_color(const glm::vec3& point_color, const glm::vec3& line_color, const glm::vec3& tri_color, const double& transparency)
 {
@@ -410,7 +408,7 @@ void obj_mesh_data::clear_mesh()
 
 	// Nodes
 	mesh_points.clear_points();
-	selected_node_points.clear_points();
+	selected_mesh_points.clear_points();
 
 	// Mesh boundaries & mesh normals
 	mesh_normals.clear_lines();
@@ -422,19 +420,29 @@ void obj_mesh_data::clear_mesh()
 
 }
 
+
 void obj_mesh_data::paint_static_mesh()
 {
 	// Paint the static mesh (mesh which are fixed)
 		// Paint the mesh triangles
 	this->mesh_tris.paint_static_triangles();
 	this->mesh_quads.paint_static_quadrilaterals();
+	
+}
 
-	// Paint the mesh boundaries
+
+void obj_mesh_data::paint_static_mesh_boundaries()
+{
+// Paint the mesh boundaries
 	this->mesh_boundaries.paint_static_lines();
 
+}
+
+
+void obj_mesh_data::paint_static_mesh_points()
+{
 	// Paint the mesh points
 	this->mesh_points.paint_static_points();
-
 
 }
 
@@ -444,14 +452,39 @@ void obj_mesh_data::paint_dynamic_mesh()
 		// Paint the mesh triangles
 	this->mesh_tris.paint_dynamic_triangles();
 	this->mesh_quads.paint_dynamic_quadrilaterals();
+	
+}
 
+void obj_mesh_data::paint_dynamic_mesh_boundaries()
+{
 	// Paint the mesh lines
 	this->mesh_boundaries.paint_dynamic_lines();
 
-	// Paint the mesh points
+}
+
+void obj_mesh_data::paint_dynamic_mesh_points()
+{
+// Paint the mesh points
 	this->mesh_points.paint_dynamic_points();
 
 }
+
+void obj_mesh_data::paint_selected_points()
+{
+	// Paint the selected points
+	this->selected_mesh_points.paint_static_points();
+
+}
+
+
+void obj_mesh_data::paint_mesh_normals()
+{
+	// Paint the mesh normals
+	this->mesh_normals.paint_static_lines();
+
+}
+
+
 
 void obj_mesh_data::update_opengl_uniforms(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency)
 {
@@ -462,7 +495,7 @@ void obj_mesh_data::update_opengl_uniforms(bool set_modelmatrix, bool set_viewma
 	this->mesh_normals.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
 	this->mesh_boundaries.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
 
-	this->selected_node_points.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
+	this->selected_mesh_points.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
 	this->mesh_points.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
 
 }

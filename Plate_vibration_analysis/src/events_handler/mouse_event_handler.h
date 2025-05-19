@@ -2,7 +2,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/vec2.hpp>
-#include "../ImGui/imgui.h"
+#include "../../resources/ImGui/imgui.h"
 #include "mouse_events.h"
 #include "../geometry_store/geom_store.h"
 
