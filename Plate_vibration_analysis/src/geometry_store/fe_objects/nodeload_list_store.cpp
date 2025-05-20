@@ -38,13 +38,14 @@ void nodeload_list_store::set_zero_condition(const int& model_type)
 	this->model_type = model_type; // Model type 0 - Circular, 1,2,3 Rectangular
 }
 
-void nodeload_list_store::add_loads(std::vector<int>& node_ids, std::vector<glm::vec3>& load_locs, double& load_start_time,
+void nodeload_list_store::add_loads(std::vector<int>& node_ids, std::vector<glm::vec3>& load_locs, std::vector<glm::vec3>& load_normals, double& load_start_time,
 	double& load_end_time, double& load_value)
 {
 	load_data temp_load;
 	temp_load.load_set_id = get_unique_load_id(all_load_ids); // Load id
 	temp_load.node_ids = node_ids; // id of the line its applied to
 	temp_load.load_locs = load_locs; // Load location
+	temp_load.load_normals = load_normals;
 	temp_load.load_start_time = load_start_time; // Load start time
 	temp_load.load_end_time = load_end_time; // Load end time
 	temp_load.load_value = load_value; // Load value
@@ -251,12 +252,15 @@ void nodeload_list_store::get_load_buffer(load_data& ld, float* load_vertices, u
 	int load_sign = ld.load_value > 0 ? 1 : -1;
 	double load_val = ld.load_value;
 
+	int i = 0;
+
 	for (auto& ld_loc : ld.load_locs)
 	{
 		glm::vec3 load_loc = ld_loc;
 
 		// Rotate the corner points
-		glm::vec3 normalized_load_loc = glm::normalize(load_loc); // Normalize the load location
+		glm::vec3 normalized_load_loc = ld.load_normals[i]; // Normalize the load location
+		i++;
 
 		glm::vec3 load_arrow_startpt = normalized_load_loc *
 			static_cast<float>(0.0f * load_sign * (geom_param_ptr->node_circle_radii / geom_param_ptr->geom_scale)); // 0

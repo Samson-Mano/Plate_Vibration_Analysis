@@ -7,6 +7,7 @@ struct load_data
 	int load_set_id = 0; // Load id
 	std::vector<int> node_ids; // ids of the node its applied to
 	std::vector<glm::vec3> load_locs; // Load location
+	std::vector<glm::vec3> load_normals; // Load normals
 
 	double load_value = 0.0; // Load value
 	double load_start_time = 0.0; // Load start time
@@ -28,10 +29,11 @@ public:
 	~nodeload_list_store();
 	void init(geom_parameters* geom_param_ptr);
 	void set_zero_condition(const int& model_type);
-	void add_loads(std::vector<int>& node_ids, std::vector<glm::vec3>& load_locs, double& load_start_time,
+	void add_loads(std::vector<int>& node_ids, std::vector<glm::vec3>& load_locs, std::vector<glm::vec3>& load_normals, double& load_start_time,
 		double& load_end_time, double& load_value);
 	void delete_load(int& node_id);
 	void set_buffer();
+
 	void paint_loads();
 	void paint_load_labels();
 	void update_geometry_matrices(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency);

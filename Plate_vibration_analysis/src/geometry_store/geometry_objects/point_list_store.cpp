@@ -39,6 +39,7 @@ void point_list_store::add_point(const int& point_id, const double& x_coord, con
 	point_count++;
 }
 
+
 void point_list_store::update_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord)
 {
 	// Get the point associated with the point_id
@@ -227,11 +228,10 @@ void point_list_store::get_point_vertex_buffer(point_store& pt, float* point_ver
 	point_vertices[point_v_index + 2] = pt.z_coord;
 
 	// Point Normal (Normal to Geometry center)
-	glm::vec3 pt_normal = glm::normalize(pt.pt_coord());
 
-	point_vertices[point_v_index + 3] = pt_normal.x;
-	point_vertices[point_v_index + 4] = pt_normal.y;
-	point_vertices[point_v_index + 5] = pt_normal.z;
+	point_vertices[point_v_index + 3] = pt.pt_normal.x;
+	point_vertices[point_v_index + 4] = pt.pt_normal.y;
+	point_vertices[point_v_index + 5] = pt.pt_normal.z;
 
 	// Iterate
 	point_v_index = point_v_index + 6;

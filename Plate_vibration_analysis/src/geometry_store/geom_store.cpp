@@ -250,6 +250,10 @@ void geom_store::load_model(std::vector<std::string> data_lines)
 		return;
 	}
 
+
+	// Set the mesh point normal
+	this->mesh_data.set_mesh_node_normals();
+
 	// Set the mesh wire frame
 	this->mesh_data.set_mesh_wireframe();
 
@@ -931,16 +935,20 @@ void  geom_store::paint_node_load_operation()
 		double load_end_time = nd_load_window->load_end_time; // load end time
 
 		std::vector<glm::vec3> load_locs;
+		std::vector<glm::vec3> load_normals;
 
 		for (int& id : nd_load_window->selected_nodes)
 		{
 			// Add to the load location
 			load_locs.push_back(model_nodes.nodeMap[id].node_pt);
 
+			// Add to the load normal
+			load_normals.push_back(mesh_data.get_mesh_node_normals(model_nodes.nodeMap[id].node_id));
+			
 		}
 
 		// Add the loads
-		node_loads.add_loads(nd_load_window->selected_nodes, load_locs,
+		node_loads.add_loads(nd_load_window->selected_nodes, load_locs, load_normals,
 			load_start_time, load_end_time, load_amplitude);
 
 		node_loads.set_buffer();
@@ -1020,7 +1028,9 @@ void geom_store::paint_node_inlcond_operation()
 					model_nodes.nodeMap[id].node_pt.y,
 					model_nodes.nodeMap[id].node_pt.z);
 
-				node_inldispl.add_inlcondition(id, node_pt, initial_displacement_z);
+				glm::vec3 inlcond_normals = mesh_data.get_mesh_node_normals(model_nodes.nodeMap[id].node_id);
+
+				node_inldispl.add_inlcondition(id, node_pt, inlcond_normals, initial_displacement_z);
 
 			}
 			else if (nd_inlcond_window->selected_inl_option == 1)
@@ -1037,7 +1047,9 @@ void geom_store::paint_node_inlcond_operation()
 					model_nodes.nodeMap[id].node_pt.y,
 					model_nodes.nodeMap[id].node_pt.z);
 
-				node_inlvelo.add_inlcondition(id, node_pt, initial_velocity_z);
+				glm::vec3 inlcond_normals = mesh_data.get_mesh_node_normals(model_nodes.nodeMap[id].node_id);
+
+				node_inlvelo.add_inlcondition(id, node_pt, inlcond_normals, initial_velocity_z);
 
 			}
 

@@ -6,6 +6,8 @@ struct nodeinl_condition_data
 {
 	int node_id = 0;
 	glm::vec3 inlcond_loc = glm::vec3(0);
+	glm::vec3 inlcond_normals = glm::vec3(0);
+
 	double inl_amplitude_z = 0.0; // initial amplitude z
 
 };
@@ -24,7 +26,7 @@ public:
 	~nodeinlcond_list_store();
 	void init(geom_parameters* geom_param_ptr);
 	void set_zero_condition(int inlcond_type, const int& model_type);
-	void add_inlcondition(int& node_id, glm::vec3& inlcond_loc, double& inl_amplitude_z);
+	void add_inlcondition(int& node_id, glm::vec3& inlcond_loc, glm::vec3& inlcond_normals, double& inl_amplitude_z);
 	void delete_inlcondition(int& node_id);
 	void set_buffer();
 	void paint_inlcond();

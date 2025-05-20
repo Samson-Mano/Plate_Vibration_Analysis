@@ -191,6 +191,8 @@ public:
 
 	static glm::vec3 get_face_normal(const glm::vec3& pt1, const glm::vec3& pt2, const glm::vec3& pt3, const glm::vec3& pt4);
 
+	static glm::vec3 average_normal(const std::vector<glm::vec3>& connected_mesh_normals);
+
 private:
 	static double HueToRGB(double v1, double v2, double vH);
 

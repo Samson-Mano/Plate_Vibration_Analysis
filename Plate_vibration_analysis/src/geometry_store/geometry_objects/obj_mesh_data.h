@@ -37,9 +37,17 @@ public:
 		const double& y_coord, 
 		const double& z_coord);
 
+	void set_mesh_node_normals();
+
 	void set_mesh_wireframe();
 
+	glm::vec3 get_mesh_node_normals(const int& point_id);
+
+
 	// void update_mesh_buffer();
+	
+	// glm::vec3 get_element_normal(const int& id, const int& type);
+
 
 	void update_mesh_color(const glm::vec3& point_color, const glm::vec3& line_color, const glm::vec3& tri_color, const double& transparency);
 
@@ -78,8 +86,8 @@ private:
 
 	void set_mesh_edge(line_store* edge, int& line_id, std::set<std::pair<int, int>>& seenLines);
 
-	void set_mesh_normal(tri_store* tri);
+	void set_mesh_normal_vector(tri_store* tri);
 
-	void set_mesh_normal(quad_store* quad);
+	void set_mesh_normal_vector(quad_store* quad);
 
 };

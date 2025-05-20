@@ -12,6 +12,8 @@ struct point_store
 	double y_coord = 0.0; // y coordinate
 	double z_coord = 0.0; // z coordinate
 
+	glm::vec3 pt_normal = glm::vec3(0); // Point normal for visualization
+
 	glm::vec3 pt_coord() const
 	{
 		return glm::vec3(x_coord, y_coord, z_coord);

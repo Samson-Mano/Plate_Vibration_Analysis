@@ -248,7 +248,7 @@ void obj_mesh_data::set_mesh_wireframe()
 		set_mesh_edge(tri->edge3, line_id, seenLines);
 
 		// Set the mesh normal
-		set_mesh_normal(tri);
+		set_mesh_normal_vector(tri);
 	}
 
 	// Quadrilaterals
@@ -267,8 +267,62 @@ void obj_mesh_data::set_mesh_wireframe()
 		set_mesh_edge(quad->tri341->edge2, line_id, seenLines);
 
 		// Set the mesh normal
-		set_mesh_normal(quad);
+		set_mesh_normal_vector(quad);
 	}
+
+}
+
+
+void obj_mesh_data::set_mesh_node_normals()
+{
+	for (const auto& mesh_pt_id_m : mesh_points.pointId_Map)
+	{
+		// Get the normals
+		std::vector<glm::vec3> connected_mesh_normals;
+		int mesh_pt_id = mesh_pt_id_m.first;
+		int mesh_pt_index = mesh_pt_id_m.second;
+
+		// Triangle mesh
+		for (const auto& tri : this->mesh_tris.triMap)
+		{
+			// find the trianlge connected to the mesh point
+			if (tri->edge1->start_pt->point_id == mesh_pt_id || 
+				tri->edge2->start_pt->point_id == mesh_pt_id || 
+				tri->edge3->start_pt->point_id == mesh_pt_id)
+			{
+				connected_mesh_normals.push_back(tri->face_normal);
+			}
+
+		}
+
+		// Quadrilateral mesh
+		for (const auto& quad : this->mesh_quads.quadMap)
+		{
+			// find the quadrilateral connected to the mesh point
+			if (quad->tri123->edge1->start_pt->point_id == mesh_pt_id ||
+				quad->tri123->edge2->start_pt->point_id == mesh_pt_id ||
+				quad->tri341->edge1->start_pt->point_id == mesh_pt_id ||
+				quad->tri341->edge2->start_pt->point_id == mesh_pt_id )
+			{
+				connected_mesh_normals.push_back(quad->face_normal);
+			}
+
+		}
+
+		// Average and normalize all the normals
+		glm::vec3 pt_normal = geom_param_ptr->average_normal(connected_mesh_normals);
+
+		// Set the mesh normals
+		this->mesh_points.pointMap[mesh_pt_index].pt_normal = pt_normal;
+	}
+
+}
+
+
+glm::vec3 obj_mesh_data::get_mesh_node_normals(const int& point_id)
+{
+	// get the mesh normal of node point
+	return	this->mesh_points.pointMap[mesh_points.pointId_Map[point_id]].pt_normal;
 
 }
 
@@ -314,7 +368,7 @@ void obj_mesh_data::set_mesh_edge(line_store* edge, int& line_id, std::set<std::
 	}
 }
 
-void obj_mesh_data::set_mesh_normal(tri_store* tri)
+void obj_mesh_data::set_mesh_normal_vector(tri_store* tri)
 {
 	// Get the geometric center of the triangle
 	point_store* pt1 = new point_store;
@@ -334,7 +388,7 @@ void obj_mesh_data::set_mesh_normal(tri_store* tri)
 }
 
 
-void obj_mesh_data::set_mesh_normal(quad_store* quad)
+void obj_mesh_data::set_mesh_normal_vector(quad_store* quad)
 {
 	// Get the geometric center of the triangle
 	point_store* pt1 = new point_store;

@@ -480,6 +480,26 @@ glm::vec3 geom_parameters::get_face_normal(const glm::vec3& pt1, const glm::vec3
 }
 
 
+glm::vec3 geom_parameters::average_normal(const std::vector<glm::vec3>& connected_mesh_normals)
+{
+	// Average normal
+	glm::vec3 normal_sum(0.0f);
+
+	for (const auto& n : connected_mesh_normals) 
+	{
+		normal_sum += n;
+	}
+
+	if (!connected_mesh_normals.empty()) 
+	{
+		normal_sum = glm::normalize(normal_sum);  // Normalize to get unit vector
+	}
+
+	return normal_sum;
+
+}
+
+
 
 //// Stop watch
 //void Stopwatch::reset_time()

@@ -45,12 +45,13 @@ void nodeinlcond_list_store::set_zero_condition(int inlcond_type, const int& mod
 
 }
 
-void nodeinlcond_list_store::add_inlcondition(int& node_id, glm::vec3& inlcond_loc, double& inl_amplitude_z)
+void nodeinlcond_list_store::add_inlcondition(int& node_id, glm::vec3& inlcond_loc, glm::vec3& inlcond_normals, double& inl_amplitude_z)
 {
 	// Add the initial condition to the particular node
 	nodeinl_condition_data temp_inl_condition_data;
 	temp_inl_condition_data.node_id = node_id;
 	temp_inl_condition_data.inlcond_loc = inlcond_loc;
+	temp_inl_condition_data.inlcond_normals = inlcond_normals;
 	temp_inl_condition_data.inl_amplitude_z = inl_amplitude_z;
 
 	// Insert the inital condition data to unordered map
@@ -153,7 +154,7 @@ void nodeinlcond_list_store::set_buffer()
 
 		// initial condition point
 		// glm::vec3 inlcond_pt_start = glm::vec3(inlcond.inlcond_loc.x, inlcond.inlcond_loc.y, inlcond.inlcond_loc.z);
-		glm::vec3 inlcond_pt_end = glm::normalize(inlcond.inlcond_loc) * static_cast<float>(pt_amplitude);
+		glm::vec3 inlcond_pt_end = inlcond.inlcond_normals * static_cast<float>(pt_amplitude);
 
 		// Add the end point
 		inlcond_points.add_point(pt_id, inlcond.inlcond_loc.x, inlcond.inlcond_loc.y, inlcond.inlcond_loc.z);
