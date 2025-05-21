@@ -29,6 +29,7 @@ public:
 	~nodeload_list_store();
 	void init(geom_parameters* geom_param_ptr);
 	void set_zero_condition(const int& model_type);
+
 	void add_loads(std::vector<int>& node_ids, std::vector<glm::vec3>& load_locs, std::vector<glm::vec3>& load_normals, double& load_start_time,
 		double& load_end_time, double& load_value);
 	void delete_load(int& node_id);
@@ -41,13 +42,13 @@ public:
 	int get_unique_load_id(std::vector<int>& all_ids);
 private:
 	geom_parameters* geom_param_ptr = nullptr;
-	gBuffers load_buffer;
-	Shader load_shader;
+	line_list_store load_lines;
+	point_list_store load_points;
+
 	// label_list_store load_value_labels;
+
 	double load_max = 0.0;
 	std::vector<int> all_load_ids;
-
-	void get_load_buffer(load_data& ld, float* load_vertices, unsigned int& load_v_index, unsigned int* load_indices, unsigned int& load_i_index);
 
 	std::pair<glm::vec3, glm::vec3> findOrthogonalVectors(const glm::vec3& v);
 

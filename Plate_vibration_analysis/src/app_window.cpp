@@ -71,6 +71,7 @@ void app_window::init()
 	inl_window.init(); // Initial condition window
 	md_window.init(); // Model window
 	nd_load_window.init(); // Node load window
+	nd_cnst_window.init(); // Node constraint window
 	op_window.init(); // Option window
 	sol_modal_window.init(); // Modal Analysis solver window
 	sol_pulse_window.init(); // Pulse Analysis solver window
@@ -81,6 +82,7 @@ void app_window::init()
 		&sol_pulse_window,
 		&op_window,
 		&nd_load_window,
+		&nd_cnst_window,
 		&inl_window,
 		&md_window);
 
@@ -245,6 +247,11 @@ void app_window::menu_events()
 				// Nodal Loads
 				nd_load_window.is_show_window = true;
 			}
+			if (ImGui::MenuItem("Nodal Constraints"))
+			{
+				// Nodal Constraints
+				nd_cnst_window.is_show_window = true;
+			}
 
 			ImGui::EndMenu();
 		}
@@ -275,6 +282,7 @@ void app_window::menu_events()
 	md_window.render_window(); // model window
 	inl_window.render_window(); // initial condition window
 	nd_load_window.render_window(); // Nodal load window
+	nd_cnst_window.render_window(); // Nodal constraint window
 	op_window.render_window(); // Option window
 	sol_modal_window.render_window(); // Modal Analysis Solver window
 	sol_pulse_window.render_window(); // Pulse Analysis Solver window

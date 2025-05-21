@@ -14,6 +14,7 @@ void geom_store::init(modal_analysis_window* modal_solver_window,
 	pulse_analysis_window* pulse_solver_window,
 	options_window* op_window,
 	node_load_window* nd_load_window,
+	constraint_window* nd_cnst_window,
 	inlcondition_window* nd_inlcond_window,
 	new_model_window* md_window)
 {
@@ -35,6 +36,7 @@ void geom_store::init(modal_analysis_window* modal_solver_window,
 	this->md_window = md_window;
 	this->op_window = op_window; // Option window
 	this->nd_load_window = nd_load_window; // Node Load window
+	this->nd_cnst_window = nd_cnst_window; // Node constraint window
 	this->nd_inlcond_window = nd_inlcond_window; // Node initial condition window
 
 	// Add the solver window pointers
@@ -75,7 +77,8 @@ void geom_store::load_model(std::vector<std::string> data_lines)
 	this->node_loads.init(&geom_param);
 	this->node_inldispl.init(&geom_param);
 	this->node_inlvelo.init(&geom_param);
-
+	this->node_fixedcnst.init(&geom_param);
+	
 	// Re-initialize the result elements
 	this->modal_result_nodes.init(&geom_param, &this->mesh_modal_rslt_data);
 	this->modal_result_trielements.init(&geom_param, &this->mesh_modal_rslt_data);
@@ -624,6 +627,13 @@ void geom_store::paint_model()
 	}
 
 	
+	if (nd_cnst_window->is_show_window == true)
+	{
+		// Node constraint window is open
+		paint_node_constraint_operation();
+	}
+
+
 }
 
 void geom_store::paint_model_results()
@@ -1124,3 +1134,131 @@ void geom_store::paint_node_inlcond_operation()
 		nd_inlcond_window->is_selection_changed = true;
 	}
 }
+
+
+void geom_store::paint_node_constraint_operation()
+{
+	// Paint the node initial condition pre processing
+		// Selection rectangle
+	selection_rectangle.paint_selection_rectangle();
+
+	// Paint the selected nodes
+	if (nd_cnst_window->is_selected_count == true)
+	{
+		glPointSize(geom_param.selected_point_size);
+		mesh_data.paint_selected_points();
+
+		// model_nodes.paint_selected_model_nodes();
+		glPointSize(geom_param.point_size);
+	}
+
+	// Check whether the selection changed
+	if (nd_cnst_window->is_selection_changed == true)
+	{
+		mesh_data.add_selected_points(nd_cnst_window->selected_nodes);
+		nd_cnst_window->is_selection_changed = false;
+	}
+
+	// Apply the Node constraints
+	if (nd_cnst_window->apply_nodal_constraint == true)
+	{
+
+		for (int& id : nd_cnst_window->selected_nodes)
+		{
+			// Add the node constraint
+			glm::vec3 node_pt = glm::vec3(model_nodes.nodeMap[id].node_pt.x,
+				model_nodes.nodeMap[id].node_pt.y,
+				model_nodes.nodeMap[id].node_pt.z);
+
+			glm::vec3 inlcond_normals = mesh_data.get_mesh_node_normals(model_nodes.nodeMap[id].node_id);
+
+			if (nd_cnst_window->constraint_selectedOptionIndex == 0)
+			{
+				// Fixed constraint
+
+				// node_inldispl.add_inlcondition(id, node_pt, inlcond_normals, initial_displacement_z);
+
+			}
+			else if (nd_cnst_window->constraint_selectedOptionIndex == 1)
+			{
+				// Pinned constraint
+
+				// node_inlvelo.add_inlcondition(id, node_pt, inlcond_normals, initial_velocity_z);
+
+			}
+
+		}
+
+
+		if (nd_cnst_window->constraint_selectedOptionIndex == 0)
+		{
+			// Reset the buffer
+			// node_inldispl.set_buffer();
+
+		}
+		else if (nd_cnst_window->constraint_selectedOptionIndex == 1)
+		{
+			// Reset the buffer
+			// node_inlvelo.set_buffer();
+
+		}
+
+		// constraint application ends
+		nd_cnst_window->apply_nodal_constraint = false;
+
+		// Remove the selection
+		nd_cnst_window->selected_nodes.clear();
+		nd_cnst_window->is_selection_changed = true;
+	}
+
+	// Delete all the Node constraints
+	if (nd_cnst_window->delete_nodal_constraint == true)
+	{
+		for (int& id : nd_cnst_window->selected_nodes)
+		{
+			// Delete the node constraints
+
+			if (nd_cnst_window->constraint_selectedOptionIndex == 0)
+			{
+				// Fixed constraint
+				
+				node_inldispl.delete_inlcondition(id);
+
+			}
+			else if (nd_cnst_window->constraint_selectedOptionIndex == 1)
+			{
+				// Pinned constraint
+				
+				node_inlvelo.delete_inlcondition(id);
+			}
+		}
+
+
+		if (nd_cnst_window->constraint_selectedOptionIndex == 0)
+		{
+			// Reset the buffer
+			// node_inldispl.set_buffer();
+
+		}
+		else if (nd_cnst_window->constraint_selectedOptionIndex == 1)
+		{
+			// Reset the buffer
+			// node_inlvelo.set_buffer();
+
+		}
+
+
+		// Initial condition delete ends
+		nd_cnst_window->delete_nodal_constraint = false;
+
+		// Remove the selection
+		nd_cnst_window->selected_nodes.clear();
+		nd_cnst_window->is_selection_changed = true;
+
+	}
+}
+
+
+
+
+

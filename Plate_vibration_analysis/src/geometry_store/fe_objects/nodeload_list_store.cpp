@@ -17,14 +17,13 @@ void nodeload_list_store::init(geom_parameters* geom_param_ptr)
 
 	// load_value_labels.init(geom_param_ptr);
 
-	// Create the shader and Texture for the drawing the constraints
-	std::filesystem::path shadersPath = geom_param_ptr->resourcePath;
+	// Set the geometry parameter for the lines showing loads
+	load_points.init(geom_param_ptr);
+	load_lines.init(geom_param_ptr);
+	
+	load_points.set_point_color(geom_param_ptr->geom_colors.load_color);
+	load_lines.set_line_color(geom_param_ptr->geom_colors.load_color);
 
-	load_shader.create_shader((shadersPath.string() + "/resources/shaders/load_vert_shader.vert").c_str(),
-		(shadersPath.string() + "/resources/shaders/load_frag_shader.frag").c_str());
-
-	// Update the point color
-	load_shader.setUniform("ptColor", geom_param_ptr->geom_colors.load_color);
 
 	// Clear the loads
 	load_count = 0;
@@ -36,6 +35,8 @@ void nodeload_list_store::init(geom_parameters* geom_param_ptr)
 void nodeload_list_store::set_zero_condition(const int& model_type)
 {
 	this->model_type = model_type; // Model type 0 - Circular, 1,2,3 Rectangular
+
+
 }
 
 void nodeload_list_store::add_loads(std::vector<int>& node_ids, std::vector<glm::vec3>& load_locs, std::vector<glm::vec3>& load_normals, double& load_start_time,
@@ -104,8 +105,8 @@ void nodeload_list_store::delete_load(int& node_id)
 		}
 	}
 
-
 }
+
 
 void nodeload_list_store::set_buffer()
 {
@@ -156,46 +157,125 @@ void nodeload_list_store::set_buffer()
 		total_load_count = total_load_count + static_cast<int>(ld.node_ids.size());
 	}
 
-	//__________________________________________________________________________
-	unsigned int load_vertex_count = 5 * 9 * total_load_count;
-	float* load_vertices = new float[load_vertex_count];
 
-	unsigned int load_indices_count = 14 * total_load_count;
-	unsigned int* load_indices = new unsigned int[load_indices_count];
+	load_points.clear_points();
+	load_lines.clear_lines();
 
-	unsigned int load_v_index = 0;
-	unsigned int load_i_index = 0;
+
+	//_________________________________________________________
+	// Create the points
+	int pt_id = 0;
+	int ln_id = 0;
 
 	for (auto& ld : loadMap)
 	{
-		// Add the load buffer
-		get_load_buffer(ld, load_vertices, load_v_index, load_indices, load_i_index);
+		int load_sign = ld.load_value > 0 ? 1 : -1;
+		double load_val = ld.load_value;
+
+		int i = 0;
+
+		for (auto& ld_loc : ld.load_locs)
+		{
+			glm::vec3 load_loc = ld_loc;
+
+			// Rotate the corner points
+			glm::vec3 normalized_load_loc = ld.load_normals[i]; // Normalize the load location
+			i++;
+
+			glm::vec3 load_arrow_startpt = load_loc + normalized_load_loc *
+				static_cast<float>(0.0f * load_sign * (geom_param_ptr->node_circle_radii / geom_param_ptr->geom_scale)); // 0
+			glm::vec3 load_arrow_endpt = load_loc + normalized_load_loc *
+				static_cast<float>(20.0f * (load_val / load_max) * (geom_param_ptr->node_circle_radii / geom_param_ptr->geom_scale)); // 1
+
+			//___________________________
+			std::pair<glm::vec3, glm::vec3> uv_orthogonal = findOrthogonalVectors(normalized_load_loc);
+
+			// Define the neck location of the arrow head
+			glm::vec3 load_arrow_neck = load_loc + normalized_load_loc *
+				static_cast<float>(5.0f * load_sign * (geom_param_ptr->node_circle_radii / geom_param_ptr->geom_scale)); // 0
+
+			// Define offset distances for arrow head points
+			float arrow_head_offset = 2.0f * (geom_param_ptr->node_circle_radii / static_cast<float>(geom_param_ptr->geom_scale));
+
+
+			// Calculate arrow head points
+			glm::vec3 load_arrow_pt1 = load_arrow_neck + glm::normalize(uv_orthogonal.first) * arrow_head_offset;
+
+			glm::vec3 load_arrow_pt2 = load_arrow_neck + glm::normalize(rotateVector(uv_orthogonal.first, normalized_load_loc, 120.0f)) * arrow_head_offset;
+
+			glm::vec3 load_arrow_pt3 = load_arrow_neck + glm::normalize(rotateVector(uv_orthogonal.first, normalized_load_loc, 240.0f)) * arrow_head_offset;
+
+			// Add the load start point
+			load_points.add_point(pt_id, load_arrow_startpt.x, load_arrow_startpt.y, load_arrow_startpt.z);
+			pt_id++;
+
+			// Add the load end point
+			load_points.add_point(pt_id, load_arrow_endpt.x, load_arrow_endpt.y, load_arrow_endpt.z);
+			pt_id++;
+
+			// Add the arrow head pt1, pt2 and pt3
+			load_points.add_point(pt_id, load_arrow_pt1.x, load_arrow_pt1.y, load_arrow_pt1.z);
+			pt_id++;
+
+			load_points.add_point(pt_id, load_arrow_pt2.x, load_arrow_pt2.y, load_arrow_pt2.z);
+			pt_id++;
+
+			load_points.add_point(pt_id, load_arrow_pt3.x, load_arrow_pt3.y, load_arrow_pt3.z);
+			pt_id++;
+
+
+			// Add the load lines
+
+			point_store* ld_start_pt = load_points.get_point(pt_id - 5);
+			point_store* ld_end_pt = load_points.get_point(pt_id - 4);
+			point_store* ld_arrow_pt1 = load_points.get_point(pt_id - 3);
+			point_store* ld_arrow_pt2 = load_points.get_point(pt_id - 2);
+			point_store* ld_arrow_pt3 = load_points.get_point(pt_id - 1);
+
+			glm::vec3 normal = glm::normalize(ld_end_pt->pt_coord() - ld_start_pt->pt_coord());
+
+			// Load main line
+			load_lines.add_line(ln_id, ld_start_pt, ld_end_pt, normal);
+			ln_id++;
+
+			// Load arrow head line 1
+			load_lines.add_line(ln_id, ld_start_pt, ld_arrow_pt1, normal);
+			ln_id++;
+
+			// Load arrow head line 2
+			load_lines.add_line(ln_id, ld_start_pt, ld_arrow_pt2, normal);
+			ln_id++;
+
+			// Load arrow head line 3
+			load_lines.add_line(ln_id, ld_start_pt, ld_arrow_pt3, normal);
+			ln_id++;
+
+			// Load arrow top triangle 1
+			load_lines.add_line(ln_id, ld_arrow_pt1, ld_arrow_pt2, normal);
+			ln_id++;
+
+			// Load arrow top trianlge 2
+			load_lines.add_line(ln_id, ld_arrow_pt2, ld_arrow_pt3, normal);
+			ln_id++;
+
+			// Load arrow top triangle 3
+			load_lines.add_line(ln_id, ld_arrow_pt3, ld_arrow_pt1, normal);
+			ln_id++;
+
+		}
+
 	}
+		
+	load_points.set_buffer();
+	load_lines.set_buffer();
 
-	VertexBufferLayout load_layout;
-	load_layout.AddFloat(3);  // Position
-	load_layout.AddFloat(3);  // Center
-	load_layout.AddFloat(3);  // Normal
-
-	unsigned int load_vertex_size = load_vertex_count * sizeof(float);
-
-	// Create the Constraint buffers
-	load_buffer.CreateBuffers(load_vertices, load_vertex_size,
-		load_indices, load_indices_count, load_layout);
-
-	// Delete the Dynamic arrays
-	delete[] load_vertices;
-	delete[] load_indices;
 }
 
 void nodeload_list_store::paint_loads()
 {
-	// Paint the loads
-	load_shader.Bind();
-	load_buffer.Bind();
-	glDrawElements(GL_LINES, 14 * total_load_count, GL_UNSIGNED_INT, 0);
-	load_buffer.UnBind();
-	load_shader.UnBind();
+	// Paint the load visualization
+	load_lines.paint_static_lines();
+
 }
 
 void nodeload_list_store::paint_load_labels()
@@ -206,214 +286,12 @@ void nodeload_list_store::paint_load_labels()
 
 void nodeload_list_store::update_geometry_matrices(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency)
 {
-	// Update the load value label uniforms
-	// load_value_labels.update_opengl_uniforms(set_modelmatrix, set_pantranslation, set_rotatetranslation, set_zoomtranslation, set_transparency, set_deflscale);
 
-	if (set_modelmatrix == true)
-	{
-		// set the model matrix
-		load_shader.setUniform("geom_scale", static_cast<float>(geom_param_ptr->geom_scale));
-		load_shader.setUniform("transparency", 1.0f);
-
-
-		// load_shader.setUniform("projectionMatrix", geom_param_ptr->projectionMatrix, false);
-		// load_shader.setUniform("viewMatrix", geom_param_ptr->viewMatrix, false);
-		load_shader.setUniform("modelMatrix", geom_param_ptr->modelMatrix, false);
-	}
-
-	if (set_viewmatrix == true)
-	{
-		// set the pan translation
-		load_shader.setUniform("panTranslation", geom_param_ptr->panTranslation, false);
-	}
-
-	if (set_viewmatrix == true)
-	{
-		// set the rotate translation
-		load_shader.setUniform("rotateTranslation", geom_param_ptr->rotateTranslation, false);
-	}
-
-	if (set_viewmatrix == true)
-	{
-		// set the zoom translation
-		load_shader.setUniform("zoomscale", static_cast<float>(geom_param_ptr->zoom_scale));
-	}
-
-	if (set_transparency == true)
-	{
-		// set the alpha transparency
-		load_shader.setUniform("transparency", static_cast<float>(geom_param_ptr->geom_transparency));
-	}
+	load_points.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
+	load_lines.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
 
 }
 
-void nodeload_list_store::get_load_buffer(load_data& ld, float* load_vertices, unsigned int& load_v_index, unsigned int* load_indices, unsigned int& load_i_index)
-{
-	int load_sign = ld.load_value > 0 ? 1 : -1;
-	double load_val = ld.load_value;
-
-	int i = 0;
-
-	for (auto& ld_loc : ld.load_locs)
-	{
-		glm::vec3 load_loc = ld_loc;
-
-		// Rotate the corner points
-		glm::vec3 normalized_load_loc = ld.load_normals[i]; // Normalize the load location
-		i++;
-
-		glm::vec3 load_arrow_startpt = normalized_load_loc *
-			static_cast<float>(0.0f * load_sign * (geom_param_ptr->node_circle_radii / geom_param_ptr->geom_scale)); // 0
-		glm::vec3 load_arrow_endpt = normalized_load_loc *
-			static_cast<float>(20.0f * (load_val / load_max) * (geom_param_ptr->node_circle_radii / geom_param_ptr->geom_scale)); // 1
-
-		//___________________________
-		std::pair<glm::vec3, glm::vec3> uv_orthogonal = findOrthogonalVectors(normalized_load_loc);
-
-		// Define the neck location of the arrow head
-		glm::vec3 load_arrow_neck = normalized_load_loc *
-			static_cast<float>(5.0f * load_sign * (geom_param_ptr->node_circle_radii / geom_param_ptr->geom_scale)); // 0
-
-		// Define offset distances for arrow head points
-		float arrow_head_offset = 2.0f * (geom_param_ptr->node_circle_radii / static_cast<float>(geom_param_ptr->geom_scale));
-
-
-		// Calculate arrow head points
-		glm::vec3 load_arrow_pt1 = load_arrow_neck + glm::normalize(uv_orthogonal.first) * arrow_head_offset;
-
-		glm::vec3 load_arrow_pt2 = load_arrow_neck + glm::normalize(rotateVector(uv_orthogonal.first, normalized_load_loc, 120.0f)) * arrow_head_offset;
-
-		glm::vec3 load_arrow_pt3 = load_arrow_neck + glm::normalize(rotateVector(uv_orthogonal.first, normalized_load_loc, 240.0f)) * arrow_head_offset;
-
-		//__________________________________________________________________________________________________________
-
-		// Load 0th point
-		// Position
-		load_vertices[load_v_index + 0] = load_loc.x + load_arrow_startpt.x;
-		load_vertices[load_v_index + 1] = load_loc.y + load_arrow_startpt.y;
-		load_vertices[load_v_index + 2] = load_loc.z + load_arrow_startpt.z;
-
-		// Load location center
-		load_vertices[load_v_index + 3] = load_loc.x;
-		load_vertices[load_v_index + 4] = load_loc.y;
-		load_vertices[load_v_index + 5] = load_loc.z;
-
-		// Load vertex normal
-		load_vertices[load_v_index + 6] = normalized_load_loc.x;
-		load_vertices[load_v_index + 7] = normalized_load_loc.y;
-		load_vertices[load_v_index + 8] = normalized_load_loc.z;
-
-		load_v_index = load_v_index + 9;
-
-		// Load 1th point
-		// Position
-		load_vertices[load_v_index + 0] = load_loc.x + load_arrow_endpt.x;
-		load_vertices[load_v_index + 1] = load_loc.y + load_arrow_endpt.y;
-		load_vertices[load_v_index + 2] = load_loc.z + load_arrow_endpt.z;
-
-		// Load location center
-		load_vertices[load_v_index + 3] = load_loc.x;
-		load_vertices[load_v_index + 4] = load_loc.y;
-		load_vertices[load_v_index + 5] = load_loc.z;
-
-		// Load vertex normal
-		load_vertices[load_v_index + 6] = normalized_load_loc.x;
-		load_vertices[load_v_index + 7] = normalized_load_loc.y;
-		load_vertices[load_v_index + 8] = normalized_load_loc.z;
-
-		load_v_index = load_v_index + 9;
-
-		// Load 2th point
-		// Position
-		load_vertices[load_v_index + 0] = load_loc.x + load_arrow_pt1.x;
-		load_vertices[load_v_index + 1] = load_loc.y + load_arrow_pt1.y;
-		load_vertices[load_v_index + 2] = load_loc.z + load_arrow_pt1.z;
-
-		// Load location center
-		load_vertices[load_v_index + 3] = load_loc.x;
-		load_vertices[load_v_index + 4] = load_loc.y;
-		load_vertices[load_v_index + 5] = load_loc.z;
-
-		// Load vertex normal
-		load_vertices[load_v_index + 6] = normalized_load_loc.x;
-		load_vertices[load_v_index + 7] = normalized_load_loc.y;
-		load_vertices[load_v_index + 8] = normalized_load_loc.z;
-
-		load_v_index = load_v_index + 9;
-
-		// Load 3th point
-		// Position
-		load_vertices[load_v_index + 0] = load_loc.x + load_arrow_pt2.x;
-		load_vertices[load_v_index + 1] = load_loc.y + load_arrow_pt2.y;
-		load_vertices[load_v_index + 2] = load_loc.z + load_arrow_pt2.z;
-
-		// Load location center
-		load_vertices[load_v_index + 3] = load_loc.x;
-		load_vertices[load_v_index + 4] = load_loc.y;
-		load_vertices[load_v_index + 5] = load_loc.z;
-
-		// Load vertex normal
-		load_vertices[load_v_index + 6] = normalized_load_loc.x;
-		load_vertices[load_v_index + 7] = normalized_load_loc.y;
-		load_vertices[load_v_index + 8] = normalized_load_loc.z;
-
-		load_v_index = load_v_index + 9;
-
-		// Load 4th point
-		// Position
-		load_vertices[load_v_index + 0] = load_loc.x + load_arrow_pt3.x;
-		load_vertices[load_v_index + 1] = load_loc.y + load_arrow_pt3.y;
-		load_vertices[load_v_index + 2] = load_loc.z + load_arrow_pt3.z;
-
-		// Load location center
-		load_vertices[load_v_index + 3] = load_loc.x;
-		load_vertices[load_v_index + 4] = load_loc.y;
-		load_vertices[load_v_index + 5] = load_loc.z;
-
-		// Load vertex normal
-		load_vertices[load_v_index + 6] = normalized_load_loc.x;
-		load_vertices[load_v_index + 7] = normalized_load_loc.y;
-		load_vertices[load_v_index + 8] = normalized_load_loc.z;
-
-		load_v_index = load_v_index + 9;
-
-		//______________________________________________________________________
-		// 
-		// Set the Load indices
-		unsigned int t_id = ((load_i_index / 14) * 5);
-
-		// Line 0,1
-		load_indices[load_i_index + 0] = t_id + 0;
-		load_indices[load_i_index + 1] = t_id + 1;
-
-		// Line 0,2
-		load_indices[load_i_index + 2] = t_id + 0;
-		load_indices[load_i_index + 3] = t_id + 2;
-
-		// Line 0,3
-		load_indices[load_i_index + 4] = t_id + 0;
-		load_indices[load_i_index + 5] = t_id + 3;
-
-		// Line 0,4
-		load_indices[load_i_index + 6] = t_id + 0;
-		load_indices[load_i_index + 7] = t_id + 4;
-
-		// Line 2,3
-		load_indices[load_i_index + 8] = t_id + 2;
-		load_indices[load_i_index + 9] = t_id + 3;
-
-		// Line 3,4
-		load_indices[load_i_index + 10] = t_id + 3;
-		load_indices[load_i_index + 11] = t_id + 4;
-
-		// Line 4,2
-		load_indices[load_i_index + 12] = t_id + 4;
-		load_indices[load_i_index + 13] = t_id + 2;
-
-		// Increment
-		load_i_index = load_i_index + 14;
-	}
-}
 
 int nodeload_list_store::get_unique_load_id(std::vector<int>& all_ids)
 {

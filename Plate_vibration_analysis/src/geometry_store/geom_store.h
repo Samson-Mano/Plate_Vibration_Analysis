@@ -7,6 +7,7 @@
 #include <iomanip>
 
 // Window includes
+#include "../tool_window/constraint_window.h"
 #include "../tool_window/new_model_window.h"
 #include "../tool_window/node_load_window.h"
 #include "../tool_window/inlcondition_window.h"
@@ -25,6 +26,7 @@
 #include "fe_objects/elementquad_list_store.h"
 #include "fe_objects/nodeload_list_store.h"
 #include "fe_objects/nodeinlcond_list_store.h"
+#include "fe_objects/nodecnst_list_store.h"
 
 // Geometry Objects
 #include "geometry_objects/dynamic_selrectangle_store.h"
@@ -54,6 +56,7 @@ public:
 		pulse_analysis_window* pulse_solver_window,
 		options_window* op_window,
 		node_load_window* nd_load_window, 
+		constraint_window* nd_cnst_window,
 		inlcondition_window* nd_inlcond_window,
 		new_model_window* md_window);
 	void fini();
@@ -96,6 +99,8 @@ private:
 	nodeload_list_store node_loads;
 	nodeinlcond_list_store node_inldispl;
 	nodeinlcond_list_store node_inlvelo;
+	nodecnst_list_store node_fixedcnst;
+	nodecnst_list_store node_pinnedcnst;
 
 	// Modal analysis result 
 	rslt_nodes_list_store modal_result_nodes;
@@ -115,6 +120,7 @@ private:
 	new_model_window* md_window = nullptr;
 	options_window* op_window = nullptr;
 	node_load_window* nd_load_window = nullptr;
+	constraint_window* nd_cnst_window = nullptr;
 	inlcondition_window* nd_inlcond_window = nullptr;
 
 	// Analysis window
@@ -129,5 +135,7 @@ private:
 	void paint_pulse_analysis_results(); // Paint the pulse analysis results
 	void paint_node_load_operation(); // Paint the node load window
 	void paint_node_inlcond_operation(); // Paint the node initial condition window
+	void paint_node_constraint_operation(); // Paint the node constraint window
+
 };
 

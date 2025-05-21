@@ -163,6 +163,7 @@
     <ClCompile Include="src\geometry_store\fe_objects\elementline_list_store.cpp" />
     <ClCompile Include="src\geometry_store\fe_objects\elementquad_list_store.cpp" />
     <ClCompile Include="src\geometry_store\fe_objects\elementtri_list_store.cpp" />
+    <ClCompile Include="src\geometry_store\fe_objects\nodecnst_list_store.cpp" />
     <ClCompile Include="src\geometry_store\fe_objects\nodeinlcond_list_store.cpp" />
     <ClCompile Include="src\geometry_store\fe_objects\nodeload_list_store.cpp" />
     <ClCompile Include="src\geometry_store\fe_objects\nodes_list_store.cpp" />
@@ -187,6 +188,7 @@
     <ClCompile Include="src\geometry_store\result_objects\rslt_elementquad_list_store.cpp" />
     <ClCompile Include="src\geometry_store\result_objects\rslt_elementtri_list_store.cpp" />
     <ClCompile Include="src\geometry_store\result_objects\rslt_nodes_list_store.cpp" />
+    <ClCompile Include="src\tool_window\constraint_window.cpp" />
     <ClCompile Include="src\tool_window\inlcondition_window.cpp" />
     <ClCompile Include="src\tool_window\modal_analysis_window.cpp" />
     <ClCompile Include="src\tool_window\new_model_window.cpp" />
@@ -248,6 +250,7 @@
     <ClInclude Include="src\geometry_store\fe_objects\elementline_list_store.h" />
     <ClInclude Include="src\geometry_store\fe_objects\elementquad_list_store.h" />
     <ClInclude Include="src\geometry_store\fe_objects\elementtri_list_store.h" />
+    <ClInclude Include="src\geometry_store\fe_objects\nodecnst_list_store.h" />
     <ClInclude Include="src\geometry_store\fe_objects\nodeinlcond_list_store.h" />
     <ClInclude Include="src\geometry_store\fe_objects\nodeload_list_store.h" />
     <ClInclude Include="src\geometry_store\fe_objects\nodes_list_store.h" />
@@ -272,6 +275,7 @@
     <ClInclude Include="src\geometry_store\result_objects\rslt_elementquad_list_store.h" />
     <ClInclude Include="src\geometry_store\result_objects\rslt_elementtri_list_store.h" />
     <ClInclude Include="src\geometry_store\result_objects\rslt_nodes_list_store.h" />
+    <ClInclude Include="src\tool_window\constraint_window.h" />
     <ClInclude Include="src\tool_window\inlcondition_window.h" />
     <ClInclude Include="src\tool_window\modal_analysis_window.h" />
     <ClInclude Include="src\tool_window\new_model_window.h" />

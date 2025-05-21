@@ -58,14 +58,14 @@ void nodeinlcond_list_store::add_inlcondition(int& node_id, glm::vec3& inlcond_l
 	// Searching for node_id
 	if (inlcondMap.find(node_id) != inlcondMap.end())
 	{
-		// Node is already have constraint
-		// so remove the constraint
+		// Node is already have initial condition
+		// so remove the intial condition
 		inlcondMap[node_id] = temp_inl_condition_data;
 
 		return;
 	}
 
-	// Insert the constraint to nodes
+	// Insert the initial condition to nodes
 	inlcondMap.insert({ node_id, temp_inl_condition_data });
 	inlcond_count++;
 

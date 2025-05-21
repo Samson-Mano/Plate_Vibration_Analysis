@@ -16,6 +16,7 @@
 //---- File event handler
 #include "events_handler/file_events.h"
 //____ Tool Window
+#include "tool_window/constraint_window.h"
 #include "tool_window/inlcondition_window.h"
 #include "tool_window/new_model_window.h"
 #include "tool_window/inlcondition_window.h"
@@ -45,6 +46,7 @@ public:
 	geom_store geom;
 
 	// Tool window variable
+	constraint_window nd_cnst_window;
 	inlcondition_window inl_window;
 	new_model_window md_window;
 	options_window op_window;
