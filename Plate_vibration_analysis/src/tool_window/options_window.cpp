@@ -15,16 +15,17 @@ void options_window::init()
 
 	// Initialize the options
 	// Model constraints
-	bool is_show_loads = true; // Show loads
-	bool is_show_inlcondition = true; // show initial condition
+	is_show_loads = true; // Show loads
+	is_show_inlcondition = true; // show initial condition
+	is_show_constraint = true; // show constraints
 
 	// Model Nodes
-	bool is_show_modelnodes = false; // Show model nodes
+	is_show_modelnodes = false; // Show model nodes
 
 	// Model elements
-	bool is_show_modeledeges = false; // Show model edges
-	bool is_show_modelelements = true; // show model elements
-	bool is_show_meshnormals = false; // show mesh normals
+	is_show_modeledeges = true; // Show model edges
+	is_show_modelelements = true; // show model elements
+	is_show_meshnormals = false; // show mesh normals
 
 	is_show_window = false;
 }
@@ -41,6 +42,7 @@ void options_window::render_window()
 	ImGui::Text("Constraint options");
 	ImGui::Checkbox("Show Loads", &is_show_loads);
 	ImGui::Checkbox("Show Point initial condition", &is_show_inlcondition);
+	ImGui::Checkbox("Show Constraints", &is_show_constraint);
 	ImGui::Spacing();
 
 	// Model nodes

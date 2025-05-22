@@ -10,6 +10,7 @@ public:
 	// Model constraints
 	bool is_show_loads = true; // Show loads
 	bool is_show_inlcondition = true; // show initial condition
+	bool is_show_constraint = true; // show constraints
 
 	// Model Nodes
 	bool is_show_modelnodes = false; // Show model nodes

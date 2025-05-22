@@ -69,11 +69,9 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 
 
 	this->node_count = model_nodes.node_count;
-	this->model_type = mat_data.model_type;
+	// this->model_type = mat_data.model_type;
 
 	this->matrix_size = 0;
-
-
 
 
 

@@ -50,6 +50,90 @@ void elementquad_list_store::add_elementquadrilateral(int& quad_id, node_store* 
 }
 
 
+
+void elementquad_list_store::add_selection_quadrilaterals(const std::vector<int>& selected_quad_element_ids)
+{
+
+
+
+}
+
+
+
+void elementquad_list_store::update_material(const std::vector<int> selected_element_quads, const int& material_id)
+{
+	//// Update the material ID
+	//for (const int& it : selected_element_tri)
+	//{
+	//	elementtriMap[it].material_id = material_id;
+	//}
+
+	//// Update the material ID label
+	//update_material_id_labels();
+
+}
+
+
+void elementquad_list_store::execute_delete_material(const int& del_material_id)
+{
+	//// Update delete material
+	//bool is_del_material_found = false; // Flag to check whether material id deleted
+
+	//// Delete the material
+	//for (const auto& tri : elementtriMap)
+	//{
+	//	int id = tri.first; // get the id
+	//	if (elementtriMap[id].material_id == del_material_id)
+	//	{
+	//		// Delete material is removed and the material ID of that element to 0
+	//		elementtriMap[id].material_id = 0;
+	//		is_del_material_found = true;
+	//	}
+	//}
+
+	//// Update the material ID label
+	//if (is_del_material_found == true)
+	//{
+	//	update_material_id_labels();
+	//}
+
+}
+
+
+void elementquad_list_store::update_material_id_labels()
+{
+	//// Clear the labels
+	//element_materialid.clear_labels();
+
+	//// Update the material id labels
+	//glm::vec3 temp_color;
+	//std::string temp_str = "";
+
+	//for (auto it = elementtriMap.begin(); it != elementtriMap.end(); ++it)
+	//{
+	//	elementtri_store elementtri = it->second;
+
+	//	// Get the triangle node points
+	//	glm::vec2 nd_pt1 = elementtri.nd1->node_pt;
+	//	glm::vec2 nd_pt2 = elementtri.nd2->node_pt;
+	//	glm::vec2 nd_pt3 = elementtri.nd3->node_pt;
+
+	//	// Calculate the midpoint of the triangle
+	//	glm::vec2 tri_mid_pt = glm::vec2((nd_pt1.x + nd_pt2.x + nd_pt3.x) * 0.33333f,
+	//		(nd_pt1.y + nd_pt2.y + nd_pt3.y) * 0.33333f);
+
+	//	// Add the material ID
+	//	temp_color = geom_parameters::get_standard_color(elementtri.material_id);
+	//	temp_str = " M = " + std::to_string(elementtri.material_id);
+	//	element_materialid.add_text(temp_str, tri_mid_pt, glm::vec2(0), temp_color, 0, true, false);
+	//}
+
+	//// Set the buffer for the labels
+	//element_materialid.set_buffer();
+}
+
+
+
 std::vector<int> elementquad_list_store::is_quad_selected(const glm::vec2& corner_pt1, const glm::vec2& corner_pt2)
 {
 	// Return the node id of node which is inside the rectangle

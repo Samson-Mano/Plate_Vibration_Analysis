@@ -72,6 +72,7 @@ void app_window::init()
 	md_window.init(); // Model window
 	nd_load_window.init(); // Node load window
 	nd_cnst_window.init(); // Node constraint window
+	mat_window.init(); // Material window
 	op_window.init(); // Option window
 	sol_modal_window.init(); // Modal Analysis solver window
 	sol_pulse_window.init(); // Pulse Analysis solver window
@@ -84,6 +85,7 @@ void app_window::init()
 		&nd_load_window,
 		&nd_cnst_window,
 		&inl_window,
+		&mat_window,
 		&md_window);
 
 	// Set the mouse button callback function with the user pointer pointing to the mouseHandler object
@@ -252,6 +254,11 @@ void app_window::menu_events()
 				// Nodal Constraints
 				nd_cnst_window.is_show_window = true;
 			}
+			if (ImGui::MenuItem("Material "))
+			{
+				// Material 
+				mat_window.is_show_window = true;
+			}
 
 			ImGui::EndMenu();
 		}
@@ -283,7 +290,9 @@ void app_window::menu_events()
 	inl_window.render_window(); // initial condition window
 	nd_load_window.render_window(); // Nodal load window
 	nd_cnst_window.render_window(); // Nodal constraint window
+	mat_window.render_window(); // Material Assignment window
 	op_window.render_window(); // Option window
+	
 	sol_modal_window.render_window(); // Modal Analysis Solver window
 	sol_pulse_window.render_window(); // Pulse Analysis Solver window
 

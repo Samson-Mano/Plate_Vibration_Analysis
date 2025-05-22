@@ -20,6 +20,7 @@
 #include "tool_window/inlcondition_window.h"
 #include "tool_window/new_model_window.h"
 #include "tool_window/inlcondition_window.h"
+#include "tool_window/material_window.h"
 #include "tool_window/node_load_window.h"
 #include "tool_window/modal_analysis_window.h"
 #include "tool_window/pulse_analysis_window.h"
@@ -51,6 +52,7 @@ public:
 	new_model_window md_window;
 	options_window op_window;
 	node_load_window nd_load_window;
+	material_window mat_window;
 	modal_analysis_window sol_modal_window;
 	pulse_analysis_window sol_pulse_window;
 

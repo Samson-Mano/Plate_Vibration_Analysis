@@ -16,6 +16,7 @@ void geom_store::init(modal_analysis_window* modal_solver_window,
 	node_load_window* nd_load_window,
 	constraint_window* nd_cnst_window,
 	inlcondition_window* nd_inlcond_window,
+	material_window* mat_window,
 	new_model_window* md_window)
 {
 	// Initialize
@@ -37,6 +38,7 @@ void geom_store::init(modal_analysis_window* modal_solver_window,
 	this->op_window = op_window; // Option window
 	this->nd_load_window = nd_load_window; // Node Load window
 	this->nd_cnst_window = nd_cnst_window; // Node constraint window
+	this->mat_window = mat_window; // Material window
 	this->nd_inlcond_window = nd_inlcond_window; // Node initial condition window
 
 	// Add the solver window pointers
@@ -73,12 +75,12 @@ void geom_store::load_model(std::vector<std::string> data_lines)
 	this->model_trielements.init(&geom_param, &this->mesh_data);
 	this->model_quadelements.init(&geom_param, &this->mesh_data);
 
-	// Node constraints
+	// Node loads, initial conditions and constraints
 	this->node_loads.init(&geom_param);
 	this->node_inldispl.init(&geom_param);
 	this->node_inlvelo.init(&geom_param);
-	this->node_fixedcnst.init(&geom_param);
-	
+	this->node_cnst.init(&geom_param);
+
 	// Re-initialize the result elements
 	this->modal_result_nodes.init(&geom_param, &this->mesh_modal_rslt_data);
 	this->modal_result_trielements.init(&geom_param, &this->mesh_modal_rslt_data);
@@ -98,15 +100,15 @@ void geom_store::load_model(std::vector<std::string> data_lines)
 
 	int node_count = 0;
 
-	
-	// Set the initial condition & loads
+
+	// Set the loads, initial condition & constraints
 
 	this->node_inldispl.set_zero_condition(0, 0);
 	this->node_inlvelo.set_zero_condition(1, 0);
 	this->node_loads.set_zero_condition(0);
+	this->node_cnst.set_zero_condition(0);
 
 
-	
 	//________________________________________ Create the model
 
 	//Node Point list
@@ -264,6 +266,21 @@ void geom_store::load_model(std::vector<std::string> data_lines)
 	stopwatch_elapsed_str << stopwatch.elapsed();
 	std::cout << "Mesh wireframe created at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 
+	// add a default material to the material list
+	material_data default_material;
+	default_material.material_id = 0; // Get the material id
+	default_material.material_name = "Default material"; //Default material name
+	default_material.material_youngsmodulus = 2.07 * std::pow(10, 5); //  MPa
+	default_material.material_shearmodulus = 0.80 * std::pow(10, 5); //  MPa
+	default_material.material_density = 7.83 * std::pow(10, -9); // tons/mm3
+	default_material.shell_thickness = 10.0; // mm
+	default_material.poissons_ratio = 0.3;
+
+	// Add to materail list
+	mat_window->material_list.clear();
+	mat_window->material_list[default_material.material_id] = default_material;
+
+
 	// Geometry is loaded
 	is_geometry_set = true;
 
@@ -287,6 +304,7 @@ void geom_store::load_model(std::vector<std::string> data_lines)
 	this->node_loads.set_buffer();
 	this->node_inldispl.set_buffer();
 	this->node_inlvelo.set_buffer();
+	this->node_cnst.set_buffer();
 
 	// Do Not Set the result object buffers
 
@@ -338,9 +356,10 @@ void geom_store::update_model_matrix()
 	mesh_data.update_opengl_uniforms(true, false, true);
 
 	//___________________
-	node_loads.update_geometry_matrices(true, false,  true);
-	node_inldispl.update_geometry_matrices(true, false,  true);
+	node_loads.update_geometry_matrices(true, false, true);
+	node_inldispl.update_geometry_matrices(true, false, true);
 	node_inlvelo.update_geometry_matrices(true, false, true);
+	node_cnst.update_geometry_matrices(true, false, true);
 
 	// Update the analysis result objects
 	mesh_modal_rslt_data.update_opengl_uniforms(true, false, true);
@@ -366,9 +385,10 @@ void geom_store::update_model_zoomfit()
 	mesh_data.update_opengl_uniforms(false, true, false);
 
 	//___________________
-	node_loads.update_geometry_matrices(false, true,  false);
-	node_inldispl.update_geometry_matrices(false, true,  false);
-	node_inlvelo.update_geometry_matrices(false, true,  false);
+	node_loads.update_geometry_matrices(false, true, false);
+	node_inldispl.update_geometry_matrices(false, true, false);
+	node_inlvelo.update_geometry_matrices(false, true, false);
+	node_cnst.update_geometry_matrices(false, true, false);
 
 	// Update the analysis result objects
 	mesh_modal_rslt_data.update_opengl_uniforms(false, true, false);
@@ -394,6 +414,7 @@ void geom_store::update_model_pan(glm::vec2& transl)
 	node_loads.update_geometry_matrices(false, true, false);
 	node_inldispl.update_geometry_matrices(false, true, false);
 	node_inlvelo.update_geometry_matrices(false, true, false);
+	node_cnst.update_geometry_matrices(false, true, false);
 
 	// Update the analysis result objects
 	mesh_modal_rslt_data.update_opengl_uniforms(false, true, false);
@@ -415,11 +436,12 @@ void geom_store::update_model_rotate(glm::mat4& rotation_m)
 	//___________________
 	node_loads.update_geometry_matrices(false, true, false);
 	node_inldispl.update_geometry_matrices(false, true, false);
-	node_inlvelo.update_geometry_matrices(false,  true, false);
+	node_inlvelo.update_geometry_matrices(false, true, false);
+	node_cnst.update_geometry_matrices(false, true, false);
 
 	// Update the analysis result objects
-	mesh_modal_rslt_data.update_opengl_uniforms(false,  true, false);
-	mesh_pulse_rslt_data.update_opengl_uniforms(false,  true, false);
+	mesh_modal_rslt_data.update_opengl_uniforms(false, true, false);
+	mesh_pulse_rslt_data.update_opengl_uniforms(false, true, false);
 
 }
 
@@ -439,10 +461,11 @@ void geom_store::update_model_zoom(double& z_scale)
 	node_loads.update_geometry_matrices(false, true, false);
 	node_inldispl.update_geometry_matrices(false, true, false);
 	node_inlvelo.update_geometry_matrices(false, true, false);
+	node_cnst.update_geometry_matrices(false, true, false);
 
 	// Update the analysis result objects
 	mesh_modal_rslt_data.update_opengl_uniforms(false, true, false);
-	mesh_pulse_rslt_data.update_opengl_uniforms(false,  true, false);
+	mesh_pulse_rslt_data.update_opengl_uniforms(false, true, false);
 
 }
 
@@ -466,9 +489,10 @@ void geom_store::update_model_transperency(bool is_transparent)
 	mesh_data.update_opengl_uniforms(false, false, true);
 
 	//___________________
-	node_loads.update_geometry_matrices(false, false,true);
+	node_loads.update_geometry_matrices(false, false, true);
 	node_inldispl.update_geometry_matrices(false, false, true);
-	node_inlvelo.update_geometry_matrices(false, false,  true);
+	node_inlvelo.update_geometry_matrices(false, false, true);
+	node_cnst.update_geometry_matrices(false, false, true);
 
 	// Donot update result elements transparency
 
@@ -498,6 +522,28 @@ void geom_store::update_selection_rectangle(const glm::vec2& o_pt, const glm::ve
 			std::vector<int> selected_node_ids = model_nodes.is_node_selected(o_pt, c_pt);
 			nd_load_window->add_to_node_list(selected_node_ids, is_rightbutton);
 		}
+
+		// Node constraint Window
+		if (nd_cnst_window->is_show_window == true)
+		{
+			// Selected Node Index
+			std::vector<int> selected_node_ids = model_nodes.is_node_selected(o_pt, c_pt);
+			nd_cnst_window->add_to_node_list(selected_node_ids, is_rightbutton);
+		}
+
+		// Material Assignment Window
+		if (mat_window->is_show_window == true)
+		{
+			// Selected Element Index
+			std::vector<int> selected_tri_elm_ids = model_trielements.is_tri_selected(o_pt, c_pt);
+			std::vector<int> selected_quad_elm_ids = model_quadelements.is_quad_selected(o_pt, c_pt);
+
+			std::vector<int> selected_elm_ids = selected_tri_elm_ids;  // Start with the tri elements
+			selected_elm_ids.insert(selected_elm_ids.end(), selected_quad_elm_ids.begin(), selected_quad_elm_ids.end());
+
+			mat_window->add_to_element_list(selected_elm_ids, is_rightbutton);
+		}
+
 
 	}
 }
@@ -613,6 +659,18 @@ void geom_store::paint_model()
 		glLineWidth(geom_param.line_width);
 	}
 
+	if (op_window->is_show_constraint == true)
+	{
+		// Show the node Constraints
+		glLineWidth(geom_param.selected_line_width);
+
+		node_cnst.paint_constraint();
+
+		glLineWidth(geom_param.line_width);
+	}
+
+
+
 	if (nd_inlcond_window->is_show_window == true)
 	{
 		// Initial condition window open
@@ -626,7 +684,7 @@ void geom_store::paint_model()
 		paint_node_load_operation();
 	}
 
-	
+
 	if (nd_cnst_window->is_show_window == true)
 	{
 		// Node constraint window is open
@@ -634,7 +692,14 @@ void geom_store::paint_model()
 	}
 
 
+	if (mat_window->is_show_window == true)
+	{
+		// Material assignment window is open
+		paint_material_assign_operation();
+	}
+
 }
+
 
 void geom_store::paint_model_results()
 {
@@ -954,7 +1019,7 @@ void  geom_store::paint_node_load_operation()
 
 			// Add to the load normal
 			load_normals.push_back(mesh_data.get_mesh_node_normals(model_nodes.nodeMap[id].node_id));
-			
+
 		}
 
 		// Add the loads
@@ -1138,7 +1203,7 @@ void geom_store::paint_node_inlcond_operation()
 
 void geom_store::paint_node_constraint_operation()
 {
-	// Paint the node initial condition pre processing
+	// Paint the node constratint pre processing
 		// Selection rectangle
 	selection_rectangle.paint_selection_rectangle();
 
@@ -1170,38 +1235,15 @@ void geom_store::paint_node_constraint_operation()
 				model_nodes.nodeMap[id].node_pt.y,
 				model_nodes.nodeMap[id].node_pt.z);
 
-			glm::vec3 inlcond_normals = mesh_data.get_mesh_node_normals(model_nodes.nodeMap[id].node_id);
+			glm::vec3 cnst_normals = mesh_data.get_mesh_node_normals(model_nodes.nodeMap[id].node_id);
 
-			if (nd_cnst_window->constraint_selectedOptionIndex == 0)
-			{
-				// Fixed constraint
 
-				// node_inldispl.add_inlcondition(id, node_pt, inlcond_normals, initial_displacement_z);
-
-			}
-			else if (nd_cnst_window->constraint_selectedOptionIndex == 1)
-			{
-				// Pinned constraint
-
-				// node_inlvelo.add_inlcondition(id, node_pt, inlcond_normals, initial_velocity_z);
-
-			}
-
+			// Add the node constraint
+			node_cnst.add_nodeconstraint(id, node_pt, cnst_normals, nd_cnst_window->constraint_selectedOptionIndex);
 		}
 
-
-		if (nd_cnst_window->constraint_selectedOptionIndex == 0)
-		{
-			// Reset the buffer
-			// node_inldispl.set_buffer();
-
-		}
-		else if (nd_cnst_window->constraint_selectedOptionIndex == 1)
-		{
-			// Reset the buffer
-			// node_inlvelo.set_buffer();
-
-		}
+		// Reset the buffer
+		node_cnst.set_buffer();
 
 		// constraint application ends
 		nd_cnst_window->apply_nodal_constraint = false;
@@ -1218,35 +1260,12 @@ void geom_store::paint_node_constraint_operation()
 		{
 			// Delete the node constraints
 
-			if (nd_cnst_window->constraint_selectedOptionIndex == 0)
-			{
-				// Fixed constraint
-				
-				node_inldispl.delete_inlcondition(id);
-
-			}
-			else if (nd_cnst_window->constraint_selectedOptionIndex == 1)
-			{
-				// Pinned constraint
-				
-				node_inlvelo.delete_inlcondition(id);
-			}
-		}
-
-
-		if (nd_cnst_window->constraint_selectedOptionIndex == 0)
-		{
-			// Reset the buffer
-			// node_inldispl.set_buffer();
-
-		}
-		else if (nd_cnst_window->constraint_selectedOptionIndex == 1)
-		{
-			// Reset the buffer
-			// node_inlvelo.set_buffer();
+			node_cnst.delete_nodeconstraint(id);
 
 		}
 
+		// Reset the buffer
+		node_cnst.set_buffer();
 
 		// Initial condition delete ends
 		nd_cnst_window->delete_nodal_constraint = false;
@@ -1257,6 +1276,63 @@ void geom_store::paint_node_constraint_operation()
 
 	}
 }
+
+
+void geom_store::paint_material_assign_operation()
+{
+	// Paint the material assignment pre processing
+		// Selection rectangle
+	selection_rectangle.paint_selection_rectangle();
+
+	// Paint the selected elements
+	if (mat_window->is_selected_count == true)
+	{
+		// model_trielements.paint_selected_elementtriangles();
+		// model_quadelements.paint_selected_elementquadrilaterals();
+
+	}
+
+	// Check whether the selection changed
+	if (mat_window->is_selection_changed == true)
+	{
+		// model_trielements.add_selection_triangles(mat_window->selected_elements);
+		// model_quadelements.add_selection_quadrilaterals(mat_window->selected_elements);
+
+		mat_window->is_selection_changed = false;
+	}
+
+	// Material deleted
+	if (mat_window->execute_delete_materialid != -1)
+	{
+		// Delete material
+		// Execute delete material id
+		// model_trielements.execute_delete_material(mat_window->execute_delete_materialid);
+		mat_window->execute_delete_materialid = -1;
+
+		// Remove the selection
+		mat_window->selected_elements.clear();
+		mat_window->is_selection_changed = true;
+	}
+
+	// Apply the Element properties
+	if (mat_window->apply_element_properties == true)
+	{
+		// Apply material properties to the selected triangle elements
+		int material_id = mat_window->material_list[mat_window->selected_material_option].material_id; // get the material id
+		// model_trielements.update_material(mat_window->selected_elements, material_id);
+		mat_window->apply_element_properties = false;
+
+		// Remove the selection
+		mat_window->selected_elements.clear();
+		mat_window->is_selection_changed = true;
+	}
+
+	// Paint the material ID
+	// model_trielements.paint_tri_material_id();
+
+
+}
+
 
 
 

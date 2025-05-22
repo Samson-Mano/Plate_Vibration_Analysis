@@ -12,6 +12,7 @@
 #include "../tool_window/node_load_window.h"
 #include "../tool_window/inlcondition_window.h"
 #include "../tool_window/options_window.h"
+#include "../tool_window/material_window.h"
 #include "../tool_window/modal_analysis_window.h"
 #include "../tool_window/pulse_analysis_window.h"
 
@@ -58,6 +59,7 @@ public:
 		node_load_window* nd_load_window, 
 		constraint_window* nd_cnst_window,
 		inlcondition_window* nd_inlcond_window,
+		material_window* mat_window,
 		new_model_window* md_window);
 	void fini();
 
@@ -99,8 +101,7 @@ private:
 	nodeload_list_store node_loads;
 	nodeinlcond_list_store node_inldispl;
 	nodeinlcond_list_store node_inlvelo;
-	nodecnst_list_store node_fixedcnst;
-	nodecnst_list_store node_pinnedcnst;
+	nodecnst_list_store node_cnst;
 
 	// Modal analysis result 
 	rslt_nodes_list_store modal_result_nodes;
@@ -121,6 +122,7 @@ private:
 	options_window* op_window = nullptr;
 	node_load_window* nd_load_window = nullptr;
 	constraint_window* nd_cnst_window = nullptr;
+	material_window* mat_window = nullptr;
 	inlcondition_window* nd_inlcond_window = nullptr;
 
 	// Analysis window
@@ -136,6 +138,8 @@ private:
 	void paint_node_load_operation(); // Paint the node load window
 	void paint_node_inlcond_operation(); // Paint the node initial condition window
 	void paint_node_constraint_operation(); // Paint the node constraint window
+	void paint_material_assign_operation(); // Paint the material assignment window
+
 
 };
 

@@ -23,6 +23,10 @@ public:
 	~elementquad_list_store();
 	void init(geom_parameters* geom_param_ptr, obj_mesh_data* mesh_data);
 	void add_elementquadrilateral(int& quad_id, node_store* nd1, node_store* nd2, node_store* nd3, node_store* nd4);
+	void add_selection_quadrilaterals(const std::vector<int>& selected_quad_element_ids);
+	void update_material(const std::vector<int> selected_element_quads, const int& material_id);
+	void execute_delete_material(const int& del_material_id);
+	void update_material_id_labels();
 
 	std::vector<int> is_quad_selected(const glm::vec2& corner_pt1, const glm::vec2& corner_pt2);
 

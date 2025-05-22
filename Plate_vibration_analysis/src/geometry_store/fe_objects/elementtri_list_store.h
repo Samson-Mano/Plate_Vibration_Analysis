@@ -21,7 +21,11 @@ public:
 	~elementtri_list_store();
 	void init(geom_parameters* geom_param_ptr, obj_mesh_data* mesh_data);
 	void add_elementtriangle(int& tri_id, node_store* nd1, node_store* nd2, node_store* nd3);
-	
+	void add_selection_triangles(const std::vector<int>& selected_tri_element_ids);
+	void update_material(const std::vector<int> selected_element_tris, const int& material_id);
+	void execute_delete_material(const int& del_material_id);
+	void update_material_id_labels();
+
 	std::vector<int> is_tri_selected(const glm::vec2& corner_pt1, const glm::vec2& corner_pt2);
 
 private:

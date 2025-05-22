@@ -190,6 +190,7 @@
     <ClCompile Include="src\geometry_store\result_objects\rslt_nodes_list_store.cpp" />
     <ClCompile Include="src\tool_window\constraint_window.cpp" />
     <ClCompile Include="src\tool_window\inlcondition_window.cpp" />
+    <ClCompile Include="src\tool_window\material_window.cpp" />
     <ClCompile Include="src\tool_window\modal_analysis_window.cpp" />
     <ClCompile Include="src\tool_window\new_model_window.cpp" />
     <ClCompile Include="src\tool_window\node_load_window.cpp" />
@@ -277,6 +278,7 @@
     <ClInclude Include="src\geometry_store\result_objects\rslt_nodes_list_store.h" />
     <ClInclude Include="src\tool_window\constraint_window.h" />
     <ClInclude Include="src\tool_window\inlcondition_window.h" />
+    <ClInclude Include="src\tool_window\material_window.h" />
     <ClInclude Include="src\tool_window\modal_analysis_window.h" />
     <ClInclude Include="src\tool_window\new_model_window.h" />
     <ClInclude Include="src\tool_window\node_load_window.h" />

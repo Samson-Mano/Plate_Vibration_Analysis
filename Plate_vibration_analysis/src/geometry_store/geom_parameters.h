@@ -7,6 +7,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <unordered_map>
 #include "geometry_buffers/font_atlas.h"
 
 // Stopwatch
@@ -64,10 +65,13 @@ struct material_data
 {
 	unsigned int material_id = 0;
 	std::string material_name = "";
-	double line_length = 0.0;
-	double line_tension = 0.0;
+
 	double material_density = 0.0;
-	int model_type = -1;
+	double material_youngsmodulus = 0.0; // E
+	double material_shearmodulus = 0.0; // G
+	double shell_thickness = 0.0; // t
+	double poissons_ratio = 0.0; // mu
+
 };
 
 
