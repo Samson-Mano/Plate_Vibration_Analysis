@@ -17,13 +17,14 @@ public:
 
 	int selected_material_option = 0;
 	std::unordered_map<int, material_data> material_list;
-	std::vector<int> selected_elements;
+	std::vector<int> selected_tri_elements;
+	std::vector<int> selected_quad_elements;
 
 	material_window();
 	~material_window();
 	void init();
 	void render_window();
-	void add_to_element_list(const std::vector<int>& selected_elements, const bool& is_right);
+	void add_to_element_list(const std::vector<int>& selected_tri_elements, const std::vector<int>& selected_quad_elements, const bool& is_right);
 
 private:
 	int selected_list_option = 0;

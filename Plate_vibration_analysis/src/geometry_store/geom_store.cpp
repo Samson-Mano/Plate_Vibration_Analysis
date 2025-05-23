@@ -538,14 +538,11 @@ void geom_store::update_selection_rectangle(const glm::vec2& o_pt, const glm::ve
 			std::vector<int> selected_tri_elm_ids = model_trielements.is_tri_selected(o_pt, c_pt);
 			std::vector<int> selected_quad_elm_ids = model_quadelements.is_quad_selected(o_pt, c_pt);
 
-			std::vector<int> selected_elm_ids = selected_tri_elm_ids;  // Start with the tri elements
-			selected_elm_ids.insert(selected_elm_ids.end(), selected_quad_elm_ids.begin(), selected_quad_elm_ids.end());
-
-			mat_window->add_to_element_list(selected_elm_ids, is_rightbutton);
+			mat_window->add_to_element_list(selected_tri_elm_ids, selected_quad_elm_ids, is_rightbutton);
 		}
 
-
 	}
+
 }
 
 
@@ -609,6 +606,14 @@ void geom_store::paint_model()
 		mesh_data.paint_static_mesh();
 
 	}
+
+
+	if (mat_window->is_show_window == true)
+	{
+		// Material assignment window is open
+		paint_material_assign_operation();
+	}
+
 
 	// Paint the wiremesh
 	if (op_window->is_show_modeledeges == true)
@@ -692,11 +697,13 @@ void geom_store::paint_model()
 	}
 
 
-	if (mat_window->is_show_window == true)
+	if (nd_inlcond_window->is_show_window == true || nd_load_window->is_show_window == true ||
+		nd_cnst_window->is_show_window == true || mat_window->is_show_window == true)
 	{
-		// Material assignment window is open
-		paint_material_assign_operation();
+		// Paint the selection rectangle (last)
+		selection_rectangle.paint_selection_rectangle();
 	}
+
 
 }
 
@@ -983,7 +990,7 @@ void geom_store::paint_pulse_analysis_results()
 void  geom_store::paint_node_load_operation()
 {
 	// Selection rectangle
-	selection_rectangle.paint_selection_rectangle();
+	// selection_rectangle.paint_selection_rectangle();
 
 	// Paint the selected nodes
 	if (nd_load_window->is_selected_count == true)
@@ -1062,7 +1069,7 @@ void geom_store::paint_node_inlcond_operation()
 {
 	// Paint the node initial condition pre processing
 		// Selection rectangle
-	selection_rectangle.paint_selection_rectangle();
+	// selection_rectangle.paint_selection_rectangle();
 
 	// Paint the selected nodes
 	if (nd_inlcond_window->is_selected_count == true)
@@ -1205,7 +1212,7 @@ void geom_store::paint_node_constraint_operation()
 {
 	// Paint the node constratint pre processing
 		// Selection rectangle
-	selection_rectangle.paint_selection_rectangle();
+	// selection_rectangle.paint_selection_rectangle();
 
 	// Paint the selected nodes
 	if (nd_cnst_window->is_selected_count == true)
@@ -1282,21 +1289,22 @@ void geom_store::paint_material_assign_operation()
 {
 	// Paint the material assignment pre processing
 		// Selection rectangle
-	selection_rectangle.paint_selection_rectangle();
+	// selection_rectangle.paint_selection_rectangle();
 
 	// Paint the selected elements
 	if (mat_window->is_selected_count == true)
 	{
-		// model_trielements.paint_selected_elementtriangles();
-		// model_quadelements.paint_selected_elementquadrilaterals();
+		// Paint the selected mesh
+		this->mesh_data.paint_selected_mesh();
 
 	}
 
 	// Check whether the selection changed
 	if (mat_window->is_selection_changed == true)
 	{
-		// model_trielements.add_selection_triangles(mat_window->selected_elements);
-		// model_quadelements.add_selection_quadrilaterals(mat_window->selected_elements);
+		// Add the selected tris and selected quads
+		this->mesh_data.add_selected_tris(mat_window->selected_tri_elements);
+		this->mesh_data.add_selected_quads(mat_window->selected_quad_elements);
 
 		mat_window->is_selection_changed = false;
 	}
@@ -1306,11 +1314,15 @@ void geom_store::paint_material_assign_operation()
 	{
 		// Delete material
 		// Execute delete material id
-		// model_trielements.execute_delete_material(mat_window->execute_delete_materialid);
+		model_trielements.execute_delete_material(mat_window->execute_delete_materialid);
+		model_quadelements.execute_delete_material(mat_window->execute_delete_materialid);
+
 		mat_window->execute_delete_materialid = -1;
 
 		// Remove the selection
-		mat_window->selected_elements.clear();
+		mat_window->selected_tri_elements.clear();
+		mat_window->selected_quad_elements.clear();
+
 		mat_window->is_selection_changed = true;
 	}
 
@@ -1319,16 +1331,22 @@ void geom_store::paint_material_assign_operation()
 	{
 		// Apply material properties to the selected triangle elements
 		int material_id = mat_window->material_list[mat_window->selected_material_option].material_id; // get the material id
-		// model_trielements.update_material(mat_window->selected_elements, material_id);
+		
+		model_trielements.update_material(mat_window->selected_tri_elements, material_id);
+		model_quadelements.update_material(mat_window->selected_quad_elements, material_id);
+
 		mat_window->apply_element_properties = false;
 
 		// Remove the selection
-		mat_window->selected_elements.clear();
+		mat_window->selected_tri_elements.clear();
+		mat_window->selected_quad_elements.clear();
+
 		mat_window->is_selection_changed = true;
 	}
 
 	// Paint the material ID
-	// model_trielements.paint_tri_material_id();
+	//  model_trielements.paint_tri_material_id();
+
 
 
 }

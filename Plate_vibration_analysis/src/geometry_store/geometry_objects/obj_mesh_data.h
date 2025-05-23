@@ -19,7 +19,11 @@ public:
 		const double& y_coord,
 		const double& z_coord);
 
-	void add_selected_points(const std::vector<int>& selected_points);
+	void add_selected_points(const std::vector<int>& selected_point_id);
+
+	void add_selected_tris(const std::vector<int>& selected_tri_id);
+
+	void add_selected_quads(const std::vector<int>& selected_quad_id);
 
 	void add_mesh_tris(const int& tri_id,
 		const int& point_id1,
@@ -64,6 +68,7 @@ public:
 	void paint_dynamic_mesh_points();
 
 	void paint_selected_points();
+	void paint_selected_mesh();
 	void paint_mesh_normals();
 
 	void update_opengl_uniforms(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency);
@@ -77,7 +82,9 @@ private:
 	line_list_store mesh_boundaries;
 	line_list_store mesh_normals;
 	tri_list_store mesh_tris;
+	tri_list_store selected_mesh_tris;
 	quad_list_store mesh_quads;
+	quad_list_store selected_mesh_quads;
 
 	int half_edge_count = 0;
 	std::vector<line_store*> mesh_half_edges; // All the Half edge data

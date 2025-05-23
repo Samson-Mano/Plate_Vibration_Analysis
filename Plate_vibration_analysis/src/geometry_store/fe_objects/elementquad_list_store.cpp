@@ -50,16 +50,6 @@ void elementquad_list_store::add_elementquadrilateral(int& quad_id, node_store* 
 }
 
 
-
-void elementquad_list_store::add_selection_quadrilaterals(const std::vector<int>& selected_quad_element_ids)
-{
-
-
-
-}
-
-
-
 void elementquad_list_store::update_material(const std::vector<int> selected_element_quads, const int& material_id)
 {
 	//// Update the material ID

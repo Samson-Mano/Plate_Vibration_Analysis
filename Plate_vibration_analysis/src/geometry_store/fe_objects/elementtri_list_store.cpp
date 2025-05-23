@@ -48,14 +48,6 @@ void elementtri_list_store::add_elementtriangle(int& tri_id, node_store* nd1, no
 
 
 
-void elementtri_list_store::add_selection_triangles(const std::vector<int>& selected_tri_element_ids)
-{
-
-
-}
-
-
-
 void elementtri_list_store::update_material(const std::vector<int> selected_element_tris, const int& material_id)
 {
 	//// Update the material ID

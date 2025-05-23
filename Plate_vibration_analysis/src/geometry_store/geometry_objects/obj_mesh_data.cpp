@@ -38,7 +38,13 @@ void obj_mesh_data::init(geom_parameters* geom_param_ptr)
 
 	// Mesh data
 	this->mesh_tris.init(geom_param_ptr);
+	this->selected_mesh_tris.init(geom_param_ptr);
+	this->selected_mesh_tris.set_tri_color(geom_param_ptr->geom_colors.selection_color, 1.0f);
+
 	this->mesh_quads.init(geom_param_ptr);
+	this->selected_mesh_quads.init(geom_param_ptr);
+	this->selected_mesh_quads.set_quad_color(geom_param_ptr->geom_colors.selection_color, 1.0f);
+
 
 }
 
@@ -49,14 +55,14 @@ void obj_mesh_data::add_mesh_point(const int& point_id, const double& x_coord, c
 
 }
 
-void obj_mesh_data::add_selected_points(const std::vector<int>& selected_points)
+void obj_mesh_data::add_selected_points(const std::vector<int>& selected_point_id)
 {
 	// Add the selected points
 	selected_mesh_points.clear_points();
 
 	// Selected points id
 	int id = 0;
-	for (auto& pt_id : selected_points)
+	for (auto& pt_id : selected_point_id)
 	{
 		// get the node point
 		point_store* pt = this->mesh_points.get_point(pt_id);
@@ -68,6 +74,48 @@ void obj_mesh_data::add_selected_points(const std::vector<int>& selected_points)
 	selected_mesh_points.set_buffer();
 
 }
+
+void obj_mesh_data::add_selected_tris(const std::vector<int>& selected_tri_id)
+{
+	// Add the selected tris
+	selected_mesh_tris.clear_triangles();
+
+	// Selected tris id
+	int id = 0;
+	for (auto& tri_id : selected_tri_id)
+	{
+		// get the tri
+		tri_store* tri = this->mesh_tris.get_triangle(tri_id);
+
+		selected_mesh_tris.add_tri(id, tri->edge1, tri->edge2, tri->edge3);
+		id++;
+	}
+
+	selected_mesh_tris.set_buffer();
+
+}
+
+void obj_mesh_data::add_selected_quads(const std::vector<int>& selected_quad_id)
+{
+	// Add the selected quads
+	selected_mesh_quads.clear_quadrilaterals();
+
+	// Selected quads id
+	int id = 0;
+	for (auto& quad_id : selected_quad_id)
+	{
+		// get the quad
+		tri_store* tri123 = this->mesh_quads.get_quadrilateral_face123(quad_id);
+		tri_store* tri341 = this->mesh_quads.get_quadrilateral_face341(quad_id);
+
+		selected_mesh_quads.add_quad(id, tri123->edge1, tri123->edge2, tri123->edge3, tri341->edge1, tri341->edge2, tri341->edge3);
+		id++;
+	}
+
+	selected_mesh_quads.set_buffer();
+
+}
+
 
 void obj_mesh_data::add_mesh_tris(const int& tri_id, const int& point_id1, const int& point_id2, const int& point_id3)
 {
@@ -530,6 +578,14 @@ void obj_mesh_data::paint_selected_points()
 
 }
 
+void obj_mesh_data::paint_selected_mesh()
+{
+	// Paint the selected tris and quds
+	this->selected_mesh_tris.paint_static_triangles();
+	this->selected_mesh_quads.paint_static_quadrilaterals();
+
+}
+
 
 void obj_mesh_data::paint_mesh_normals()
 {
@@ -545,6 +601,8 @@ void obj_mesh_data::update_opengl_uniforms(bool set_modelmatrix, bool set_viewma
 	// Update the openGl uniform matrices
 	this->mesh_quads.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, false); // do not use default transparency 
 	this->mesh_tris.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, false); // do not use default transparency 
+	this->selected_mesh_quads.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, false); // do not use default transparency 
+	this->selected_mesh_tris.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, false); // do not use default transparency 
 
 	this->mesh_normals.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
 	this->mesh_boundaries.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);

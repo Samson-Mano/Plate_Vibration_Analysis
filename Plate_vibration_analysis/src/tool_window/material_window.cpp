@@ -81,25 +81,50 @@ void material_window::render_window()
 
 	// List the selected Elements
 		//__________________________________________________________________________________________
+	// Selected tri Element list
+	ImGui::Spacing();
+	ImGui::Spacing();
+
+	static char tri_elementNumbers[1024] = ""; // Increase the buffer size to accommodate more characters
+
+	geom_parameters::copyNodenumberlistToCharArray(selected_tri_elements, tri_elementNumbers, 1024);
+
+	ImGui::Text("Selected Tri Elements: ");
+	ImGui::Spacing();
+
+	// Begin a child window with ImGuiWindowFlags_HorizontalScrollbar to enable vertical scrollbar ImGuiWindowFlags_AlwaysVerticalScrollbar
+	ImGui::BeginChild("Tri Element Numbers", ImVec2(-1.0f, ImGui::GetTextLineHeight() * 10), true);
+
+	// Assuming 'elementNumbers' is a char array or a string
+	ImGui::TextWrapped("%s", tri_elementNumbers);
+
+	// End the child window
+	ImGui::EndChild();
+
+	//____________________________________________________
 	// Selected Element list
 	ImGui::Spacing();
 	ImGui::Spacing();
 
-	static char elementNumbers[1024] = ""; // Increase the buffer size to accommodate more characters
+	static char quad_elementNumbers[1024] = ""; // Increase the buffer size to accommodate more characters
 
-	geom_parameters::copyNodenumberlistToCharArray(selected_elements, elementNumbers, 1024);
+	geom_parameters::copyNodenumberlistToCharArray(selected_quad_elements, quad_elementNumbers, 1024);
 
-	ImGui::Text("Selected Elements: ");
+	ImGui::Text("Selected Quad Elements: ");
 	ImGui::Spacing();
 
 	// Begin a child window with ImGuiWindowFlags_HorizontalScrollbar to enable vertical scrollbar ImGuiWindowFlags_AlwaysVerticalScrollbar
-	ImGui::BeginChild("Element Numbers", ImVec2(-1.0f, ImGui::GetTextLineHeight() * 10), true);
+	ImGui::BeginChild("Quad Element Numbers", ImVec2(-1.0f, ImGui::GetTextLineHeight() * 10), true);
 
 	// Assuming 'elementNumbers' is a char array or a string
-	ImGui::TextWrapped("%s", elementNumbers);
+	ImGui::TextWrapped("%s", quad_elementNumbers);
 
 	// End the child window
 	ImGui::EndChild();
+
+
+
+
 
 	// Add some spacing before the "Create Material" header
 	ImGui::Spacing();
@@ -163,7 +188,8 @@ void material_window::render_window()
 	if (ImGui::Button("Close"))
 	{
 		// Clear the selected elements
-		this->selected_elements.clear();
+		this->selected_tri_elements.clear();
+		this->selected_quad_elements.clear();
 		is_selected_count = false; // Number of selected elements 0
 		is_selection_changed = false; // Set the selection changed
 
@@ -211,18 +237,32 @@ int material_window::get_unique_material_id()
 
 
 
-void material_window::add_to_element_list(const std::vector<int>& selected_elements, const bool& is_right)
+void material_window::add_to_element_list(const std::vector<int>& selected_tri_elements, const std::vector<int>& selected_quad_elements, const bool& is_right)
 {
 	if (is_right == false)
 	{
-		// Add to the selected elements list
-		for (int elmnt : selected_elements)
+		// Add to the selected tri elements list
+		for (int tri_elmnt : selected_tri_elements)
 		{
 			// Check whether elements are already in the list or not
-			if (std::find(this->selected_elements.begin(), this->selected_elements.end(), elmnt) == this->selected_elements.end())
+			if (std::find(this->selected_tri_elements.begin(), this->selected_tri_elements.end(), tri_elmnt) == this->selected_tri_elements.end())
 			{
 				// Add to selected elements
-				this->selected_elements.push_back(elmnt);
+				this->selected_tri_elements.push_back(tri_elmnt);
+
+				// Selection changed flag
+				this->is_selection_changed = true;
+			}
+		}
+
+		// Add to the selected quad elements list
+		for (int quad_elmnt : selected_quad_elements)
+		{
+			// Check whether elements are already in the list or not
+			if (std::find(this->selected_quad_elements.begin(), this->selected_quad_elements.end(), quad_elmnt) == this->selected_quad_elements.end())
+			{
+				// Add to selected elements
+				this->selected_quad_elements.push_back(quad_elmnt);
 
 				// Selection changed flag
 				this->is_selection_changed = true;
@@ -231,24 +271,37 @@ void material_window::add_to_element_list(const std::vector<int>& selected_eleme
 	}
 	else
 	{
-		// Remove from the selected elements list
-		for (int elmnt : selected_elements)
+		// Remove from the selected tri elements list
+		for (int tri_elmnt : selected_tri_elements)
 		{
 			// Erase the elements which is found in the list
-			this->selected_elements.erase(std::remove(this->selected_elements.begin(), this->selected_elements.end(), elmnt),
-				this->selected_elements.end());
+			this->selected_tri_elements.erase(std::remove(this->selected_tri_elements.begin(), this->selected_tri_elements.end(), tri_elmnt),
+				this->selected_tri_elements.end());
 
 			// Selection changed flag
 			this->is_selection_changed = true;
 		}
+
+		// Remove from the selected quad elements list
+		for (int quad_elmnt : selected_quad_elements)
+		{
+			// Erase the elements which is found in the list
+			this->selected_quad_elements.erase(std::remove(this->selected_quad_elements.begin(), this->selected_quad_elements.end(), quad_elmnt),
+				this->selected_quad_elements.end());
+
+			// Selection changed flag
+			this->is_selection_changed = true;
+		}
+
 	}
 
 	// Number of selected elements
 	this->is_selected_count = false;
-	if (static_cast<int>(this->selected_elements.size()) > 0)
+	if (static_cast<int>(this->selected_tri_elements.size() + this->selected_quad_elements.size()) > 0)
 	{
 		this->is_selected_count = true;
 	}
+
 }
 
 
