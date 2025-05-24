@@ -108,12 +108,12 @@ void text_list_store::set_buffer()
 
 	// Create a layout
 	VertexBufferLayout label_layout;
-	label_layout.AddFloat(2);  // Character Position
+	label_layout.AddFloat(3);  // Character Position
 	label_layout.AddFloat(2);  // Texture glyph coordinate
 
 	// Define the label vertices of the model for the entire label
-	// (4 vertex (to form a triangle) * (2 character position +  2 Texture Glyph coordinate) 
-	const unsigned int label_vertex_count = 4 * 4 * total_char_count;
+	// (4 vertex (to form a triangle) * (3 character position +  2 Texture Glyph coordinate) 
+	const unsigned int label_vertex_count = 4 * 5 * total_char_count;
 	unsigned int label_vertex_size = label_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the text dynamic buffers
@@ -179,8 +179,8 @@ void text_list_store::update_buffer()
 {
 
 	// Define the label vertices of the model for the entire label
-	// (4 vertex (to form a triangle) * (2 character position + 2 Texture Glyph coordinate) 
-	const unsigned int label_vertex_count = 4 * 4 * total_char_count;
+	// (4 vertex (to form a triangle) * (3 character position + 2 Texture Glyph coordinate) 
+	const unsigned int label_vertex_count = 4 * 5 * total_char_count;
 	float* label_vertices = new float[label_vertex_count];
 
 	unsigned int label_v_index = 0;
@@ -219,6 +219,11 @@ void text_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_view
 
 		// text_shader.setUniform("geom_scale", static_cast<float>(geom_param_ptr->geom_scale));
 
+
+		// set the projection matrix
+		text_shader.setUniform("projectionMatrix", geom_param_ptr->projectionMatrix, false);
+
+
 		// set the model matrix
 		text_shader.setUniform("modelMatrix", geom_param_ptr->modelMatrix, false);
 
@@ -234,7 +239,7 @@ void text_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_view
 		glm::mat4 scalingMatrix = glm::mat4(1.0) * static_cast<float>(geom_param_ptr->zoom_scale);
 		scalingMatrix[3][3] = 1.0f;
 
-		glm::mat4 viewMatrix = glm::transpose(geom_param_ptr->panTranslation) * scalingMatrix;
+		glm::mat4 viewMatrix = glm::transpose(geom_param_ptr->panTranslation) * geom_param_ptr->rotateTranslation * scalingMatrix;
 
 		// set the pan translation
 		text_shader.setUniform("viewMatrix", viewMatrix, false);

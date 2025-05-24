@@ -67,18 +67,22 @@ std::vector<int> nodes_list_store::is_node_selected(const glm::vec2& corner_pt1,
 	glm::vec2 screen_cpt2 = glm::vec2(2.0f * ((corner_pt2.x - (geom_param_ptr->window_width * 0.5f)) / max_dim),
 		2.0f * (((geom_param_ptr->window_height * 0.5f) - corner_pt2.y) / max_dim));
 
-	// Nodal location
-	glm::mat4 scaling_matrix = glm::mat4(1.0) * static_cast<float>(geom_param_ptr->zoom_scale);
-	scaling_matrix[3][3] = 1.0f;
 
-	glm::mat4 scaledModelMatrix =geom_param_ptr->rotateTranslation *  scaling_matrix * geom_param_ptr->modelMatrix;
+	// gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(node_position, 1.0);
+
+	// Nodal location
+	glm::mat4 scalingMatrix = glm::mat4(1.0) * static_cast<float>(geom_param_ptr->zoom_scale);
+	scalingMatrix[3][3] = 1.0f;
+
+	glm::mat4 viewMatrix = glm::transpose(geom_param_ptr->panTranslation) * geom_param_ptr->rotateTranslation * scalingMatrix;
+
 
 
 	// Loop through all nodes in map
 	for (auto it = nodeMap.begin(); it != nodeMap.end(); ++it)
 	{
 		const auto& node = it->second.node_pt;
-		glm::vec4 finalPosition = scaledModelMatrix * glm::vec4(node.x, node.y, 0, 1.0f) * geom_param_ptr->panTranslation;
+		glm::vec4 finalPosition = geom_param_ptr->projectionMatrix * viewMatrix * geom_param_ptr->modelMatrix * glm::vec4(node.x, node.y, node.z, 1.0f);
 
 		double node_position_x = finalPosition.x;
 		double node_position_y = finalPosition.y;

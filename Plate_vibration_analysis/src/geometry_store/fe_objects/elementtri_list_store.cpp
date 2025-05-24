@@ -143,30 +143,34 @@ std::vector<int> elementtri_list_store::is_tri_selected(const glm::vec2& corner_
 		2.0f * (((geom_param_ptr->window_height * 0.5f) - corner_pt2.y) / max_dim));
 
 	// Nodal location
-	glm::mat4 scaling_matrix = glm::mat4(1.0) * static_cast<float>(geom_param_ptr->zoom_scale);
-	scaling_matrix[3][3] = 1.0f;
+	glm::mat4 scalingMatrix = glm::mat4(1.0) * static_cast<float>(geom_param_ptr->zoom_scale);
+	scalingMatrix[3][3] = 1.0f;
 
-	glm::mat4 scaledModelMatrix = scaling_matrix * geom_param_ptr->modelMatrix;
+	glm::mat4 viewMatrix = glm::transpose(geom_param_ptr->panTranslation) * geom_param_ptr->rotateTranslation * scalingMatrix;
+
 
 	// Loop through all triangles in map
 	for (auto it = elementtriMap.begin(); it != elementtriMap.end(); ++it)
 	{
-		const glm::vec2& node_pt1 = it->second.nd1->node_pt;
-		const glm::vec2& node_pt2 = it->second.nd2->node_pt;
-		const glm::vec2& node_pt3 = it->second.nd3->node_pt;
-		glm::vec2 md_pt_12 = geom_param_ptr->linear_interpolation(node_pt1, node_pt2, 0.50);
-		glm::vec2 md_pt_23 = geom_param_ptr->linear_interpolation(node_pt2, node_pt3, 0.50);
-		glm::vec2 md_pt_31 = geom_param_ptr->linear_interpolation(node_pt3, node_pt1, 0.50);
-		glm::vec2 tri_midpt = glm::vec2((node_pt1.x + node_pt2.x + node_pt3.x) * 0.33f, (node_pt1.y + node_pt2.y + node_pt3.y) * 0.33f);
+		const glm::vec3& node_pt1 = it->second.nd1->node_pt;
+		const glm::vec3& node_pt2 = it->second.nd2->node_pt;
+		const glm::vec3& node_pt3 = it->second.nd3->node_pt;
+		glm::vec3 md_pt_12 = geom_param_ptr->linear_interpolation3d(node_pt1, node_pt2, 0.50);
+		glm::vec3 md_pt_23 = geom_param_ptr->linear_interpolation3d(node_pt2, node_pt3, 0.50);
+		glm::vec3 md_pt_31 = geom_param_ptr->linear_interpolation3d(node_pt3, node_pt1, 0.50);
+		glm::vec3 tri_midpt = glm::vec3((node_pt1.x + node_pt2.x + node_pt3.x) * 0.33f, 
+			(node_pt1.y + node_pt2.y + node_pt3.y) * 0.33f, (node_pt1.z + node_pt2.z + node_pt3.z) * 0.33f);
 
 		//______________________________
-		glm::vec4 node_pt1_fp = scaledModelMatrix * glm::vec4(node_pt1.x, node_pt1.y, 0, 1.0f) * geom_param_ptr->panTranslation;
-		glm::vec4 node_pt2_fp = scaledModelMatrix * glm::vec4(node_pt2.x, node_pt2.y, 0, 1.0f) * geom_param_ptr->panTranslation;
-		glm::vec4 node_pt3_fp = scaledModelMatrix * glm::vec4(node_pt3.x, node_pt3.y, 0, 1.0f) * geom_param_ptr->panTranslation;
-		glm::vec4 md_pt_12_fp = scaledModelMatrix * glm::vec4(md_pt_12.x, md_pt_12.y, 0, 1.0f) * geom_param_ptr->panTranslation;
-		glm::vec4 md_pt_23_fp = scaledModelMatrix * glm::vec4(md_pt_23.x, md_pt_23.y, 0, 1.0f) * geom_param_ptr->panTranslation;
-		glm::vec4 md_pt_31_fp = scaledModelMatrix * glm::vec4(md_pt_31.x, md_pt_31.y, 0, 1.0f) * geom_param_ptr->panTranslation;
-		glm::vec2 tri_midpt_fp = scaledModelMatrix * glm::vec4(tri_midpt.x, tri_midpt.y, 0, 1.0f) * geom_param_ptr->panTranslation;
+		glm::vec4 node_pt1_fp = geom_param_ptr->projectionMatrix * viewMatrix * geom_param_ptr->modelMatrix * glm::vec4(node_pt1.x, node_pt1.y, node_pt1.z, 1.0f);
+		glm::vec4 node_pt2_fp = geom_param_ptr->projectionMatrix * viewMatrix * geom_param_ptr->modelMatrix * glm::vec4(node_pt2.x, node_pt2.y, node_pt2.z, 1.0f);
+		glm::vec4 node_pt3_fp = geom_param_ptr->projectionMatrix * viewMatrix * geom_param_ptr->modelMatrix * glm::vec4(node_pt3.x, node_pt3.y, node_pt3.z, 1.0f);
+		glm::vec4 md_pt_12_fp = geom_param_ptr->projectionMatrix * viewMatrix * geom_param_ptr->modelMatrix * glm::vec4(md_pt_12.x, md_pt_12.y, md_pt_12.z, 1.0f);
+		glm::vec4 md_pt_23_fp = geom_param_ptr->projectionMatrix * viewMatrix * geom_param_ptr->modelMatrix * glm::vec4(md_pt_23.x, md_pt_23.y, md_pt_23.z, 1.0f);
+		glm::vec4 md_pt_31_fp = geom_param_ptr->projectionMatrix * viewMatrix * geom_param_ptr->modelMatrix * glm::vec4(md_pt_31.x, md_pt_31.y, md_pt_31.z, 1.0f);
+		glm::vec2 tri_midpt_fp = geom_param_ptr->projectionMatrix * viewMatrix * geom_param_ptr->modelMatrix * glm::vec4(tri_midpt.x, tri_midpt.y, tri_midpt.z, 1.0f);
+
+
 
 		// Check whether the point inside a rectangle
 		if (geom_param_ptr->isPointInsideRectangle(screen_cpt1, screen_cpt2, node_pt1_fp) == true ||

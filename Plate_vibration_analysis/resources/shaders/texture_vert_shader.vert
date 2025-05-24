@@ -2,14 +2,15 @@
 
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
+uniform mat4 projectionMatrix;
 
 uniform vec3 vertexColor; // color of the mesh
 uniform float vertexTransparency; // Transparency of the mesh
 
 uniform float zoomscale; // zoomscale value is passed to keep the size of the texture constant
 
-layout(location = 0) in vec2 vertex_position;
-layout(location = 1) in vec2 vertex_center;
+layout(location = 0) in vec3 vertex_position;
+layout(location = 1) in vec3 vertex_center;
 layout(location = 2) in vec2 textureCoord;
 layout(location = 3) in float textureType;
 
@@ -33,10 +34,10 @@ void main()
 
 	// Final position with projection matrix
 	// apply transformation to vertex position
-    vec4 trans_position = viewMatrix * modelMatrix * vec4(vertex_position, 0.0, 1.0);
+    vec4 trans_position = projectionMatrix * viewMatrix * modelMatrix * vec4(vertex_position, 1.0);
 
 	// apply transformation to vertex center
-	vec4 trans_center = viewMatrix * modelMatrix * vec4(vertex_center, 0.0, 1.0); 
+	vec4 trans_center = projectionMatrix * viewMatrix * modelMatrix * vec4(vertex_center, 1.0); 
 
 	// Scale the final position
 	vec2 scaled_pt = vec2(trans_position.x - trans_center.x, trans_position.y - trans_center.y) / zoomscale;
