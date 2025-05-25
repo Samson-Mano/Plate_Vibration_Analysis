@@ -1,6 +1,5 @@
 #pragma once
-#include "elementline_list_store.h"
-#include "../geometry_objects/quad_list_store.h"
+#include "nodes_list_store.h"
 
 
 struct elementquad_store
@@ -10,6 +9,9 @@ struct elementquad_store
 	node_store* nd2 = nullptr; // node 2
 	node_store* nd3 = nullptr; // node 3
 	node_store* nd4 = nullptr; // node 4
+
+	int material_id = -1;
+
 };
 
 
@@ -26,7 +28,8 @@ public:
 
 	void update_material(const std::vector<int> selected_element_quads, const int& material_id);
 	void execute_delete_material(const int& del_material_id);
-	void update_material_id_labels();
+	// void update_material_id_labels();
+
 
 	std::vector<int> is_quad_selected(const glm::vec2& corner_pt1, const glm::vec2& corner_pt2);
 

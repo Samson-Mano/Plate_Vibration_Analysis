@@ -1,6 +1,6 @@
 #pragma once
-#include "elementline_list_store.h"
-#include "../geometry_objects/tri_list_store.h"
+#include "nodes_list_store.h"
+
 
 struct elementtri_store
 {
@@ -8,6 +8,9 @@ struct elementtri_store
 	node_store* nd1 = nullptr; // node 1
 	node_store* nd2 = nullptr; // node 2
 	node_store* nd3 = nullptr; // node 3
+
+	int material_id = -1;
+
 };
 
 
@@ -24,7 +27,7 @@ public:
 
 	void update_material(const std::vector<int> selected_element_tris, const int& material_id);
 	void execute_delete_material(const int& del_material_id);
-	void update_material_id_labels();
+	// void update_material_id_labels();
 
 	std::vector<int> is_tri_selected(const glm::vec2& corner_pt1, const glm::vec2& corner_pt2);
 

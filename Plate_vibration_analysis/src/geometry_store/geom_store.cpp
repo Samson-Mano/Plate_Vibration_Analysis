@@ -280,6 +280,23 @@ void geom_store::load_model(std::vector<std::string> data_lines)
 	mat_window->material_list.clear();
 	mat_window->material_list[default_material.material_id] = default_material;
 
+	// Add default material id to the elements
+	std::vector<int> selected_tri_elm_ids;
+	std::vector<int> selected_quad_elm_ids;
+
+	for (auto it = this->model_trielements.elementtriMap.begin(); it != this->model_trielements.elementtriMap.end(); ++it)
+	{
+		selected_tri_elm_ids.push_back(it->second.tri_id);
+	}
+
+	this->model_trielements.update_material(selected_tri_elm_ids, default_material.material_id);
+
+	for (auto it = this->model_quadelements.elementquadMap.begin(); it != this->model_quadelements.elementquadMap.end(); ++it)
+	{
+		selected_quad_elm_ids.push_back(it->second.quad_id);
+	}
+
+	this->model_quadelements.update_material(selected_quad_elm_ids, default_material.material_id);
 
 	// Geometry is loaded
 	is_geometry_set = true;
@@ -1345,9 +1362,7 @@ void geom_store::paint_material_assign_operation()
 	}
 
 	// Paint the material ID
-	//  model_trielements.paint_tri_material_id();
-
-
+	this->mesh_data.paint_mesh_materialids();
 
 }
 

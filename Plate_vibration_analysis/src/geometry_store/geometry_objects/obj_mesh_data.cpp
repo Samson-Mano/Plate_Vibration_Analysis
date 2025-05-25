@@ -45,6 +45,9 @@ void obj_mesh_data::init(geom_parameters* geom_param_ptr)
 	this->selected_mesh_quads.init(geom_param_ptr);
 	this->selected_mesh_quads.set_quad_color(geom_param_ptr->geom_colors.selection_color, 1.0f);
 
+	// Mesh material ID data
+	this->mesh_tri_material_ids.init(geom_param_ptr);
+	this->mesh_quad_material_ids.init(geom_param_ptr);
 
 }
 
@@ -171,6 +174,24 @@ void obj_mesh_data::add_mesh_tris(const int& tri_id, const int& point_id1, const
 	mesh_half_edges[line_id2]->face = temp_tri;
 	mesh_half_edges[line_id3]->face = temp_tri;
 
+
+	//_______________________________________________________________________________________________________
+	// Add a text for material ID
+	glm::vec3 nd_pt1 = temp_tri->edge1->start_pt->pt_coord();
+	glm::vec3 nd_pt2 = temp_tri->edge2->start_pt->pt_coord();
+	glm::vec3 nd_pt3 = temp_tri->edge3->start_pt->pt_coord();
+
+	// Calculate the midpoint of the triangle
+	glm::vec3 tri_mid_pt = glm::vec3((nd_pt1.x + nd_pt2.x + nd_pt3.x) * 0.33333f,
+		(nd_pt1.y + nd_pt2.y + nd_pt3.y) * 0.33333f,
+		(nd_pt1.z + nd_pt2.z + nd_pt3.z) * 0.33333f);
+
+	// Add the material ID
+	glm::vec3	temp_str_color = geom_parameters::get_standard_color(0);
+	std::string	temp_str = " M = " + std::to_string(0);
+	mesh_tri_material_ids.add_text(tri_id, temp_str, tri_mid_pt, temp_str_color);
+
+
 }
 
 void obj_mesh_data::add_mesh_quads(const int& quad_id, const int& point_id1, const int& point_id2, const int& point_id3, const int& point_id4)
@@ -243,6 +264,24 @@ void obj_mesh_data::add_mesh_quads(const int& quad_id, const int& point_id1, con
 	mesh_half_edges[line_id4]->face = temp_tri341;
 	mesh_half_edges[line_id5]->face = temp_tri341;
 	mesh_half_edges[line_id6]->face = temp_tri341;
+
+
+	//_______________________________________________________________________________________________________
+	// Add a text for material ID
+	glm::vec3 nd_pt1 = temp_tri123->edge1->start_pt->pt_coord();
+	glm::vec3 nd_pt2 = temp_tri123->edge2->start_pt->pt_coord();
+	glm::vec3 nd_pt3 = temp_tri341->edge1->start_pt->pt_coord();
+	glm::vec3 nd_pt4 = temp_tri341->edge2->start_pt->pt_coord();
+
+	// Calculate the midpoint of the triangle
+	glm::vec3 quad_mid_pt = glm::vec3((nd_pt1.x + nd_pt2.x + nd_pt3.x + nd_pt4.x) * 0.25f,
+		(nd_pt1.y + nd_pt2.y + nd_pt3.y + nd_pt4.y) * 0.25f,
+		(nd_pt1.z + nd_pt2.z + nd_pt3.z + nd_pt4.z) * 0.25f);
+
+	// Add the material ID
+	glm::vec3 temp_str_color = geom_parameters::get_standard_color(0);
+	std::string	temp_str = " M = " + std::to_string(0);
+	mesh_quad_material_ids.add_text(quad_id, temp_str, quad_mid_pt, temp_str_color);
 
 
 }
@@ -334,8 +373,8 @@ void obj_mesh_data::set_mesh_node_normals()
 		for (const auto& tri : this->mesh_tris.triMap)
 		{
 			// find the trianlge connected to the mesh point
-			if (tri->edge1->start_pt->point_id == mesh_pt_id || 
-				tri->edge2->start_pt->point_id == mesh_pt_id || 
+			if (tri->edge1->start_pt->point_id == mesh_pt_id ||
+				tri->edge2->start_pt->point_id == mesh_pt_id ||
 				tri->edge3->start_pt->point_id == mesh_pt_id)
 			{
 				connected_mesh_normals.push_back(tri->face_normal);
@@ -350,7 +389,7 @@ void obj_mesh_data::set_mesh_node_normals()
 			if (quad->tri123->edge1->start_pt->point_id == mesh_pt_id ||
 				quad->tri123->edge2->start_pt->point_id == mesh_pt_id ||
 				quad->tri341->edge1->start_pt->point_id == mesh_pt_id ||
-				quad->tri341->edge2->start_pt->point_id == mesh_pt_id )
+				quad->tri341->edge2->start_pt->point_id == mesh_pt_id)
 			{
 				connected_mesh_normals.push_back(quad->face_normal);
 			}
@@ -463,6 +502,71 @@ void obj_mesh_data::update_mesh_point(const int& point_id, const double& x_coord
 
 }
 
+
+void obj_mesh_data::update_tri_material_ids(const std::vector<int>& selected_tri_id, const int& material_id)
+{
+	// Update the material IDs of triangle elements
+	for (auto& tri_id : selected_tri_id)
+	{
+		// get the tri
+		tri_store* tri = this->mesh_tris.get_triangle(tri_id);
+
+		glm::vec3 nd_pt1 = tri->edge1->start_pt->pt_coord();
+		glm::vec3 nd_pt2 = tri->edge2->start_pt->pt_coord();
+		glm::vec3 nd_pt3 = tri->edge3->start_pt->pt_coord();
+
+		// Calculate the midpoint of the triangle
+		glm::vec3 tri_mid_pt = glm::vec3((nd_pt1.x + nd_pt2.x + nd_pt3.x) * 0.33333f,
+			(nd_pt1.y + nd_pt2.y + nd_pt3.y) * 0.33333f,
+			(nd_pt1.z + nd_pt2.z + nd_pt3.z) * 0.33333f);
+
+		// Add the material ID
+		glm::vec3 temp_str_color = geom_parameters::get_standard_color(material_id);
+		std::string	temp_str = " 0 = " + std::to_string(material_id);
+		mesh_tri_material_ids.add_text(tri_id, temp_str, tri_mid_pt, temp_str_color);
+
+	}
+
+	// Set the buffer for the labels
+	mesh_tri_material_ids.update_buffer();
+
+}
+
+
+void obj_mesh_data::update_quad_material_ids(const std::vector<int>& selected_quad_id, const int& material_id)
+{
+	// Update the material IDs of quadrilateral elements
+
+	for (auto& quad_id : selected_quad_id)
+	{
+		// get the quad
+		tri_store* tri123 = this->mesh_quads.get_quadrilateral_face123(quad_id);
+		tri_store* tri341 = this->mesh_quads.get_quadrilateral_face341(quad_id);
+
+
+		glm::vec3 nd_pt1 = tri123->edge1->start_pt->pt_coord();
+		glm::vec3 nd_pt2 = tri123->edge2->start_pt->pt_coord();
+		glm::vec3 nd_pt3 = tri341->edge1->start_pt->pt_coord();
+		glm::vec3 nd_pt4 = tri341->edge2->start_pt->pt_coord();
+
+		// Calculate the midpoint of the triangle
+		glm::vec3 quad_mid_pt = glm::vec3((nd_pt1.x + nd_pt2.x + nd_pt3.x + nd_pt4.x) * 0.25f,
+			(nd_pt1.y + nd_pt2.y + nd_pt3.y + nd_pt4.y) * 0.25f,
+			(nd_pt1.z + nd_pt2.z + nd_pt3.z + nd_pt4.z) * 0.25f);
+
+		glm::vec3 temp_str_color = geom_parameters::get_standard_color(material_id);
+		std::string	temp_str = " 0 = " + std::to_string(material_id);
+		mesh_quad_material_ids.update_text(quad_id, temp_str, quad_mid_pt, temp_str_color);
+
+	}
+
+	// Set the buffer for the labels
+	mesh_quad_material_ids.update_buffer();
+
+}
+
+
+
 //void obj_mesh_data::update_mesh_buffer()
 //{
 //	// Update the mesh point buffer
@@ -486,11 +590,17 @@ void obj_mesh_data::set_buffer()
 	// Set the buffer
 	this->mesh_points.set_buffer();
 
+	// Mesh boundaries & mesh normals
 	this->mesh_normals.set_buffer();
 	this->mesh_boundaries.set_buffer();
 
+	// Mesh data
 	this->mesh_tris.set_buffer();
 	this->mesh_quads.set_buffer();
+
+	// Mesh material labels
+	this->mesh_tri_material_ids.set_buffer();
+	this->mesh_quad_material_ids.set_buffer();
 
 }
 
@@ -520,6 +630,10 @@ void obj_mesh_data::clear_mesh()
 	mesh_tris.clear_triangles();
 	mesh_quads.clear_quadrilaterals();
 
+	// Mesh material labels
+	mesh_tri_material_ids.clear_texts();
+	mesh_quad_material_ids.clear_texts();
+
 }
 
 
@@ -529,13 +643,13 @@ void obj_mesh_data::paint_static_mesh()
 		// Paint the mesh triangles
 	this->mesh_tris.paint_static_triangles();
 	this->mesh_quads.paint_static_quadrilaterals();
-	
+
 }
 
 
 void obj_mesh_data::paint_static_mesh_boundaries()
 {
-// Paint the mesh boundaries
+	// Paint the mesh boundaries
 	this->mesh_boundaries.paint_static_lines();
 
 }
@@ -554,7 +668,7 @@ void obj_mesh_data::paint_dynamic_mesh()
 		// Paint the mesh triangles
 	this->mesh_tris.paint_dynamic_triangles();
 	this->mesh_quads.paint_dynamic_quadrilaterals();
-	
+
 }
 
 void obj_mesh_data::paint_dynamic_mesh_boundaries()
@@ -566,7 +680,7 @@ void obj_mesh_data::paint_dynamic_mesh_boundaries()
 
 void obj_mesh_data::paint_dynamic_mesh_points()
 {
-// Paint the mesh points
+	// Paint the mesh points
 	this->mesh_points.paint_dynamic_points();
 
 }
@@ -594,7 +708,13 @@ void obj_mesh_data::paint_mesh_normals()
 
 }
 
+void obj_mesh_data::paint_mesh_materialids()
+{
+	// Paint the mesh material IDs
+	this->mesh_tri_material_ids.paint_static_texts();
+	this->mesh_quad_material_ids.paint_static_texts();
 
+}
 
 void obj_mesh_data::update_opengl_uniforms(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency)
 {
@@ -609,6 +729,9 @@ void obj_mesh_data::update_opengl_uniforms(bool set_modelmatrix, bool set_viewma
 
 	this->selected_mesh_points.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
 	this->mesh_points.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
+
+	this->mesh_tri_material_ids.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
+	this->mesh_quad_material_ids.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
 
 }
 

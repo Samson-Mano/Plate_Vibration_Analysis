@@ -79,7 +79,7 @@ class geom_parameters
 {
 public:
 	// Standard sizes
-	const float font_size = static_cast<float>(12.0f * std::pow(10, -5));
+	const float font_size = static_cast<float>(12.0f * std::pow(10, -7));
 	const float node_circle_radii = 0.005f;
 
 	// Geometry size

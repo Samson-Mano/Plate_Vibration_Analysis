@@ -48,6 +48,10 @@ public:
 	glm::vec3 get_mesh_node_normals(const int& point_id);
 
 
+	void update_tri_material_ids(const std::vector<int>& selected_tri_id, const int& material_id);
+
+	void update_quad_material_ids(const std::vector<int>& selected_quad_id, const int& material_id);
+
 	// void update_mesh_buffer();
 	
 	// glm::vec3 get_element_normal(const int& id, const int& type);
@@ -71,6 +75,8 @@ public:
 	void paint_selected_mesh();
 	void paint_mesh_normals();
 
+	void paint_mesh_materialids();
+
 	void update_opengl_uniforms(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency);
 
 private:
@@ -85,6 +91,10 @@ private:
 	tri_list_store selected_mesh_tris;
 	quad_list_store mesh_quads;
 	quad_list_store selected_mesh_quads;
+
+	text_list_store mesh_tri_material_ids;
+	text_list_store mesh_quad_material_ids;
+	
 
 	int half_edge_count = 0;
 	std::vector<line_store*> mesh_half_edges; // All the Half edge data

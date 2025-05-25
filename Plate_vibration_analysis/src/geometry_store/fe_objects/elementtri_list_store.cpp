@@ -50,14 +50,14 @@ void elementtri_list_store::add_elementtriangle(int& tri_id, node_store* nd1, no
 
 void elementtri_list_store::update_material(const std::vector<int> selected_element_tris, const int& material_id)
 {
-	//// Update the material ID
-	//for (const int& it : selected_element_tri)
-	//{
-	//	elementtriMap[it].material_id = material_id;
-	//}
+	// Update the material ID
+	for (const int& it : selected_element_tris)
+	{
+		elementtriMap[it].material_id = material_id;
+	}
 
-	//// Update the material ID label
-	//update_material_id_labels();
+	// Update the material ID label
+	this->mesh_data->update_tri_material_ids(selected_element_tris, material_id);
 
 }
 
@@ -88,39 +88,39 @@ void elementtri_list_store::execute_delete_material(const int& del_material_id)
 
 }
 
-
-void elementtri_list_store::update_material_id_labels()
-{
-	//// Clear the labels
-	//element_materialid.clear_labels();
-
-	//// Update the material id labels
-	//glm::vec3 temp_color;
-	//std::string temp_str = "";
-
-	//for (auto it = elementtriMap.begin(); it != elementtriMap.end(); ++it)
-	//{
-	//	elementtri_store elementtri = it->second;
-
-	//	// Get the triangle node points
-	//	glm::vec2 nd_pt1 = elementtri.nd1->node_pt;
-	//	glm::vec2 nd_pt2 = elementtri.nd2->node_pt;
-	//	glm::vec2 nd_pt3 = elementtri.nd3->node_pt;
-
-	//	// Calculate the midpoint of the triangle
-	//	glm::vec2 tri_mid_pt = glm::vec2((nd_pt1.x + nd_pt2.x + nd_pt3.x) * 0.33333f,
-	//		(nd_pt1.y + nd_pt2.y + nd_pt3.y) * 0.33333f);
-
-	//	// Add the material ID
-	//	temp_color = geom_parameters::get_standard_color(elementtri.material_id);
-	//	temp_str = " M = " + std::to_string(elementtri.material_id);
-	//	element_materialid.add_text(temp_str, tri_mid_pt, glm::vec2(0), temp_color, 0, true, false);
-	//}
-
-	//// Set the buffer for the labels
-	//element_materialid.set_buffer();
-}
-
+//
+//void elementtri_list_store::update_material_id_labels()
+//{
+//	// Clear the labels
+//	element_tri_materialid.clear_texts();
+//
+//	// Update the material id labels
+//	glm::vec3 temp_color;
+//	std::string temp_str = "";
+//
+//	for (auto it = elementtriMap.begin(); it != elementtriMap.end(); ++it)
+//	{
+//		elementtri_store elementtri = it->second;
+//
+//		// Get the triangle node points
+//		glm::vec3 nd_pt1 = elementtri.nd1->node_pt;
+//		glm::vec3 nd_pt2 = elementtri.nd2->node_pt;
+//		glm::vec3 nd_pt3 = elementtri.nd3->node_pt;
+//
+//		// Calculate the midpoint of the triangle
+//		glm::vec3 tri_mid_pt = glm::vec3((nd_pt1.x + nd_pt2.x + nd_pt3.x) * 0.33333f,
+//			(nd_pt1.y + nd_pt2.y + nd_pt3.y) * 0.33333f, (nd_pt1.z + nd_pt2.z + nd_pt3.z) * 0.33333f);
+//
+//		// Add the material ID
+//		temp_color = geom_parameters::get_standard_color(elementtri.material_id);
+//		temp_str = " M = " + std::to_string(elementtri.material_id);
+//		element_tri_materialid.add_text(temp_str, tri_mid_pt, glm::vec2(0), temp_color, 0, true, false);
+//	}
+//
+//	// Set the buffer for the labels
+//	element_tri_materialid.set_buffer();
+//
+//}
 
 
 

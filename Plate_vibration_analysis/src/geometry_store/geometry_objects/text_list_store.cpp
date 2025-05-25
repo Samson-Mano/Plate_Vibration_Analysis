@@ -26,27 +26,24 @@ void text_list_store::init(geom_parameters* geom_param_ptr)
 	// Set texture uniform variables
 	text_shader.setUniform("u_Texture", 0);
 
-	// Set vertex color
-	text_shader.setUniform("vertexColor", geom_param_ptr->geom_colors.load_color);
 
 	// Delete all the labels
 	text_labels.clear();
 	total_char_count = 0;
 	text_count = 0;
+
 }
 
-void text_list_store::add_text(const int& label_id, std::string& label, glm::vec3& label_loc,
-	double label_angle, bool above_point)
+void text_list_store::add_text(const int& label_id, std::string& label, glm::vec3& label_loc, glm::vec3& label_color)
 {
 	// Create a temporary element
 	text_store temp_label;
-	temp_label.label_id = label_id;
-	temp_label.label = label;
-	temp_label.label_loc = label_loc;
-	temp_label.label_char_count = static_cast<unsigned int>(label.size());
+	temp_label.label_id = label_id; // label id
+	temp_label.label = label; // label string
+	temp_label.label_loc = label_loc; // label location 
+	temp_label.label_color = label_color; // label color
 
-	temp_label.label_angle = label_angle;
-	temp_label.label_above_loc = above_point;
+	temp_label.label_char_count = static_cast<unsigned int>(label.size());
 
 	//___________________________________________________________________
 	// Add to the list
@@ -61,7 +58,7 @@ void text_list_store::add_text(const int& label_id, std::string& label, glm::vec
 
 
 
-void text_list_store::update_text(const int& label_id, std::string& label, glm::vec3& label_loc)
+void text_list_store::update_text(const int& label_id, std::string& label, glm::vec3& label_loc, glm::vec3& label_color)
 {
 	// Find the label from id
 	// Check whether the text_id is already there
@@ -80,6 +77,7 @@ void text_list_store::update_text(const int& label_id, std::string& label, glm::
 
 		text_labels[label_id].label = label;
 		text_labels[label_id].label_loc = label_loc;
+		text_labels[label_id].label_color = label_color;
 
 	}
 
@@ -108,12 +106,14 @@ void text_list_store::set_buffer()
 
 	// Create a layout
 	VertexBufferLayout label_layout;
-	label_layout.AddFloat(3);  // Character Position
+	label_layout.AddFloat(3);  // Label location
+	label_layout.AddFloat(2);  // Character Position
 	label_layout.AddFloat(2);  // Texture glyph coordinate
+	label_layout.AddFloat(3);  // Label color
 
 	// Define the label vertices of the model for the entire label
-	// (4 vertex (to form a triangle) * (3 character position +  2 Texture Glyph coordinate) 
-	const unsigned int label_vertex_count = 4 * 5 * total_char_count;
+	// (4 vertex (to form a triangle) * ( 3 label location +  2 character position +  2 Texture Glyph coordinate + 3 label color) 
+	const unsigned int label_vertex_count = 4 * 10 * total_char_count;
 	unsigned int label_vertex_size = label_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the text dynamic buffers
@@ -127,12 +127,6 @@ void text_list_store::set_buffer()
 
 }
 
-void text_list_store::set_text_color(const glm::vec3& text_color)
-{
-	// Set vertex color
-	text_shader.setUniform("vertexColor", text_color);
-
-}
 
 void text_list_store::paint_static_texts()
 {
@@ -179,8 +173,8 @@ void text_list_store::update_buffer()
 {
 
 	// Define the label vertices of the model for the entire label
-	// (4 vertex (to form a triangle) * (3 character position + 2 Texture Glyph coordinate) 
-	const unsigned int label_vertex_count = 4 * 5 * total_char_count;
+	// (4 vertex (to form a triangle) * ( 3 label location +  2 character position +  2 Texture Glyph coordinate + 3 label color)  
+	const unsigned int label_vertex_count = 4 * 10 * total_char_count;
 	float* label_vertices = new float[label_vertex_count];
 
 	unsigned int label_v_index = 0;
@@ -217,19 +211,15 @@ void text_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_view
 		// set the transparency
 		text_shader.setUniform("vertexTransparency", 1.0f);
 
-		// text_shader.setUniform("geom_scale", static_cast<float>(geom_param_ptr->geom_scale));
-
-
 		// set the projection matrix
 		text_shader.setUniform("projectionMatrix", geom_param_ptr->projectionMatrix, false);
-
 
 		// set the model matrix
 		text_shader.setUniform("modelMatrix", geom_param_ptr->modelMatrix, false);
 
-		// set an unit view matrix
-		glm::mat4 viewMatrix = glm::mat4(1.0);
-		text_shader.setUniform("viewMatrix", viewMatrix, false);
+		//// set an unit view matrix
+		//glm::mat4 viewMatrix = glm::mat4(1.0);
+		//text_shader.setUniform("viewMatrix", viewMatrix, false);
 
 	}
 
@@ -257,39 +247,7 @@ void text_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_view
 void text_list_store::get_label_vertex_buffer(text_store& txt, float* text_vertices, unsigned int& text_v_index)
 {
 	float font_scale = static_cast<float>(geom_param_ptr->font_size / geom_param_ptr->geom_scale);
-
-	// Find the label total width and total height
-	float total_label_width = 0.0f;
-	float total_label_height = 0.0f;
-
-
-	for (int i = 0; txt.label[i] != '\0'; ++i)
-	{
-		// get the atlas information
-		char ch = txt.label[i];
-		Character ch_data = geom_param_ptr->main_font.ch_atlas[ch];
-
-		total_label_width += (ch_data.Advance >> 6) * font_scale;
-		total_label_height = std::max(total_label_height, ch_data.Size.y * font_scale);
-	}
-
-
-	// Store the x, y, z location
-	glm::vec3 loc = txt.label_loc;
-
-	float x = loc.x - (total_label_width * 0.5f);
-	float y = 0.0f;
-
-	if (txt.label_above_loc == true)
-	{
-		y = loc.y + (total_label_height * 0.5f);
-	}
-	else
-	{
-		y = loc.y - (total_label_height + (total_label_height * 0.5f));
-	}
-
-	glm::vec3 rotated_pt = glm::vec3(0);
+	float x = 0; // To advance the character width
 
 	for (int i = 0; txt.label[i] != '\0'; ++i)
 	{
@@ -299,7 +257,7 @@ void text_list_store::get_label_vertex_buffer(text_store& txt, float* text_verti
 		Character ch_data = geom_param_ptr->main_font.ch_atlas[ch];
 
 		float xpos = x + (ch_data.Bearing.x * font_scale);
-		float ypos = y - (ch_data.Size.y - ch_data.Bearing.y) * font_scale;
+		float ypos = (ch_data.Size.y - ch_data.Bearing.y) * font_scale;
 
 		float w = ch_data.Size.x * font_scale;
 		float h = ch_data.Size.y * font_scale;
@@ -308,65 +266,109 @@ void text_list_store::get_label_vertex_buffer(text_store& txt, float* text_verti
 
 		// Point 1
 		// Vertices [0,0] // 0th point
-		rotated_pt = rotate_pt(loc, glm::vec3(xpos, ypos + h, 0.0), txt.label_angle);
 
-		text_vertices[text_v_index + 0] = rotated_pt.x;
-		text_vertices[text_v_index + 1] = rotated_pt.y;
+		// Label location
+		text_vertices[text_v_index + 0] = txt.label_loc.x;
+		text_vertices[text_v_index + 1] = txt.label_loc.y;
+		text_vertices[text_v_index + 2] = txt.label_loc.z;
+		
+		// Char location
+		text_vertices[text_v_index + 3] = xpos;
+		text_vertices[text_v_index + 4] = ypos + h;
 
 		// Texture Glyph coordinate
-		text_vertices[text_v_index + 2] = ch_data.top_left.x + margin;
-		text_vertices[text_v_index + 3] = ch_data.top_left.y;
+		text_vertices[text_v_index + 5] = ch_data.top_left.x + margin;
+		text_vertices[text_v_index + 6] = ch_data.top_left.y;
+
+		// Label color
+		text_vertices[text_v_index + 7] = txt.label_color.x;
+		text_vertices[text_v_index + 8] = txt.label_color.y;
+		text_vertices[text_v_index + 9] = txt.label_color.z;
+
 
 		// Iterate
-		text_v_index = text_v_index + 4;
+		text_v_index = text_v_index + 10;
 
 		//__________________________________________________________________________________________
 
 		// Point 2
 		// Vertices [0,1] // 1th point
-		rotated_pt = rotate_pt(loc, glm::vec3(xpos, ypos, 0.0), txt.label_angle);
+	
+		// Label location
+		text_vertices[text_v_index + 0] = txt.label_loc.x;
+		text_vertices[text_v_index + 1] = txt.label_loc.y;
+		text_vertices[text_v_index + 2] = txt.label_loc.z;
 
-		text_vertices[text_v_index + 0] = rotated_pt.x;
-		text_vertices[text_v_index + 1] = rotated_pt.y;
+		// Char location
+		text_vertices[text_v_index + 3] = xpos;
+		text_vertices[text_v_index + 4] = ypos;
 
 		// Texture Glyph coordinate
-		text_vertices[text_v_index + 2] = ch_data.top_left.x + margin;
-		text_vertices[text_v_index + 3] = ch_data.bot_right.y;
+		text_vertices[text_v_index + 5] = ch_data.top_left.x + margin;
+		text_vertices[text_v_index + 6] = ch_data.top_left.y;
+
+		// Label color
+		text_vertices[text_v_index + 7] = txt.label_color.x;
+		text_vertices[text_v_index + 8] = txt.label_color.y;
+		text_vertices[text_v_index + 9] = txt.label_color.z;
+
 
 		// Iterate
-		text_v_index = text_v_index + 4;
+		text_v_index = text_v_index + 10;
 
 		//__________________________________________________________________________________________
 
 		// Point 3
 		// Vertices [1,1] // 2th point
-		rotated_pt = rotate_pt(loc, glm::vec3(xpos + w, ypos, 0.0), txt.label_angle);
 
-		text_vertices[text_v_index + 0] = rotated_pt.x;
-		text_vertices[text_v_index + 1] = rotated_pt.y;
+		// Label location
+		text_vertices[text_v_index + 0] = txt.label_loc.x;
+		text_vertices[text_v_index + 1] = txt.label_loc.y;
+		text_vertices[text_v_index + 2] = txt.label_loc.z;
+
+		// Char location
+		text_vertices[text_v_index + 3] = xpos + w;
+		text_vertices[text_v_index + 4] = ypos;
 
 		// Texture Glyph coordinate
-		text_vertices[text_v_index + 2] = ch_data.bot_right.x - margin;
-		text_vertices[text_v_index + 3] = ch_data.bot_right.y;
+		text_vertices[text_v_index + 5] = ch_data.bot_right.x - margin;
+		text_vertices[text_v_index + 6] = ch_data.bot_right.y;
+
+		// Label color
+		text_vertices[text_v_index + 7] = txt.label_color.x;
+		text_vertices[text_v_index + 8] = txt.label_color.y;
+		text_vertices[text_v_index + 9] = txt.label_color.z;
+
 
 		// Iterate
-		text_v_index = text_v_index + 4;
+		text_v_index = text_v_index + 10;
 
 		//__________________________________________________________________________________________
 
 		// Point 4
 		// Vertices [1,0] // 3th point
-		rotated_pt = rotate_pt(loc, glm::vec3(xpos + w, ypos + h, 0.0), txt.label_angle);
+		
+		// Label location
+		text_vertices[text_v_index + 0] = txt.label_loc.x;
+		text_vertices[text_v_index + 1] = txt.label_loc.y;
+		text_vertices[text_v_index + 2] = txt.label_loc.z;
 
-		text_vertices[text_v_index + 0] = rotated_pt.x;
-		text_vertices[text_v_index + 1] = rotated_pt.y;
+		// Char location
+		text_vertices[text_v_index + 3] = xpos + w;
+		text_vertices[text_v_index + 4] = ypos + h;
 
 		// Texture Glyph coordinate
-		text_vertices[text_v_index + 2] = ch_data.bot_right.x - margin;
-		text_vertices[text_v_index + 3] = ch_data.top_left.y;
+		text_vertices[text_v_index + 5] = ch_data.bot_right.x - margin;
+		text_vertices[text_v_index + 6] = ch_data.bot_right.y;
+
+		// Label color
+		text_vertices[text_v_index + 7] = txt.label_color.x;
+		text_vertices[text_v_index + 8] = txt.label_color.y;
+		text_vertices[text_v_index + 9] = txt.label_color.z;
+
 
 		// Iterate
-		text_v_index = text_v_index + 4;
+		text_v_index = text_v_index + 10;
 
 		//__________________________________________________________________________________________
 		x += (ch_data.Advance >> 6) * font_scale;
@@ -399,32 +401,9 @@ void text_list_store::get_label_index_buffer(unsigned int* text_vertex_indices, 
 
 
 
-glm::vec3 text_list_store::rotate_pt(glm::vec3& rotate_about, glm::vec3 pt, double& rotation_angle)
-{
-	// Return the rotation point
-	glm::vec2 translated_pt = pt - rotate_about;
 
-	if (rotation_angle > (3.14159365 * 0.5))
-	{
-		rotation_angle = rotation_angle - 3.14159365;
-	}
 
-	if (rotation_angle < (-1.0 * 3.14159365 * 0.5))
-	{
-		rotation_angle = 3.14159365 + rotation_angle;
-	}
 
-	// Apply rotation
-	double radians = rotation_angle;
-	double cos_theta = cos(radians);
-	double sin_theta = sin(radians);
-
-	// Rotated point of the corners
-	glm::vec3 rotated_pt = glm::vec3((translated_pt.x * cos_theta) - (translated_pt.y * sin_theta),
-		(translated_pt.x * sin_theta) + (translated_pt.y * cos_theta), 0.0);
-
-	return (rotated_pt + rotate_about);
-}
 
 
 
