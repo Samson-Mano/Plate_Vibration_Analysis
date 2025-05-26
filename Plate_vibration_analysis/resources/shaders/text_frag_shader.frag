@@ -9,9 +9,6 @@ out vec4 f_Color; // fragment's final color (out to the fragment shader)
 void main()
 {
 
-	// vec4 texColor = vec4(1.0, 1.0, 1.0, texture(u_Texture, v_textureCoord).r);
-	// f_Color = v_textureColor * texColor;
-
 	// Sample the texture's red channel for the alpha value
     float alpha = texture(u_Texture, v_textureCoord).r;
 

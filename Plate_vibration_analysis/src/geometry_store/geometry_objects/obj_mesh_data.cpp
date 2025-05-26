@@ -188,7 +188,7 @@ void obj_mesh_data::add_mesh_tris(const int& tri_id, const int& point_id1, const
 
 	// Add the material ID
 	glm::vec3	temp_str_color = geom_parameters::get_standard_color(0);
-	std::string	temp_str = " M = " + std::to_string(0);
+	std::string	temp_str = "1234";
 	mesh_tri_material_ids.add_text(tri_id, temp_str, tri_mid_pt, temp_str_color);
 
 
@@ -280,7 +280,7 @@ void obj_mesh_data::add_mesh_quads(const int& quad_id, const int& point_id1, con
 
 	// Add the material ID
 	glm::vec3 temp_str_color = geom_parameters::get_standard_color(0);
-	std::string	temp_str = " M = " + std::to_string(0);
+	std::string	temp_str = "1234";
 	mesh_quad_material_ids.add_text(quad_id, temp_str, quad_mid_pt, temp_str_color);
 
 
@@ -522,7 +522,7 @@ void obj_mesh_data::update_tri_material_ids(const std::vector<int>& selected_tri
 
 		// Add the material ID
 		glm::vec3 temp_str_color = geom_parameters::get_standard_color(material_id);
-		std::string	temp_str = " 0 = " + std::to_string(material_id);
+		std::string	temp_str = "[" + std::to_string(material_id) + "]";
 		mesh_tri_material_ids.add_text(tri_id, temp_str, tri_mid_pt, temp_str_color);
 
 	}
@@ -555,7 +555,7 @@ void obj_mesh_data::update_quad_material_ids(const std::vector<int>& selected_qu
 			(nd_pt1.z + nd_pt2.z + nd_pt3.z + nd_pt4.z) * 0.25f);
 
 		glm::vec3 temp_str_color = geom_parameters::get_standard_color(material_id);
-		std::string	temp_str = " 0 = " + std::to_string(material_id);
+		std::string	temp_str = "[" + std::to_string(material_id) + "]";
 		mesh_quad_material_ids.update_text(quad_id, temp_str, quad_mid_pt, temp_str_color);
 
 	}

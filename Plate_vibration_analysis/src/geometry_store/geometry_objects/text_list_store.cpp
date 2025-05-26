@@ -217,10 +217,6 @@ void text_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_view
 		// set the model matrix
 		text_shader.setUniform("modelMatrix", geom_param_ptr->modelMatrix, false);
 
-		//// set an unit view matrix
-		//glm::mat4 viewMatrix = glm::mat4(1.0);
-		//text_shader.setUniform("viewMatrix", viewMatrix, false);
-
 	}
 
 	if (set_viewmatrix == true)
@@ -257,12 +253,12 @@ void text_list_store::get_label_vertex_buffer(text_store& txt, float* text_verti
 		Character ch_data = geom_param_ptr->main_font.ch_atlas[ch];
 
 		float xpos = x + (ch_data.Bearing.x * font_scale);
-		float ypos = (ch_data.Size.y - ch_data.Bearing.y) * font_scale;
+		float ypos = (20.0 * font_scale) - (ch_data.Size.y - ch_data.Bearing.y) * font_scale;
 
 		float w = ch_data.Size.x * font_scale;
 		float h = ch_data.Size.y * font_scale;
 
-		float margin = 0.00002f; // This value prevents the minor overlap with the next char when rendering
+		float margin = 0.000002f; // This value prevents the minor overlap with the next char when rendering
 
 		// Point 1
 		// Vertices [0,0] // 0th point
@@ -305,7 +301,7 @@ void text_list_store::get_label_vertex_buffer(text_store& txt, float* text_verti
 
 		// Texture Glyph coordinate
 		text_vertices[text_v_index + 5] = ch_data.top_left.x + margin;
-		text_vertices[text_v_index + 6] = ch_data.top_left.y;
+		text_vertices[text_v_index + 6] = ch_data.bot_right.y;
 
 		// Label color
 		text_vertices[text_v_index + 7] = txt.label_color.x;
@@ -359,7 +355,7 @@ void text_list_store::get_label_vertex_buffer(text_store& txt, float* text_verti
 
 		// Texture Glyph coordinate
 		text_vertices[text_v_index + 5] = ch_data.bot_right.x - margin;
-		text_vertices[text_v_index + 6] = ch_data.bot_right.y;
+		text_vertices[text_v_index + 6] = ch_data.top_left.y;
 
 		// Label color
 		text_vertices[text_v_index + 7] = txt.label_color.x;
