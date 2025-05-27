@@ -8,7 +8,6 @@
 
 // Window includes
 #include "../tool_window/constraint_window.h"
-#include "../tool_window/new_model_window.h"
 #include "../tool_window/node_load_window.h"
 #include "../tool_window/inlcondition_window.h"
 #include "../tool_window/options_window.h"
@@ -59,12 +58,13 @@ public:
 		node_load_window* nd_load_window, 
 		constraint_window* nd_cnst_window,
 		inlcondition_window* nd_inlcond_window,
-		material_window* mat_window,
-		new_model_window* md_window);
+		material_window* mat_window);
+
 	void fini();
 
 	// Load the geometry
-	void load_model(std::vector<std::string> data_lines);
+	void import_model(std::ifstream& input_file);
+	void export_model(std::ofstream& output_file);
 
 	// Functions to control the drawing area
 	void update_WindowDimension(const int& window_width, const int& window_height);
@@ -118,7 +118,6 @@ private:
 	pulse_analysis_solver pulse_solver;
 
 	// Window pointers
-	new_model_window* md_window = nullptr;
 	options_window* op_window = nullptr;
 	node_load_window* nd_load_window = nullptr;
 	constraint_window* nd_cnst_window = nullptr;

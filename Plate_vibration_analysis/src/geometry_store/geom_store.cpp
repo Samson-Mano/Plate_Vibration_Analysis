@@ -16,8 +16,7 @@ void geom_store::init(modal_analysis_window* modal_solver_window,
 	node_load_window* nd_load_window,
 	constraint_window* nd_cnst_window,
 	inlcondition_window* nd_inlcond_window,
-	material_window* mat_window,
-	new_model_window* md_window)
+	material_window* mat_window)
 {
 	// Initialize
 	// Initialize the geometry parameters
@@ -34,7 +33,6 @@ void geom_store::init(modal_analysis_window* modal_solver_window,
 
 
 	// Add the window pointers
-	this->md_window = md_window;
 	this->op_window = op_window; // Option window
 	this->nd_load_window = nd_load_window; // Node Load window
 	this->nd_cnst_window = nd_cnst_window; // Node constraint window
@@ -52,7 +50,7 @@ void geom_store::fini()
 	is_geometry_set = false;
 }
 
-void geom_store::load_model(std::vector<std::string> data_lines)
+void geom_store::import_model(std::ifstream& input_file)
 {
 
 	// Create stopwatch
@@ -62,6 +60,24 @@ void geom_store::load_model(std::vector<std::string> data_lines)
 	stopwatch_elapsed_str << std::fixed << std::setprecision(6);
 
 	std::cout << "Reading of raw data input started" << std::endl;
+
+	// Read the Raw Data
+	// Read the entire file into a string
+	std::string file_contents((std::istreambuf_iterator<char>(input_file)),
+		std::istreambuf_iterator<char>());
+
+	// Split the string into lines
+	std::istringstream iss(file_contents);
+	std::string line;
+	std::vector<std::string> data_lines;
+	while (std::getline(iss, line))
+	{
+		data_lines.push_back(line);
+	}
+
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Lines loaded at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+
 
 	int j = 0, i = 0;
 
@@ -113,6 +129,8 @@ void geom_store::load_model(std::vector<std::string> data_lines)
 
 	//Node Point list
 	std::vector<glm::vec3> node_pts_list;
+	bool is_material_exists = false;
+
 	j = 0;
 	// Process the lines
 	while (j < data_lines.size())
@@ -243,6 +261,32 @@ void geom_store::load_model(std::vector<std::string> data_lines)
 			std::cout << "Quadrilateral Elements read completed at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 		}
 
+		if (inpt_type == "*MATERIAL_DATA")
+		{
+			is_material_exists = true;
+
+
+
+		}
+
+		if (inpt_type == "*CONSTRAINT_DATA")
+		{
+
+
+		}
+
+		if (inpt_type == "*LOAD_DATA")
+		{
+
+
+		}
+
+		if (inpt_type == "*INITIAL_CONDITION_DATA")
+		{
+
+
+		}
+
 		// Iterate line
 		j++;
 	}
@@ -266,37 +310,44 @@ void geom_store::load_model(std::vector<std::string> data_lines)
 	stopwatch_elapsed_str << stopwatch.elapsed();
 	std::cout << "Mesh wireframe created at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 
-	// add a default material to the material list
-	material_data default_material;
-	default_material.material_id = 0; // Get the material id
-	default_material.material_name = "Default material"; //Default material name
-	default_material.material_youngsmodulus = 2.07 * std::pow(10, 5); //  MPa
-	default_material.material_shearmodulus = 0.80 * std::pow(10, 5); //  MPa
-	default_material.material_density = 7.83 * std::pow(10, -9); // tons/mm3
-	default_material.shell_thickness = 10.0; // mm
-	default_material.poissons_ratio = 0.3;
 
-	// Add to materail list
-	mat_window->material_list.clear();
-	mat_window->material_list[default_material.material_id] = default_material;
-
-	// Add default material id to the elements
-	std::vector<int> selected_tri_elm_ids;
-	std::vector<int> selected_quad_elm_ids;
-
-	for (auto it = this->model_trielements.elementtriMap.begin(); it != this->model_trielements.elementtriMap.end(); ++it)
+	// No material is assigned in the model (Add a default material)
+	if (is_material_exists == false)
 	{
-		selected_tri_elm_ids.push_back(it->second.tri_id);
+		// add a default material to the material list
+		material_data default_material;
+		default_material.material_id = 0; // Get the material id
+		default_material.material_name = "Default material"; //Default material name
+		default_material.material_youngsmodulus = 2.07 * std::pow(10, 5); //  MPa
+		default_material.material_shearmodulus = 0.80 * std::pow(10, 5); //  MPa
+		default_material.material_density = 7.83 * std::pow(10, -9); // tons/mm3
+		default_material.shell_thickness = 10.0; // mm
+		default_material.poissons_ratio = 0.3;
+
+		// Add to materail list
+		mat_window->material_list.clear();
+		mat_window->material_list[default_material.material_id] = default_material;
+
+		// Add default material id to the elements
+		std::vector<int> selected_tri_elm_ids;
+		std::vector<int> selected_quad_elm_ids;
+
+		for (auto it = this->model_trielements.elementtriMap.begin(); it != this->model_trielements.elementtriMap.end(); ++it)
+		{
+			selected_tri_elm_ids.push_back(it->second.tri_id);
+		}
+
+		this->model_trielements.update_material(selected_tri_elm_ids, default_material.material_id);
+
+		for (auto it = this->model_quadelements.elementquadMap.begin(); it != this->model_quadelements.elementquadMap.end(); ++it)
+		{
+			selected_quad_elm_ids.push_back(it->second.quad_id);
+		}
+
+		this->model_quadelements.update_material(selected_quad_elm_ids, default_material.material_id);
+
 	}
-
-	this->model_trielements.update_material(selected_tri_elm_ids, default_material.material_id);
-
-	for (auto it = this->model_quadelements.elementquadMap.begin(); it != this->model_quadelements.elementquadMap.end(); ++it)
-	{
-		selected_quad_elm_ids.push_back(it->second.quad_id);
-	}
-
-	this->model_quadelements.update_material(selected_quad_elm_ids, default_material.material_id);
+	
 
 	// Geometry is loaded
 	is_geometry_set = true;
@@ -329,6 +380,113 @@ void geom_store::load_model(std::vector<std::string> data_lines)
 	stopwatch_elapsed_str << stopwatch.elapsed();
 	std::cout << "Model read completed at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 }
+
+
+void geom_store::export_model(std::ofstream& output_file)
+{
+	Stopwatch_events stopwatch;
+	stopwatch.start();
+	std::stringstream stopwatch_elapsed_str;
+	stopwatch_elapsed_str << std::fixed << std::setprecision(6);
+
+	std::cout << "Writing of model started" << std::endl;
+
+	// Comment on model data
+	output_file << "**" << std::endl;
+	output_file << "**" << std::endl;
+	output_file << "**Template:  Plate Vibration" << std::endl;
+	output_file << "**" << std::endl;
+
+
+	// Write all the nodes
+	output_file << "*NODE" << std::endl;
+
+	for (const auto& nd_m : model_nodes.nodeMap)
+	{
+		// Print the node details
+		const node_store nd = nd_m.second;
+
+		output_file << nd.node_id <<",\t\t" 
+			<< nd.node_pt.x << ",\t\t" 
+			<< nd.node_pt.y << ",\t\t" 
+			<< nd.node_pt.z << std::endl;
+
+	}
+
+	stopwatch_elapsed_str.str("");
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Nodes written at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+
+	// Write all the elements
+	// Write the triangle elements
+	if (static_cast<int>(model_trielements.elementtriMap.size()) != 0)
+	{
+		output_file << "*ELEMENT,TYPE=S3" << std::endl;
+
+		for (const auto& elm_tri_m : model_trielements.elementtriMap)
+		{
+			// Print the tri element details
+			const elementtri_store elm_tri = elm_tri_m.second;
+
+			output_file << elm_tri.tri_id << ",\t\t"
+				<< elm_tri.nd1->node_id << ",\t\t"
+				<< elm_tri.nd2->node_id << ",\t\t"
+				<< elm_tri.nd3->node_id << std::endl;
+
+		}
+
+	}
+
+	// Write the quadrilateral elements
+	if (static_cast<int>(model_quadelements.elementquadMap.size()) != 0)
+	{
+		output_file << "*ELEMENT,TYPE=S4" << std::endl;
+
+		for (const auto& elm_quad_m : model_quadelements.elementquadMap)
+		{
+			// Print the quad element details
+			const elementquad_store elm_quad = elm_quad_m.second;
+
+			output_file << elm_quad.quad_id << ",\t\t"
+				<< elm_quad.nd1->node_id << ",\t\t"
+				<< elm_quad.nd2->node_id << ",\t\t"
+				<< elm_quad.nd3->node_id << ",\t\t"
+				<< elm_quad.nd4->node_id << std::endl;
+
+		}
+
+	}
+
+	stopwatch_elapsed_str.str("");
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Elements written at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+
+
+	// Write the material data
+
+
+
+	// Write the constraint data
+
+
+
+	// Write the load data
+
+
+
+	// Write the initial condition data
+
+
+
+
+	output_file << "*****" << std::endl;
+
+	std::cout << "Model written " << std::endl;
+
+
+}
+
+
 
 void geom_store::update_WindowDimension(const int& window_width, const int& window_height)
 {
@@ -565,20 +723,6 @@ void geom_store::update_selection_rectangle(const glm::vec2& o_pt, const glm::ve
 
 void geom_store::paint_geometry()
 {
-
-	if (md_window->is_show_window == true)
-	{
-		// New Model Window
-		if (md_window->execute_create_model == true)
-		{
-			// Load a model
-			load_model(md_window->data_lines);
-
-			md_window->execute_create_model = false;
-		}
-
-	}
-
 
 	if (is_geometry_set == false)
 		return;

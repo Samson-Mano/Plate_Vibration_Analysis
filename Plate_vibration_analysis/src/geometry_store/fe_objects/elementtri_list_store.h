@@ -27,7 +27,6 @@ public:
 
 	void update_material(const std::vector<int> selected_element_tris, const int& material_id);
 	void execute_delete_material(const int& del_material_id);
-	// void update_material_id_labels();
 
 	std::vector<int> is_tri_selected(const glm::vec2& corner_pt1, const glm::vec2& corner_pt2);
 

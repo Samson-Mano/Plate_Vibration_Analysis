@@ -54,9 +54,6 @@
     <ClCompile Include="src\tool_window\modal_analysis_window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\tool_window\new_model_window.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\tool_window\node_load_window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -256,9 +253,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\tool_window\modal_analysis_window.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\tool_window\new_model_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\tool_window\node_load_window.h">

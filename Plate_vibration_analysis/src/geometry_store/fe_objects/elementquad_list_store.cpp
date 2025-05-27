@@ -66,64 +66,29 @@ void elementquad_list_store::update_material(const std::vector<int> selected_ele
 
 void elementquad_list_store::execute_delete_material(const int& del_material_id)
 {
-	//// Update delete material
-	//bool is_del_material_found = false; // Flag to check whether material id deleted
+	// Update delete material
+	std::vector<int> selected_element_quads; // element quads where the material is changed
 
-	//// Delete the material
-	//for (const auto& tri : elementtriMap)
-	//{
-	//	int id = tri.first; // get the id
-	//	if (elementtriMap[id].material_id == del_material_id)
-	//	{
-	//		// Delete material is removed and the material ID of that element to 0
-	//		elementtriMap[id].material_id = 0;
-	//		is_del_material_found = true;
-	//	}
-	//}
+	// Delete the material
+	for (const auto& quad : elementquadMap)
+	{
+		int id = quad.first; // get the id
+		if (elementquadMap[id].material_id == del_material_id)
+		{
+			// Delete material is removed and the material ID of that element to 0
+			elementquadMap[id].material_id = 0;
+			selected_element_quads.push_back(id);
 
-	//// Update the material ID label
-	//if (is_del_material_found == true)
-	//{
-	//	update_material_id_labels();
-	//}
+		}
+	}
+
+	// Update the material ID label
+	if (static_cast<int>(selected_element_quads.size()) != 0)
+	{
+		this->mesh_data->update_quad_material_ids(selected_element_quads, 0);
+	}
 
 }
-
-//
-//void elementquad_list_store::update_material_id_labels()
-//{
-//	// Clear the labels
-//	element_quad_materialid.clear_texts();
-//
-//	// Update the material id labels
-//	glm::vec3 temp_color;
-//	std::string temp_str = "";
-//
-//	for (auto it = elementquadMap.begin(); it != elementquadMap.end(); ++it)
-//	{
-//		elementquad_store elementquad = it->second;
-//
-//		// Get the triangle node points
-//		glm::vec3 nd_pt1 = elementquad.nd1->node_pt;
-//		glm::vec3 nd_pt2 = elementquad.nd2->node_pt;
-//		glm::vec3 nd_pt3 = elementquad.nd3->node_pt;
-//		glm::vec3 nd_pt4 = elementquad.nd3->node_pt;
-//
-//		// Calculate the midpoint of the triangle
-//		glm::vec3 tri_mid_pt = glm::vec3((nd_pt1.x + nd_pt2.x + nd_pt3.x + nd_pt4.x) * 0.25f,
-//			(nd_pt1.y + nd_pt2.y + nd_pt3.y + nd_pt4.y) * 0.25f, 
-//			(nd_pt1.z + nd_pt2.z + nd_pt3.z + nd_pt4.z) * 0.25f);
-//
-//		// Add the material ID
-//		temp_color = geom_parameters::get_standard_color(elementquad.material_id);
-//		temp_str = " M = " + std::to_string(elementquad.material_id);
-//		element_quad_materialid.add_text(temp_str, tri_mid_pt, glm::vec2(0), temp_color, 0, true, false);
-//	}
-//
-//	// Set the buffer for the labels
-//	element_quad_materialid.set_buffer();
-//
-//}
 
 
 

@@ -69,7 +69,6 @@ void app_window::init()
 
 	// Intialize tool windows
 	inl_window.init(); // Initial condition window
-	md_window.init(); // Model window
 	nd_load_window.init(); // Node load window
 	nd_cnst_window.init(); // Node constraint window
 	mat_window.init(); // Material window
@@ -85,8 +84,7 @@ void app_window::init()
 		&nd_load_window,
 		&nd_cnst_window,
 		&inl_window,
-		&mat_window,
-		&md_window);
+		&mat_window);
 
 	// Set the mouse button callback function with the user pointer pointing to the mouseHandler object
 	glfwSetWindowUserPointer(window, &mouse_Handler);
@@ -219,10 +217,17 @@ void app_window::menu_events()
 		// File menu item
 		if (ImGui::BeginMenu("File"))
 		{
-			if (ImGui::MenuItem("New model"))
+			if (ImGui::MenuItem("Import model"))
 			{
-				// Model data menu
-				md_window.is_show_window = true;
+				// Import the model data menu
+				file_menu.filemenu_event(import_raw_data, geom);
+				isWindowSizeChanging = true;
+			}
+			if (ImGui::MenuItem("Export model"))
+			{
+				// Export the model data menu
+				file_menu.filemenu_event(export_raw_data, geom);
+				isWindowSizeChanging = true;
 			}
 			if (ImGui::MenuItem("Options"))
 			{
@@ -286,7 +291,6 @@ void app_window::menu_events()
 	}
 
 	// Execute window render operation
-	md_window.render_window(); // model window
 	inl_window.render_window(); // initial condition window
 	nd_load_window.render_window(); // Nodal load window
 	nd_cnst_window.render_window(); // Nodal constraint window

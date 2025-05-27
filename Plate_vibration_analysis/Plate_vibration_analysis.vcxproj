@@ -192,7 +192,6 @@
     <ClCompile Include="src\tool_window\inlcondition_window.cpp" />
     <ClCompile Include="src\tool_window\material_window.cpp" />
     <ClCompile Include="src\tool_window\modal_analysis_window.cpp" />
-    <ClCompile Include="src\tool_window\new_model_window.cpp" />
     <ClCompile Include="src\tool_window\node_load_window.cpp" />
     <ClCompile Include="src\tool_window\options_window.cpp" />
     <ClCompile Include="src\tool_window\pulse_analysis_window.cpp" />
@@ -278,7 +277,6 @@
     <ClInclude Include="src\tool_window\inlcondition_window.h" />
     <ClInclude Include="src\tool_window\material_window.h" />
     <ClInclude Include="src\tool_window\modal_analysis_window.h" />
-    <ClInclude Include="src\tool_window\new_model_window.h" />
     <ClInclude Include="src\tool_window\node_load_window.h" />
     <ClInclude Include="src\tool_window\options_window.h" />
     <ClInclude Include="src\tool_window\pulse_analysis_window.h" />
