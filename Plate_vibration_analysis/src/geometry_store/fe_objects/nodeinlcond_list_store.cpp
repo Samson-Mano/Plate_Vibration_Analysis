@@ -23,10 +23,9 @@ void nodeinlcond_list_store::init(geom_parameters* geom_param_ptr)
 	inlcond_count = 0;
 }
 
-void nodeinlcond_list_store::set_zero_condition(int inlcond_type, const int& model_type)
+void nodeinlcond_list_store::set_zero_condition(int inlcond_type)
 {
 	this->inlcond_type = inlcond_type; // Initial condition type 0 - Displacement, 1 - Velocity
-	this->model_type = model_type; // Model type 0
 
 	if (inlcond_type == 0)
 	{

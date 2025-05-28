@@ -30,12 +30,6 @@ void nodecnst_list_store::init(geom_parameters* geom_param_ptr)
 }
 
 
-void nodecnst_list_store::set_zero_condition(const int& model_type)
-{
-	this->model_type = model_type; // Model type 0
-
-}
-
 
 void nodecnst_list_store::add_nodeconstraint(int& node_id, glm::vec3& ndcnst_loc, glm::vec3& ndcnst_normals, int& constraint_type)
 {

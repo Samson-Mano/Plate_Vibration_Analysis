@@ -20,12 +20,11 @@ public:
 	unsigned int inlcond_count = 0;
 	std::unordered_map<int, nodeinl_condition_data> inlcondMap;
 	int inlcond_type = 0; //0 - Displacement, 1 - Velocity
-	int model_type = 0; // 0,1 - Line, 2,3 - Circle
 
 	nodeinlcond_list_store();
 	~nodeinlcond_list_store();
 	void init(geom_parameters* geom_param_ptr);
-	void set_zero_condition(int inlcond_type, const int& model_type);
+	void set_zero_condition(int inlcond_type);
 	void add_inlcondition(int& node_id, glm::vec3& inlcond_loc, glm::vec3& inlcond_normals, double& inl_amplitude_z);
 	void delete_inlcondition(int& node_id);
 	void set_buffer();

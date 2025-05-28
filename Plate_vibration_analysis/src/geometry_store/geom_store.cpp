@@ -117,12 +117,11 @@ void geom_store::import_model(std::ifstream& input_file)
 	int node_count = 0;
 
 
-	// Set the loads, initial condition & constraints
+	// Set the initial conditions
 
-	this->node_inldispl.set_zero_condition(0, 0);
-	this->node_inlvelo.set_zero_condition(1, 0);
+	this->node_inldispl.set_zero_condition(0);
+	this->node_inlvelo.set_zero_condition(1);
 	this->node_loads.set_zero_condition(0);
-	this->node_cnst.set_zero_condition(0);
 
 
 	//________________________________________ Create the model
@@ -264,14 +263,135 @@ void geom_store::import_model(std::ifstream& input_file)
 		if (inpt_type == "*MATERIAL_DATA")
 		{
 			is_material_exists = true;
+			mat_window->material_list.clear(); // Clear the existing material list
 
+			std::map<int, std::vector<int>> tri_material_map;
+			std::map<int, std::vector<int>> quad_material_map;
 
+			// Material data
+			while (j < data_lines.size())
+			{
+				std::istringstream materialIss(data_lines[j + 1]);
 
+				// Vector to store the split values
+				std::vector<std::string> splitValues;
+
+				// Split the string by comma
+				std::string token;
+				while (std::getline(materialIss, token, ','))
+				{
+					splitValues.push_back(token);
+				}
+
+				const int numValues = static_cast<int>(splitValues.size());
+
+				if (numValues == 7)
+				{
+					material_data temp_material;
+
+					temp_material.material_id = std::stoi(splitValues[0]); // Material ID
+					temp_material.material_name = splitValues[1]; // Material name
+					temp_material.material_youngsmodulus = std::stod(splitValues[2]); // material youngs modulus
+					temp_material.material_shearmodulus = std::stod(splitValues[3]); // material shear modulus
+					temp_material.material_density = std::stod(splitValues[4]); // material density
+					temp_material.shell_thickness = std::stod(splitValues[5]); // shell thickness
+					temp_material.poissons_ratio = std::stod(splitValues[6]); // poissons ratio
+
+					// Add the Material data to material data store
+					// Add to materail list
+					// mat_window->material_list[temp_material.material_id] = temp_material;
+
+					// Emplace does the following
+					// If the key exists : does nothing(does not overwrite).
+						// If the key doesn't exist: constructs the key-value pair in-place.
+						// Avoids unnecessary copying(especially if using std::move or in - place construction).
+
+					mat_window->material_list.emplace(temp_material.material_id, temp_material);
+
+				}
+				else if (numValues == 3)
+				{
+					int elm_id = std::stoi(splitValues[0]); // Element ID
+					int elm_type = std::stoi(splitValues[1]); // Element type 1 = Triangle, 2 = Quadrilateral
+					int material_id = std::stoi(splitValues[2]); // Material ID
+
+					if (elm_type == 1)
+					{
+						// Add the material ID map to Triangle element id
+						tri_material_map[material_id].push_back(elm_id);
+						// this->model_trielements.update_material({ elm_id }, material_id);
+
+					}
+					else if (elm_type == 2)
+					{
+						// Add the material ID map to Quadrilateral element id
+						quad_material_map[material_id].push_back(elm_id);
+
+						// this->model_quadelements.update_material({elm_id}, material_id);
+					}
+				}
+				else
+				{
+					// Apply all materials at once
+					for (const auto& [mat_id, tri_ids] : tri_material_map)
+					{
+						this->model_trielements.update_material(tri_ids, mat_id);
+					}
+
+					for (const auto& [mat_id, quad_ids] : quad_material_map)
+					{
+						this->model_quadelements.update_material(quad_ids, mat_id);
+					}
+
+					stopwatch_elapsed_str.str("");
+					stopwatch_elapsed_str << stopwatch.elapsed();
+					std::cout << "Material data read completed at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+
+					break;
+				}
+
+				j++;
+			}
 		}
+
 
 		if (inpt_type == "*CONSTRAINT_DATA")
 		{
+			// Constraint data
+			while (j < data_lines.size())
+			{
+				std::istringstream cnstdataIss(data_lines[j + 1]);
 
+				// Vector to store the split values
+				std::vector<std::string> splitValues;
+
+				// Split the string by comma
+				std::string token;
+				while (std::getline(cnstdataIss, token, ','))
+				{
+					splitValues.push_back(token);
+				}
+
+				if (static_cast<int>(splitValues.size()) != 8)
+				{
+					break;
+				}
+
+				int cnst_node_id = std::stoi(splitValues[0]); // Constraint node id
+				glm::vec3 ndcnst_loc = glm::vec3(std::stod(splitValues[1]), std::stod(splitValues[2]), std::stod(splitValues[3])); // Constraint location
+				glm::vec3 ndcnst_normal = glm::vec3(std::stod(splitValues[4]), std::stod(splitValues[5]), std::stod(splitValues[6])); // Constraint normal
+				int cnst_type = std::stoi(splitValues[7]); // Constraint type
+
+				// Add the Constraint data
+				this->node_cnst.add_nodeconstraint(cnst_node_id, ndcnst_loc, ndcnst_normal, cnst_type);
+
+				j++;
+			}
+
+
+			stopwatch_elapsed_str.str("");
+			stopwatch_elapsed_str << stopwatch.elapsed();
+			std::cout << "Constraint data read completed at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 
 		}
 
@@ -284,6 +404,51 @@ void geom_store::import_model(std::ifstream& input_file)
 		if (inpt_type == "*INITIAL_CONDITION_DATA")
 		{
 
+			while (j < data_lines.size())
+			{
+				std::istringstream inldataIss(data_lines[j + 1]);
+
+				// Vector to store the split values
+				std::vector<std::string> splitValues;
+
+				// Split the string by comma
+				std::string token;
+				while (std::getline(inldataIss, token, ','))
+				{
+					splitValues.push_back(token);
+				}
+
+				if (static_cast<int>(splitValues.size()) != 9)
+				{
+					break;
+				}
+
+				int inl_node_id = std::stoi(splitValues[0]); // Constraint node id
+				glm::vec3 inlcond_loc = glm::vec3(std::stod(splitValues[1]), std::stod(splitValues[2]), std::stod(splitValues[3])); // Initial condition location
+				glm::vec3 inlcond_normal = glm::vec3(std::stod(splitValues[4]), std::stod(splitValues[5]), std::stod(splitValues[6])); // Initial condition normal
+				double inl_amplitude_z = std::stod(splitValues[7]); // Initial condition value
+				int inlcond_type = std::stoi(splitValues[8]); // Initial condition type
+
+				// Add the Initial condition data
+				if (inlcond_type == 0)
+				{
+					// Initial displacement
+					this->node_inldispl.add_inlcondition(inl_node_id, inlcond_loc, inlcond_normal, inl_amplitude_z);
+
+				}
+				else if (inlcond_type == 1)
+				{
+					// Initial velocity
+					this->node_inlvelo.add_inlcondition(inl_node_id, inlcond_loc, inlcond_normal, inl_amplitude_z);
+
+				}
+
+				j++;
+			}
+
+			stopwatch_elapsed_str.str("");
+			stopwatch_elapsed_str << stopwatch.elapsed();
+			std::cout << "Initial condition data read completed at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 
 		}
 
@@ -347,7 +512,7 @@ void geom_store::import_model(std::ifstream& input_file)
 		this->model_quadelements.update_material(selected_quad_elm_ids, default_material.material_id);
 
 	}
-	
+
 
 	// Geometry is loaded
 	is_geometry_set = true;
@@ -406,9 +571,9 @@ void geom_store::export_model(std::ofstream& output_file)
 		// Print the node details
 		const node_store nd = nd_m.second;
 
-		output_file << nd.node_id <<",\t\t" 
-			<< nd.node_pt.x << ",\t\t" 
-			<< nd.node_pt.y << ",\t\t" 
+		output_file << nd.node_id << ",\t\t"
+			<< nd.node_pt.x << ",\t\t"
+			<< nd.node_pt.y << ",\t\t"
 			<< nd.node_pt.z << std::endl;
 
 	}
@@ -463,20 +628,115 @@ void geom_store::export_model(std::ofstream& output_file)
 
 
 	// Write the material data
+	output_file << "*MATERIAL_DATA" << std::endl;
 
+	for (const auto& mat_m : mat_window->material_list)
+	{
+		material_data mat = mat_m.second;
+
+		output_file << mat.material_id << ",\t\t"
+			<< mat.material_name << ",\t\t"
+			<< mat.material_youngsmodulus << ",\t\t"
+			<< mat.material_shearmodulus << ",\t\t"
+			<< mat.material_density << ",\t\t"
+			<< mat.shell_thickness << ",\t\t"
+			<< mat.poissons_ratio << std::endl;
+
+	}
+
+	if (static_cast<int>(model_trielements.elementtriMap.size()) != 0)
+	{
+
+		for (const auto& elm_tri_m : model_trielements.elementtriMap)
+		{
+			// Print the tri element details
+			const elementtri_store elm_tri = elm_tri_m.second;
+
+			output_file << elm_tri.tri_id << ",\t\t"
+				<< "1" << ",\t\t"
+				<< elm_tri.material_id << std::endl;
+
+		}
+
+	}
+
+	if (static_cast<int>(model_quadelements.elementquadMap.size()) != 0)
+	{
+
+		for (const auto& elm_quad_m : model_quadelements.elementquadMap)
+		{
+			// Print the quad element details
+			const elementquad_store elm_quad = elm_quad_m.second;
+
+			output_file << elm_quad.quad_id << ",\t\t"
+				<< "2" << ",\t\t"
+				<< elm_quad.material_id << std::endl;
+
+		}
+
+	}
 
 
 	// Write the constraint data
+	output_file << "*CONSTRAINT_DATA" << std::endl;
 
+	for (const auto& cnst_m : node_cnst.ndcnstMap)
+	{
+		nodecnst_data cnst_d = cnst_m.second;
+
+		output_file << cnst_d.node_id << ",\t\t"
+			<< cnst_d.ndcnst_loc.x << ",\t\t"
+			<< cnst_d.ndcnst_loc.y << ",\t\t"
+			<< cnst_d.ndcnst_loc.z << ",\t\t"
+			<< cnst_d.ndcnst_normals.x << ",\t\t"
+			<< cnst_d.ndcnst_normals.y << ",\t\t"
+			<< cnst_d.ndcnst_normals.z << ",\t\t"
+			<< cnst_d.constraint_type << std::endl;
+
+	}
 
 
 	// Write the load data
+	output_file << "*LOAD_DATA" << std::endl;
 
 
 
 	// Write the initial condition data
+	output_file << "*INITIAL_CONDITION_DATA" << std::endl;
 
+	for (const auto& nd_inl_displ_m : node_inldispl.inlcondMap)
+	{
+		// Node initial displacement data
+		nodeinl_condition_data nd_inl_displ = nd_inl_displ_m.second;
 
+		output_file << nd_inl_displ.node_id << ",\t\t"
+			<< nd_inl_displ.inlcond_loc.x << ",\t\t"
+			<< nd_inl_displ.inlcond_loc.y << ",\t\t"
+			<< nd_inl_displ.inlcond_loc.z << ",\t\t"
+			<< nd_inl_displ.inlcond_normals.x << ",\t\t"
+			<< nd_inl_displ.inlcond_normals.y << ",\t\t"
+			<< nd_inl_displ.inlcond_normals.z << ",\t\t"
+			<< nd_inl_displ.inl_amplitude_z << ",\t\t"
+			<< "0" << std::endl;
+
+	}
+
+	for (const auto& nd_inl_velo_m : node_inlvelo.inlcondMap)
+	{
+		// Node initial velocity data
+		nodeinl_condition_data nd_inl_velo = nd_inl_velo_m.second;
+
+		output_file << nd_inl_velo.node_id << ",\t\t"
+			<< nd_inl_velo.inlcond_loc.x << ",\t\t"
+			<< nd_inl_velo.inlcond_loc.y << ",\t\t"
+			<< nd_inl_velo.inlcond_loc.z << ",\t\t"
+			<< nd_inl_velo.inlcond_normals.x << ",\t\t"
+			<< nd_inl_velo.inlcond_normals.y << ",\t\t"
+			<< nd_inl_velo.inlcond_normals.z << ",\t\t"
+			<< nd_inl_velo.inl_amplitude_z << ",\t\t"
+			<< "1" << std::endl;
+
+	}
 
 
 	output_file << "*****" << std::endl;
@@ -1492,7 +1752,7 @@ void geom_store::paint_material_assign_operation()
 	{
 		// Apply material properties to the selected triangle elements
 		int material_id = mat_window->material_list[mat_window->selected_material_option].material_id; // get the material id
-		
+
 		model_trielements.update_material(mat_window->selected_tri_elements, material_id);
 		model_quadelements.update_material(mat_window->selected_quad_elements, material_id);
 

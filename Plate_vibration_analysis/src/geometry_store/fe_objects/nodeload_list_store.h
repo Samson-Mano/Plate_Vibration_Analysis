@@ -12,7 +12,7 @@ struct load_data
 	double load_value = 0.0; // Load value
 	double load_start_time = 0.0; // Load start time
 	double load_end_time = 0.0; // Load end time
-	bool show_load_label = false;
+	// bool show_load_label = false;
 
 };
 

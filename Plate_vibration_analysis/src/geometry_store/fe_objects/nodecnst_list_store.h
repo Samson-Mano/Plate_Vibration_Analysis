@@ -19,12 +19,11 @@ public:
 	const double epsilon = 0.000001;
 	unsigned int ndcnst_count = 0;
 	std::unordered_map<int, nodecnst_data> ndcnstMap;
-	int model_type = 0; // 0,1 - Line, 2,3 - Circle
 
 	nodecnst_list_store();
 	~nodecnst_list_store();
 	void init(geom_parameters* geom_param_ptr);
-	void set_zero_condition(const int& model_type);
+
 	void add_nodeconstraint(int& node_id, glm::vec3& ndcnst_loc, glm::vec3& ndcnst_normals, int& constraint_type);
 	void delete_nodeconstraint(int& node_id);
 	void set_buffer();
