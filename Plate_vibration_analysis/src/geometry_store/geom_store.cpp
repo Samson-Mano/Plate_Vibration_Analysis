@@ -290,7 +290,7 @@ void geom_store::import_model(std::ifstream& input_file)
 					material_data temp_material;
 
 					temp_material.material_id = std::stoi(splitValues[0]); // Material ID
-					temp_material.material_name = splitValues[1]; // Material name
+					temp_material.material_name = splitValues[1].substr(4); // Material name
 					temp_material.material_youngsmodulus = std::stod(splitValues[2]); // material youngs modulus
 					temp_material.material_shearmodulus = std::stod(splitValues[3]); // material shear modulus
 					temp_material.material_density = std::stod(splitValues[4]); // material density
@@ -398,6 +398,67 @@ void geom_store::import_model(std::ifstream& input_file)
 		if (inpt_type == "*LOAD_DATA")
 		{
 
+			std::map<int, load_data> nd_loadset_data;
+
+			while (j < data_lines.size())
+			{
+				std::istringstream loaddataIss(data_lines[j + 1]);
+
+				// Vector to store the split values
+				std::vector<std::string> splitValues;
+
+				// Split the string by comma
+				std::string token;
+				while (std::getline(loaddataIss, token, ','))
+				{
+					splitValues.push_back(token);
+				}
+
+				if (static_cast<int>(splitValues.size()) != 11)
+				{
+					break;
+				}
+
+
+
+				int load_set_id = std::stoi(splitValues[0]); // Load set id
+				int load_node_ids = std::stoi(splitValues[1]); // Load node id
+				glm::vec3 load_loc = glm::vec3(std::stod(splitValues[2]), std::stod(splitValues[3]), std::stod(splitValues[4])); // Load location
+				glm::vec3 load_normal = glm::vec3(std::stod(splitValues[5]), std::stod(splitValues[6]), std::stod(splitValues[7])); // Load normal
+				double load_value = std::stod(splitValues[8]); // Load amplitude 
+				double load_start_time = std::stod(splitValues[9]); // Load start time
+				double load_end_time = std::stod(splitValues[10]); // Load end time
+
+				auto& load_entry = nd_loadset_data[load_set_id];
+				load_entry.node_ids.push_back(load_node_ids);
+				load_entry.load_locs.push_back(load_loc);
+				load_entry.load_normals.push_back(load_normal);
+
+				if (static_cast<int>(load_entry.node_ids.size()) == 1)
+				{
+					load_entry.load_value = load_value;
+					load_entry.load_start_time = load_start_time;
+					load_entry.load_end_time = load_end_time;
+
+				}
+
+				j++;
+			}
+
+
+			// Add to the main load storage
+			for (auto& ld_m : nd_loadset_data)
+			{
+				load_data ld = ld_m.second;
+
+				this->node_loads.add_loads(ld.node_ids, ld.load_locs, ld.load_normals,
+					ld.load_start_time, ld.load_end_time, ld.load_value);
+
+			}
+
+			stopwatch_elapsed_str.str("");
+			stopwatch_elapsed_str << stopwatch.elapsed();
+			std::cout << "Load data read completed at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 
 		}
 
@@ -477,7 +538,7 @@ void geom_store::import_model(std::ifstream& input_file)
 
 
 	// No material is assigned in the model (Add a default material)
-	if (is_material_exists == false)
+	if (is_material_exists == false || static_cast<int>(mat_window->material_list.size()) == 0)
 	{
 		// add a default material to the material list
 		material_data default_material;
@@ -699,6 +760,25 @@ void geom_store::export_model(std::ofstream& output_file)
 	// Write the load data
 	output_file << "*LOAD_DATA" << std::endl;
 
+	for (const auto& nd_load : node_loads.loadMap)
+	{
+		for (int i = 0; i < static_cast<int>(nd_load.node_ids.size()); i++)
+		{
+			output_file << nd_load.load_set_id << ",\t\t"
+				<< nd_load.node_ids[i] << ",\t\t"
+				<< nd_load.load_locs[i].x << ",\t\t"
+				<< nd_load.load_locs[i].y << ",\t\t"
+				<< nd_load.load_locs[i].z << ",\t\t"
+				<< nd_load.load_normals[i].x << ",\t\t"
+				<< nd_load.load_normals[i].y << ",\t\t"
+				<< nd_load.load_normals[i].z << ",\t\t"
+				<< nd_load.load_value << ",\t\t"
+				<< nd_load.load_start_time << ",\t\t"
+				<< nd_load.load_end_time << std::endl;
+
+		}
+
+	}
 
 
 	// Write the initial condition data
