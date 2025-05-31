@@ -25,12 +25,11 @@ void modal_analysis_solver::clear_results()
 
 
 void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_nodes,
-	const elementline_list_store& model_lineelements,
 	const elementtri_list_store& model_trielements,
 	const elementquad_list_store& model_quadelements,
+	const nodecnst_list_store& node_cnst,
 	const material_data& mat_data,
 	rslt_nodes_list_store& modal_result_nodes,
-	rslt_elementline_list_store& modal_result_lineelements,
 	rslt_elementtri_list_store& modal_result_trielements,
 	rslt_elementquad_list_store& modal_result_quadelements)
 {
@@ -40,12 +39,6 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	// Check the model
 	// Number of nodes
 	if (model_nodes.node_count == 0)
-	{
-		return;
-	}
-
-	// Number of lines
-	if (model_lineelements.elementline_count == 0)
 	{
 		return;
 	}
@@ -69,9 +62,15 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 
 
 	this->node_count = model_nodes.node_count;
-	// this->model_type = mat_data.model_type;
+
 
 	this->matrix_size = 0;
+
+
+	// Create stiffness matrix
+
+
+
 
 
 

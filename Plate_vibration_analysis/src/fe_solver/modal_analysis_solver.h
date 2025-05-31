@@ -4,13 +4,12 @@
 
 // FE Objects
 #include "../geometry_store/fe_objects/nodes_list_store.h"
-#include "../geometry_store/fe_objects/elementline_list_store.h"
 #include "../geometry_store/fe_objects/elementtri_list_store.h"
 #include "../geometry_store/fe_objects/elementquad_list_store.h"
+#include "../geometry_store/fe_objects/nodecnst_list_store.h"
 
 // FE Results Modal Analysis
 #include "../geometry_store/result_objects/rslt_nodes_list_store.h"
-#include "../geometry_store/result_objects/rslt_elementline_list_store.h"
 #include "../geometry_store/result_objects/rslt_elementtri_list_store.h"
 #include "../geometry_store/result_objects/rslt_elementquad_list_store.h"
 
@@ -80,12 +79,11 @@ public:
 	void clear_results();
 
 	void modal_analysis_start(const nodes_list_store& model_nodes,
-		const elementline_list_store& model_lineelements,
 		const elementtri_list_store& model_trielements,
 		const elementquad_list_store& model_quadelements,
+		const nodecnst_list_store& node_cnst,
 		const material_data& mat_data,
 		rslt_nodes_list_store& modal_result_nodes,
-		rslt_elementline_list_store& modal_result_lineelements,
 		rslt_elementtri_list_store& modal_result_trielements,
 		rslt_elementquad_list_store& modal_result_quadelements);
 
@@ -93,6 +91,7 @@ private:
 	const double m_pi = 3.14159265358979323846;
 	const double epsilon = 0.000001;
 	// const bool print_matrix = true;
+
 	Stopwatch_events stopwatch;
 	std::stringstream stopwatch_elapsed_str;
 
