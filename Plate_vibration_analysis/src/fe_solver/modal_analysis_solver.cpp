@@ -83,7 +83,42 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 
 
 
+void modal_analysis_solver::computeLocalCoordinateSystem(
+	const Eigen::Vector3d& p,  // Point P
+	const Eigen::Vector3d& q,  // Point Q
+	const Eigen::Vector3d& r,  // Point R
+	double& sin_angle,
+	double& cos_angle,
+	double& dpq,
+	double& dpr, 
+	Eigen::Matrix3d& coordinateSystemE)
+{
+	// Vectors PQ and PR
+	Eigen::Vector3d v_pq = q - p;
+	Eigen::Vector3d v_pr = r - p;
 
+	dpq = v_pq.norm();
+	dpr = v_pr.norm();
+
+	// Normal vector to the triangle (Z-axis)
+	Eigen::Vector3d v_z = v_pq.cross(v_pr);
+	double dz = v_z.norm();
+
+	// Sine and Cosine of angle between PQ and PR
+	sin_angle = dz / (dpq * dpr);
+	cos_angle = v_pq.dot(v_pr) / (dpq * dpr);
+
+	// Unit vectors for local coordinate system
+	Eigen::Vector3d x_local = v_pq.normalized();           // Local x-axis
+	Eigen::Vector3d z_local = v_z.normalized();            // Local z-axis
+	Eigen::Vector3d y_local = z_local.cross(x_local);      // Local y-axis
+
+	// Construct transformation matrix E (columns: X, Y, Z)
+	coordinateSystemE.col(0) = x_local;
+	coordinateSystemE.col(1) = y_local;
+	coordinateSystemE.col(2) = z_local;
+
+}
 
 
 

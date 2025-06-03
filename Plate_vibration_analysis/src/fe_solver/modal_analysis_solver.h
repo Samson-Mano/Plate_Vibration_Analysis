@@ -95,6 +95,13 @@ private:
 	Stopwatch_events stopwatch;
 	std::stringstream stopwatch_elapsed_str;
 
-
+	void computeLocalCoordinateSystem(
+		const Eigen::Vector3d& p,  // Point P
+		const Eigen::Vector3d& q,  // Point Q
+		const Eigen::Vector3d& r,  // Point R
+		double& sin_angle,
+		double& cos_angle,
+		double& dpq,
+		double& dpr, Eigen::Matrix3d& coordinateSystemE);
 
 };
