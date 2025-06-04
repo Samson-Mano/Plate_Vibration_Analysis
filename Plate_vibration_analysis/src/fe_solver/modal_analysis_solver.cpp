@@ -44,7 +44,7 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	}
 
 	// Number of quads/ tris
-	if ((model_quadelements.elementquad_count  + model_trielements.elementtri_count)== 0)
+	if ((model_quadelements.elementquad_count + model_trielements.elementtri_count) == 0)
 	{
 		return;
 	}
@@ -90,7 +90,7 @@ void modal_analysis_solver::computeLocalCoordinateSystem(
 	double& sin_angle,
 	double& cos_angle,
 	double& dpq,
-	double& dpr, 
+	double& dpr,
 	Eigen::Matrix3d& coordinateSystemE)
 {
 	// Vectors PQ and PR
@@ -119,6 +119,137 @@ void modal_analysis_solver::computeLocalCoordinateSystem(
 	coordinateSystemE.col(2) = z_local;
 
 }
+
+
+
+Eigen::MatrixXd modal_analysis_solver::generateTriangleIntegrationPoints(int nip)
+{
+	Eigen::MatrixXd integration_points(nip, 4); // Each row: [L1, L2, L3, weight]
+	Eigen::Vector4d temp_row;
+
+	temp_row(0) = 1.0 / 3.0;
+	temp_row(1) = 1.0 / 3.0;
+	temp_row(2) = 1.0 / 3.0;
+
+	if (nip == 4)
+	{
+		temp_row(3) = -27.0 / 48.0;
+	}
+	else if (nip == 7)
+	{
+		temp_row(3) = 9.0 / 40.0;
+	}
+	else
+	{
+		temp_row(3) = 0.0;
+	}
+
+	integration_points.row(0) = temp_row;
+
+	double alpha = 0.6;
+	double beta = 0.2;
+	double weight = 25.0 / 48.0;
+	double sq15 = std::sqrt(15.0);
+
+	if (nip == 7)
+	{
+		alpha = (9.0 + 2.0 * sq15) / 21.0;
+		beta = (6.0 - sq15) / 21.0;
+		weight = (155.0 - sq15) / 1200.0;
+	}
+
+	for (int i = 1; i <= 3; ++i)
+	{
+		temp_row(0) = beta;
+		temp_row(1) = beta;
+		temp_row(2) = beta;
+		temp_row(3) = weight;
+
+		temp_row(i - 1) = alpha;  // Set L1, L2, or L3
+		integration_points.row(i) = temp_row;
+	}
+
+	if (nip == 4) return integration_points;
+
+	alpha = (9.0 - 2.0 * sq15) / 21.0;
+	beta = (6.0 + sq15) / 21.0;
+	weight = (155.0 + sq15) / 1200.0;
+
+	for (int i = 4; i <= 6; ++i)
+	{
+		temp_row(0) = beta;
+		temp_row(1) = beta;
+		temp_row(2) = beta;
+		temp_row(3) = weight;
+
+		int j = i - 3;
+		temp_row(j - 1) = alpha;  // Set L1, L2, or L3
+		integration_points.row(i) = temp_row;
+	}
+
+	return integration_points;
+
+}
+
+
+void modal_analysis_solver::computeJacobianCoefficients(
+	double x1, double y1,
+	double x2, double y2,
+	double x3, double y3,
+	double triangle_area,
+	Eigen::Matrix<double, 2, 3>& jacobianMatrix,
+	Eigen::Matrix<double, 3, 6>& jacobianProducts)
+{
+
+	// Reciprocal of 2 × triangle area (used as a scaling factor)
+	double invTwoArea = 1.0 / (2.0 * triangle_area);
+
+	// Differences in y-coordinates for B vector components
+	double b1 = y2 - y3;
+	double b2 = y3 - y1;
+	double b3 = y1 - y2;
+
+	// Differences in x-coordinates for C vector components
+	double c1 = x3 - x2;
+	double c2 = x1 - x3;
+	double c3 = x2 - x1;
+
+	// Fill first Jacobian matrix (2x3): derivatives of shape functions
+	jacobianMatrix(0, 0) = b1 * invTwoArea;
+	jacobianMatrix(0, 1) = b2 * invTwoArea;
+	jacobianMatrix(0, 2) = b3 * invTwoArea;
+
+	jacobianMatrix(1, 0) = c1 * invTwoArea;
+	jacobianMatrix(1, 1) = c2 * invTwoArea;
+	jacobianMatrix(1, 2) = c3 * invTwoArea;
+
+	// Fill second matrix (3x6): products of derivatives for stiffness calculation
+	for (int j = 0; j < 3; ++j)
+	{
+		double bj = jacobianMatrix(0, j);
+		double cj = jacobianMatrix(1, j);
+
+		jacobianProducts(0, j) = bj * bj;           // b^2
+		jacobianProducts(1, j) = cj * cj;           // c^2
+		jacobianProducts(2, j) = bj * cj;           // b * c
+
+		int m = j + 3;
+		int next = (j + 1) % 3; // Wrap-around index for pairs
+
+		double bjNext = jacobianMatrix(0, next);
+		double cjNext = jacobianMatrix(1, next);
+
+		jacobianProducts(0, m) = 2.0 * bj * bjNext;
+		jacobianProducts(1, m) = 2.0 * cj * cjNext;
+		jacobianProducts(2, m) = bj * cjNext + bjNext * cj;
+	}
+
+}
+
+
+
+
+
 
 
 

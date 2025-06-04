@@ -104,4 +104,17 @@ private:
 		double& dpq,
 		double& dpr, Eigen::Matrix3d& coordinateSystemE);
 
+
+	Eigen::MatrixXd generateTriangleIntegrationPoints(int nip);
+
+
+	void computeJacobianCoefficients(
+		double x1, double y1,
+		double x2, double y2,
+		double x3, double y3,
+		double triangle_area,
+		Eigen::Matrix<double, 2, 3>& jacobianMatrix,
+		Eigen::Matrix<double, 3, 6>& jacobianProducts);
+
+
 };
