@@ -117,4 +117,20 @@ private:
 		Eigen::Matrix<double, 3, 6>& jacobianProducts);
 
 
+	void computeShapeFunctions(
+		double B1, double B2, double B3,
+		double C1, double C2, double C3,
+		double L1, double L2, double L3,
+		const Eigen::Matrix<double, 2, 3>& jacobianMatrix,
+		const Eigen::Matrix<double, 3, 6>& jacobianProducts,
+		Eigen::VectorXd& shapeFunction,         // Size 9
+		Eigen::MatrixXd& shapeGradient,         // Size 2x9
+		Eigen::MatrixXd& secondDerivativeMatrix); // Size 6x9
+
+
+
+	
 };
+
+
+
