@@ -373,6 +373,37 @@ void modal_analysis_solver::computeShapeFunctions(double B1, double B2, double B
 
 
 
+Eigen::MatrixXd modal_analysis_solver::computeStrainDisplacementMatrix(
+	const Eigen::Matrix<double, 3, 6>& jacobianProducts,
+	const Eigen::MatrixXd& shapefunction_secondDerivativeMatrix)
+{
+	Eigen::MatrixXd strain_displacement_matrix(3, 9);
+	strain_displacement_matrix.setZero();
+
+	// Compute B(I,J) = JC2(I,K) * AN2(K,J)
+	for (int i = 0; i < 3; ++i)
+	{
+		for (int j = 0; j < 9; ++j)
+		{
+			double bij = 0.0;
+			for (int k = 0; k < 6; ++k)
+			{
+				bij += jacobianProducts(i, k) * shapefunction_secondDerivativeMatrix(k, j);
+			}
+			strain_displacement_matrix(i, j) = bij;
+		}
+	}
+
+	// Apply scaling factors
+	for (int j = 0; j < 9; ++j)
+	{
+		strain_displacement_matrix(0, j) = -strain_displacement_matrix(0, j);
+		strain_displacement_matrix(1, j) = -strain_displacement_matrix(1, j);
+		strain_displacement_matrix(2, j) = -2.0 * strain_displacement_matrix(2, j);
+	}
+
+	return strain_displacement_matrix;
+}
 
 
 

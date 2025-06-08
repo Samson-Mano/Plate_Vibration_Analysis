@@ -129,6 +129,10 @@ private:
 
 
 
+	Eigen::MatrixXd computeStrainDisplacementMatrix(const Eigen::Matrix<double, 3, 6>& jacobianProducts,
+		const Eigen::MatrixXd& shapefunction_secondDerivativeMatrix);
+
+
 	
 };
 
