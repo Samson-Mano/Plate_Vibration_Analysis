@@ -1,4 +1,5 @@
 #include "modal_analysis_solver.h"
+#include "triCKZ_element.h"
 
 modal_analysis_solver::modal_analysis_solver()
 {
@@ -82,7 +83,6 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 }
 
 
-
 void modal_analysis_solver::computeLocalCoordinateSystem(
 	const Eigen::Vector3d& p,  // Point P
 	const Eigen::Vector3d& q,  // Point Q
@@ -119,7 +119,6 @@ void modal_analysis_solver::computeLocalCoordinateSystem(
 	coordinateSystemE.col(2) = z_local;
 
 }
-
 
 
 Eigen::MatrixXd modal_analysis_solver::generateTriangleIntegrationPoints(int nip)
@@ -214,7 +213,12 @@ void modal_analysis_solver::computeJacobianCoefficients(
 	double c2 = x1 - x3;
 	double c3 = x2 - x1;
 
-	// Fill first Jacobian matrix (2x3): derivatives of shape functions
+	// Fill first Jacobian matrix (2x3): derivatives of area co-ordinates L1, L2, L3
+	// 
+	//  | dL1/dx  dL2/dx  dL3/dx |
+	//  | dL1/dy  dL2/dy  dL3/dy |
+	//
+
 	jacobianMatrix(0, 0) = b1 * invTwoArea;
 	jacobianMatrix(0, 1) = b2 * invTwoArea;
 	jacobianMatrix(0, 2) = b3 * invTwoArea;
@@ -223,15 +227,21 @@ void modal_analysis_solver::computeJacobianCoefficients(
 	jacobianMatrix(1, 1) = c2 * invTwoArea;
 	jacobianMatrix(1, 2) = c3 * invTwoArea;
 
-	// Fill second matrix (3x6): products of derivatives for stiffness calculation
+	// Fill second matrix (3x6): products of derivatives of the area co-ordinates
+	//
+	// |    (dL1/dx)^2       (dL2/dx)^2       (dL3/dx)^2          2(dL1/dx dL2/dx)                 2(dL2/dx dL3/dx)                 2(dL2/dx dL3/dx)           |
+	// |    (dL1/dy)^2       (dL2/dy)^2       (dL3/dy)^2          2(dL1/dy dL2/dy)                 2(dL2/dy dL3/dy)                 2(dL2/dy dL3/dy)           |
+	// | (dL1/dx dL1/dy)  (dL2/dx dL2/dy)  (dL3/dx dL3/dy)  (dL1/dx dL2/dy)+(dL1/dy dL2/dx)  (dL2/dx dL3/dy)+(dL2/dy dL3/dx)  (dL3/dx dL1/dy)+(dL3/dy dL1/dx)  |
+	//
+
 	for (int j = 0; j < 3; ++j)
 	{
 		double bj = jacobianMatrix(0, j);
 		double cj = jacobianMatrix(1, j);
 
-		jacobianProducts(0, j) = bj * bj;           // b^2
-		jacobianProducts(1, j) = cj * cj;           // c^2
-		jacobianProducts(2, j) = bj * cj;           // b * c
+		jacobianProducts(0, j) = bj * bj; // (dL1/dx)^2
+		jacobianProducts(1, j) = cj * cj; // (dL1/dy)^2
+		jacobianProducts(2, j) = bj * cj; // (dL1/dx dL1/dy)
 
 		int m = j + 3;
 		int next = (j + 1) % 3; // Wrap-around index for pairs
@@ -239,9 +249,9 @@ void modal_analysis_solver::computeJacobianCoefficients(
 		double bjNext = jacobianMatrix(0, next);
 		double cjNext = jacobianMatrix(1, next);
 
-		jacobianProducts(0, m) = 2.0 * bj * bjNext;
-		jacobianProducts(1, m) = 2.0 * cj * cjNext;
-		jacobianProducts(2, m) = bj * cjNext + bjNext * cj;
+		jacobianProducts(0, m) = 2.0 * bj * bjNext; // 2(dL1/dx dL2/dx) 
+		jacobianProducts(1, m) = 2.0 * cj * cjNext; // 2(dL1/dy dL2/dy) 
+		jacobianProducts(2, m) = bj * cjNext + bjNext * cj; // (dL1/dx dL2/dy)+(dL1/dy dL2/dx)
 	}
 
 }
@@ -258,7 +268,7 @@ void modal_analysis_solver::computeShapeFunctions(double B1, double B2, double B
 {
 
 	shapeFunction.setZero(9);
-	shapeGradient.setZero(2, 9);
+	shapeGradient.setZero(3, 9);
 	secondDerivativeMatrix.setZero(6, 9);
 
 	//__________________________________________________________________________________________________________________
@@ -275,97 +285,118 @@ void modal_analysis_solver::computeShapeFunctions(double B1, double B2, double B
 
 
 	//__________________________________________________________________________________________________________________
-	// First derivative
+	// First derivative AN1 (3 x 9 Matrix)
+	//      0       1   2     3      4   5     6      7   8 
+	//  0| dN1/dL1  ()  ()  dN2/dL1  ()  ()  dN3/dL1  ()  () |
+	//  1| dN1/dL2  ()  ()  dN2/dL2  ()  ()  dN3/dL2  ()  () |
+	//  2| dN1/dL3  ()  ()  dN2/dL3  ()  ()  dN3/dL3  ()  () |
+	//  
 	// Derivatives with respect to L1, L2, L3
-	shapeGradient(0, 0) = 1.0 + 2.0 * L1 * L2 + 2.0 * L1 * L3 - L2 * L2 - L3 * L3;
-	shapeGradient(1, 3) = 1.0 + 2.0 * L2 * L3 + 2.0 * L2 * L1 - L3 * L3 - L1 * L1;
-	shapeGradient(2, 6) = 1.0 + 2.0 * L3 * L1 + 2.0 * L3 * L2 - L1 * L1 - L2 * L2;
+	shapeGradient(0, 0) = 1.0 + 2.0 * L1 * L2 + 2.0 * L1 * L3 - L2 * L2 - L3 * L3; // dN1/dL1
+	shapeGradient(1, 3) = 1.0 + 2.0 * L2 * L3 + 2.0 * L2 * L1 - L3 * L3 - L1 * L1; // dN2/dL2
+	shapeGradient(2, 6) = 1.0 + 2.0 * L3 * L1 + 2.0 * L3 * L2 - L1 * L1 - L2 * L2; // dN3/dL3
 
-	shapeGradient(1, 0) = L1 * L1 - 2.0 * L1 * L2;
-	shapeGradient(2, 3) = L2 * L2 - 2.0 * L2 * L3;
-	shapeGradient(0, 6) = L3 * L3 - 2.0 * L3 * L1;
+	shapeGradient(1, 0) = L1 * L1 - 2.0 * L1 * L2; // dN1/dL2
+	shapeGradient(2, 3) = L2 * L2 - 2.0 * L2 * L3; // dN2/dL3
+	shapeGradient(0, 6) = L3 * L3 - 2.0 * L3 * L1; // dN3/dL1
 
-	shapeGradient(2, 0) = L1 * L1 - 2.0 * L1 * L3;
-	shapeGradient(0, 3) = L2 * L2 - 2.0 * L2 * L1;
-	shapeGradient(1, 6) = L3 * L3 - 2.0 * L3 * L2;
+	shapeGradient(2, 0) = L1 * L1 - 2.0 * L1 * L3; // dN1/dL3
+	shapeGradient(0, 3) = L2 * L2 - 2.0 * L2 * L1; // dN2/dL1
+	shapeGradient(1, 6) = L3 * L3 - 2.0 * L3 * L2; // dN3/dL2
 
 	// B terms
-	shapeGradient(0, 1) = -B3 * (2.0 * L1 * L2 + 0.5 * L2 * L3) + B2 * (2.0 * L3 * L1 + 0.5 * L2 * L3);
-	shapeGradient(1, 4) = -B1 * (2.0 * L2 * L3 + 0.5 * L3 * L1) + B3 * (2.0 * L1 * L2 + 0.5 * L3 * L1);
-	shapeGradient(2, 7) = -B2 * (2.0 * L3 * L1 + 0.5 * L1 * L2) + B1 * (2.0 * L2 * L3 + 0.5 * L1 * L2);
+	shapeGradient(0, 1) = -B3 * (2.0 * L1 * L2 + 0.5 * L2 * L3) + B2 * (2.0 * L3 * L1 + 0.5 * L2 * L3); // dN'1/dL1
+	shapeGradient(1, 4) = -B1 * (2.0 * L2 * L3 + 0.5 * L3 * L1) + B3 * (2.0 * L1 * L2 + 0.5 * L3 * L1); // dN'2/dL2
+	shapeGradient(2, 7) = -B2 * (2.0 * L3 * L1 + 0.5 * L1 * L2) + B1 * (2.0 * L2 * L3 + 0.5 * L1 * L2); // dN'3/dL3
 
-	shapeGradient(1, 1) = -B3 * (L1 * L1 + 0.5 * L1 * L3) + B2 * (0.5 * L1 * L3);
-	shapeGradient(2, 4) = -B1 * (L2 * L2 + 0.5 * L2 * L1) + B3 * (0.5 * L2 * L1);
-	shapeGradient(0, 7) = -B2 * (L3 * L3 + 0.5 * L3 * L2) + B1 * (0.5 * L3 * L2);
+	shapeGradient(1, 1) = -B3 * (L1 * L1 + 0.5 * L1 * L3) + B2 * (0.5 * L1 * L3); // dN'1/dL2
+	shapeGradient(2, 4) = -B1 * (L2 * L2 + 0.5 * L2 * L1) + B3 * (0.5 * L2 * L1); // dN'2/dL3
+	shapeGradient(0, 7) = -B2 * (L3 * L3 + 0.5 * L3 * L2) + B1 * (0.5 * L3 * L2); // dN'3/dL1
 
-	shapeGradient(2, 1) = -B3 * (0.5 * L1 * L2) + B2 * (L1 * L1 + 0.5 * L1 * L2);
-	shapeGradient(0, 4) = -B1 * (0.5 * L2 * L3) + B3 * (L2 * L2 + 0.5 * L2 * L3);
-	shapeGradient(1, 7) = -B2 * (0.5 * L3 * L1) + B1 * (L3 * L3 + 0.5 * L3 * L1);
+	shapeGradient(2, 1) = -B3 * (0.5 * L1 * L2) + B2 * (L1 * L1 + 0.5 * L1 * L2); // dN'1/dL3
+	shapeGradient(0, 4) = -B1 * (0.5 * L2 * L3) + B3 * (L2 * L2 + 0.5 * L2 * L3); // dN'2/dL1
+	shapeGradient(1, 7) = -B2 * (0.5 * L3 * L1) + B1 * (L3 * L3 + 0.5 * L3 * L1); // dN'3/dL2
 
 	// C terms
-	shapeGradient(0, 2) = -C3 * (2.0 * L1 * L2 + 0.5 * L2 * L3) + C2 * (2.0 * L3 * L1 + 0.5 * L2 * L3);
-	shapeGradient(1, 5) = -C1 * (2.0 * L2 * L3 + 0.5 * L3 * L1) + C3 * (2.0 * L1 * L2 + 0.5 * L3 * L1);
-	shapeGradient(2, 8) = -C2 * (2.0 * L3 * L1 + 0.5 * L1 * L2) + C1 * (2.0 * L2 * L3 + 0.5 * L1 * L2);
+	shapeGradient(0, 2) = -C3 * (2.0 * L1 * L2 + 0.5 * L2 * L3) + C2 * (2.0 * L3 * L1 + 0.5 * L2 * L3); // dN''1/dL1
+	shapeGradient(1, 5) = -C1 * (2.0 * L2 * L3 + 0.5 * L3 * L1) + C3 * (2.0 * L1 * L2 + 0.5 * L3 * L1); // dN''2/dL2
+	shapeGradient(2, 8) = -C2 * (2.0 * L3 * L1 + 0.5 * L1 * L2) + C1 * (2.0 * L2 * L3 + 0.5 * L1 * L2); // dN''3/dL3
 
-	shapeGradient(1, 2) = -C3 * (L1 * L1 + 0.5 * L1 * L3) + C2 * (0.5 * L1 * L3);
-	shapeGradient(2, 5) = -C1 * (L2 * L2 + 0.5 * L2 * L1) + C3 * (0.5 * L2 * L1);
-	shapeGradient(0, 8) = -C2 * (L3 * L3 + 0.5 * L3 * L2) + C1 * (0.5 * L3 * L2);
+	shapeGradient(1, 2) = -C3 * (L1 * L1 + 0.5 * L1 * L3) + C2 * (0.5 * L1 * L3); // dN''1/dL2
+	shapeGradient(2, 5) = -C1 * (L2 * L2 + 0.5 * L2 * L1) + C3 * (0.5 * L2 * L1); // dN''2/dL3
+	shapeGradient(0, 8) = -C2 * (L3 * L3 + 0.5 * L3 * L2) + C1 * (0.5 * L3 * L2); // dN''3/dL1
 
-	shapeGradient(2, 2) = -C3 * (0.5 * L1 * L2) + C2 * (L1 * L1 + 0.5 * L1 * L2);
-	shapeGradient(0, 5) = -C1 * (0.5 * L2 * L3) + C3 * (L2 * L2 + 0.5 * L2 * L3);
-	shapeGradient(1, 8) = -C2 * (0.5 * L3 * L1) + C1 * (L3 * L3 + 0.5 * L3 * L1);
+	shapeGradient(2, 2) = -C3 * (0.5 * L1 * L2) + C2 * (L1 * L1 + 0.5 * L1 * L2); // dN''1/dL3
+	shapeGradient(0, 5) = -C1 * (0.5 * L2 * L3) + C3 * (L2 * L2 + 0.5 * L2 * L3); // dN''2/dL1
+	shapeGradient(1, 8) = -C2 * (0.5 * L3 * L1) + C1 * (L3 * L3 + 0.5 * L3 * L1); // dN''3/dL2
 
 
 	//__________________________________________________________________________________________________________________
-	// Second derivatives AN2
-	secondDerivativeMatrix(0, 0) = 2.0 * (L2 + L3);
-	secondDerivativeMatrix(1, 3) = 2.0 * (L3 + L1);
-	secondDerivativeMatrix(2, 6) = 2.0 * (L1 + L2);
-	secondDerivativeMatrix(1, 0) = -2.0 * L1;
-	secondDerivativeMatrix(2, 3) = -2.0 * L2;
-	secondDerivativeMatrix(0, 6) = -2.0 * L3;
-	secondDerivativeMatrix(2, 0) = -2.0 * L1;
-	secondDerivativeMatrix(0, 3) = -2.0 * L2;
-	secondDerivativeMatrix(1, 6) = -2.0 * L3;
+	// Second derivatives AN2  (6 x 9 Matrix)
+	//      0              1   2     3            4   5        6          7   8 
+	//  0| d^2N1/dL1^2    ()  ()  d^2N2/dL1^2    ()  ()    d^2N3/dL1^2   ()  () |
+	//  1| d^2N1/dL2^2    ()  ()  d^2N2/dL2^2    ()  ()    d^2N3/dL2^2   ()  () |
+	//  2| d^2N1/dL3^2    ()  ()  d^2N2/dL3^2    ()  ()    d^2N3/dL3^2   ()  () |
+	//  3| d^2N1/dL1dL2   ()  ()  d^2N2/dL1dL2   ()  ()    d^2N3/dL1dL2  ()  () |
+	//  4| d^2N1/dL2dL3   ()  ()  d^2N2/dL2dL3   ()  ()    d^2N3/dL2dL3  ()  () |
+	//  5| d^2N1/dL3dL1   ()  ()  d^2N2/dL3dL1   ()  ()    d^2N3/dL3dL1  ()  () |
+	// 
+	// Second Derivatives with respect to L1, L2, L3
 
-	secondDerivativeMatrix(0, 1) = (-2.0 * B3 * L2) + (2.0 * B2 * L3);
-	secondDerivativeMatrix(1, 4) = (-2.0 * B1 * L3) + (2.0 * B3 * L1);
-	secondDerivativeMatrix(2, 7) = (-2.0 * B2 * L1) + (2.0 * B1 * L2);
 
-	secondDerivativeMatrix(0, 2) = (-2.0 * C3 * L2) + (2.0 * C2 * L3);
-	secondDerivativeMatrix(1, 5) = (-2.0 * C1 * L3) + (2.0 * C3 * L1);
-	secondDerivativeMatrix(2, 8) = (-2.0 * C2 * L1) + (2.0 * C1 * L2);
+	secondDerivativeMatrix(0, 0) = 2.0 * (L2 + L3); // d^2N1/dL1^2
+	secondDerivativeMatrix(1, 3) = 2.0 * (L3 + L1); // d^2N2/dL2^2
+	secondDerivativeMatrix(2, 6) = 2.0 * (L1 + L2); // d^2N3/dL3^2
+	secondDerivativeMatrix(1, 0) = -2.0 * L1; // d^2N1/dL2^2
+	secondDerivativeMatrix(2, 3) = -2.0 * L2; // d^2N2/dL3^2
+	secondDerivativeMatrix(0, 6) = -2.0 * L3; // d^2N3/dL1^2
+	secondDerivativeMatrix(2, 0) = -2.0 * L1; // d^2N1/dL3^2 
+	secondDerivativeMatrix(0, 3) = -2.0 * L2; // d^2N2/dL1^2 
+	secondDerivativeMatrix(1, 6) = -2.0 * L3; // d^2N3/dL2^2
 
-	// Additional terms, as needed from the Fortran AN2 block...
-	secondDerivativeMatrix(3, 0) = +2.0 * L1 - 2.0 * L2;
-	secondDerivativeMatrix(4, 3) = +2.0 * L2 - 2.0 * L3;
-	secondDerivativeMatrix(5, 6) = +2.0 * L3 - 2.0 * L1;
+	secondDerivativeMatrix(0, 1) = (-2.0 * B3 * L2) + (2.0 * B2 * L3); // d^2N'1/dL1^2
+	secondDerivativeMatrix(1, 4) = (-2.0 * B1 * L3) + (2.0 * B3 * L1); // d^2N'2/dL2^2
+	secondDerivativeMatrix(2, 7) = (-2.0 * B2 * L1) + (2.0 * B1 * L2); // d^2N'3/dL3^2
 
-	secondDerivativeMatrix(5, 0) = +2.0 * L1 - 2.0 * L3;
-	secondDerivativeMatrix(3, 3) = +2.0 * L2 - 2.0 * L1;
-	secondDerivativeMatrix(4, 6) = +2.0 * L3 - 2.0 * L2;
+	secondDerivativeMatrix(0, 2) = (-2.0 * C3 * L2) + (2.0 * C2 * L3); // d^2N''1/dL1^2
+	secondDerivativeMatrix(1, 5) = (-2.0 * C1 * L3) + (2.0 * C3 * L1); // d^2N''2/dL2^2
+	secondDerivativeMatrix(2, 8) = (-2.0 * C2 * L1) + (2.0 * C1 * L2); // d^2N''3/dL3^2
 
-	// Cross terms for C 
-	secondDerivativeMatrix(3, 1) = -B3 * (2.0 * L1 + 0.5 * L3) + B2 * (0.5 * L3);
-	secondDerivativeMatrix(4, 4) = -B1 * (2.0 * L2 + 0.5 * L1) + B3 * (0.5 * L1);
-	secondDerivativeMatrix(5, 7) = -B2 * (2.0 * L3 + 0.5 * L2) + B1 * (0.5 * L2);
+	// Additional terms... after 3rd row
+	// N
+	secondDerivativeMatrix(3, 0) = +2.0 * L1 - 2.0 * L2; // d^2N1/dL1dL2
+	secondDerivativeMatrix(4, 3) = +2.0 * L2 - 2.0 * L3; // d^2N2/dL2dL3
+	secondDerivativeMatrix(5, 6) = +2.0 * L3 - 2.0 * L1; // d^2N3/dL3dL1
 
-	secondDerivativeMatrix(4, 1) = -B3 * (L1 * 0.5) + B2 * (L1 * 0.5);
-	secondDerivativeMatrix(5, 4) = -B1 * (L2 * 0.5) + B3 * (L2 * 0.5);
-	secondDerivativeMatrix(3, 7) = -B2 * (L3 * 0.5) + B1 * (L3 * 0.5);
-	secondDerivativeMatrix(5, 1) = -B3 * (L2 * 0.5) + B2 * (2.0 * L1 + L2 * 0.5);
-	secondDerivativeMatrix(3, 4) = -B1 * (L3 * 0.5) + B3 * (2.0 * L2 + L3 * 0.5);
-	secondDerivativeMatrix(4, 7) = -B2 * (L1 * 0.5) + B1 * (2.0 * L3 + L1 * 0.5);
+	secondDerivativeMatrix(5, 0) = +2.0 * L1 - 2.0 * L3; // d^2N1/dL3dL1
+	secondDerivativeMatrix(3, 3) = +2.0 * L2 - 2.0 * L1; // d^2N2/dL1dL2
+	secondDerivativeMatrix(4, 6) = +2.0 * L3 - 2.0 * L2; // d^2N3/dL2dL3
 
-	secondDerivativeMatrix(3, 2) = -C3 * (2.0 * L1 + L3 * 0.5) + C2 * (L3 * 0.5);
-	secondDerivativeMatrix(4, 5) = -C1 * (2.0 * L2 + L1 * 0.5) + C3 * (L1 * 0.5);
-	secondDerivativeMatrix(5, 8) = -C2 * (2.0 * L3 + L2 * 0.5) + C1 * (L2 * 0.5);
-	secondDerivativeMatrix(4, 2) = -C3 * (L1 * 0.5) + C2 * (L1 * 0.5);
-	secondDerivativeMatrix(5, 5) = -C1 * (L2 * 0.5) + C3 * (L2 * 0.5);
-	secondDerivativeMatrix(3, 8) = -C2 * (L3 * 0.5) + C1 * (L3 * 0.5);
-	secondDerivativeMatrix(5, 2) = -C3 * (L2 * 0.5) + C2 * (2.0 * L1 + L2 * 0.5);
-	secondDerivativeMatrix(3, 5) = -C1 * (L3 * 0.5) + C3 * (2.0 * L2 + L3 * 0.5);
-	secondDerivativeMatrix(4, 8) = -C2 * (L1 * 0.5) + C1 * (2.0 * L3 + L1 * 0.5);
+	// N'
+	secondDerivativeMatrix(3, 1) = -B3 * (2.0 * L1 + 0.5 * L3) + B2 * (0.5 * L3); // d^2N'1/dL1dL2
+	secondDerivativeMatrix(4, 4) = -B1 * (2.0 * L2 + 0.5 * L1) + B3 * (0.5 * L1); // d^2N'2/dL2dL3
+	secondDerivativeMatrix(5, 7) = -B2 * (2.0 * L3 + 0.5 * L2) + B1 * (0.5 * L2); // d^2N'3/dL3dL1
+
+	secondDerivativeMatrix(4, 1) = -B3 * (L1 * 0.5) + B2 * (L1 * 0.5); // d^2N'1/dL2dL3
+	secondDerivativeMatrix(5, 4) = -B1 * (L2 * 0.5) + B3 * (L2 * 0.5); // d^2N'2/dL3dL1
+	secondDerivativeMatrix(3, 7) = -B2 * (L3 * 0.5) + B1 * (L3 * 0.5); // d^2N'3/dL1dL2
+
+	secondDerivativeMatrix(5, 1) = -B3 * (L2 * 0.5) + B2 * (2.0 * L1 + L2 * 0.5); // d^2N'1/dL3dL1
+	secondDerivativeMatrix(3, 4) = -B1 * (L3 * 0.5) + B3 * (2.0 * L2 + L3 * 0.5); // d^2N'2/dL1dL2
+	secondDerivativeMatrix(4, 7) = -B2 * (L1 * 0.5) + B1 * (2.0 * L3 + L1 * 0.5); // d^2N'3/dL2dL3
+
+	// N''
+	secondDerivativeMatrix(3, 2) = -C3 * (2.0 * L1 + L3 * 0.5) + C2 * (L3 * 0.5); // d^2N''1/dL1dL2
+	secondDerivativeMatrix(4, 5) = -C1 * (2.0 * L2 + L1 * 0.5) + C3 * (L1 * 0.5); // d^2N''2/dL2dL3
+	secondDerivativeMatrix(5, 8) = -C2 * (2.0 * L3 + L2 * 0.5) + C1 * (L2 * 0.5); // d^2N''3/dL3dL1
+
+	secondDerivativeMatrix(4, 2) = -C3 * (L1 * 0.5) + C2 * (L1 * 0.5); // d^2N''1/dL2dL3
+	secondDerivativeMatrix(5, 5) = -C1 * (L2 * 0.5) + C3 * (L2 * 0.5); // d^2N''2/dL3dL1
+	secondDerivativeMatrix(3, 8) = -C2 * (L3 * 0.5) + C1 * (L3 * 0.5); // d^2N''3/dL1dL2
+
+	secondDerivativeMatrix(5, 2) = -C3 * (L2 * 0.5) + C2 * (2.0 * L1 + L2 * 0.5); // d^2N''1/dL3dL1
+	secondDerivativeMatrix(3, 5) = -C1 * (L3 * 0.5) + C3 * (2.0 * L2 + L3 * 0.5); // d^2N''2/dL1dL2
+	secondDerivativeMatrix(4, 8) = -C2 * (L1 * 0.5) + C1 * (2.0 * L3 + L1 * 0.5); // d^2N''3/dL2dL3
 
 
 }
