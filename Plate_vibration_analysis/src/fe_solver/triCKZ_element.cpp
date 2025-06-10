@@ -27,7 +27,6 @@ void triCKZ_element::computeElasticityMatrix(const double& youngsmodulus, const 
 {
 
 	// compute the elasticity matrix
-	elasticity_matrix.resize(3, 3);
 	elasticity_matrix.setZero();
 
 	double k_const = youngsmodulus / (1.0 - (poissonsratio * poissonsratio));
@@ -58,7 +57,6 @@ void triCKZ_element::computeTriangleIntegrationPoints()
 {
 
 	// compute the Triangle Area coordinates Integration Points
-	integration_points.resize(4, 4);
 	integration_points.setZero();
 
 	// Row 1 coordinate 1
@@ -103,12 +101,12 @@ Eigen::MatrixXd triCKZ_element::get_triCKZ_element_stiffness_matrix(const double
 
 	// Parameters for calculating Consistent mass matrix
 	double elem_volume = this->triangle_area * thickness;
-	double element_mass_scaling = (elem_volume * materialdensity) / 12.0;
+	double element_mass = elem_volume * materialdensity;
 
 
 	// Initialize the element consistent mass matrix and element stiffness matrix
-	this->element_consistentmassMatrix = Eigen::MatrixXd::Zero(9, 9);
-	this->element_stiffness_matrix = Eigen::MatrixXd::Zero(9, 9);
+	this->element_consistentmassMatrix.setZero();
+	this->element_stiffness_matrix.setZero();
 	
 
 	for (int i = 0; i < 4; i++)
@@ -128,7 +126,7 @@ Eigen::MatrixXd triCKZ_element::get_triCKZ_element_stiffness_matrix(const double
 		Eigen::MatrixXd mass_matrix_ip = this->shapeFunction * this->shapeFunction.transpose(); // 9x9
 
 		// Scale and accumulate Mass
-		this->element_consistentmassMatrix = this->element_consistentmassMatrix + (element_mass_scaling * int_wt * mass_matrix_ip);
+		this->element_consistentmassMatrix = this->element_consistentmassMatrix + (element_mass * int_wt * mass_matrix_ip);
 
 
 		//___________________________________________________________________________________________________________________
@@ -201,6 +199,20 @@ void triCKZ_element::computeLocalCoordinateSystem(const double& x1, const double
 
 	this->triangle_area = 0.5 * x2 * y3;
 
+
+	// 18x18 transformation matrices
+	// It fills the 18 × 18 matrices PHI in 3×3 diagonal blocks with the local transformation matrix E0 (3×3)
+	// So for blocks at positions [0:3, 0:3], [3:6, 3:6], ..., [15:18, 15:18], inserting E0
+	this->transformation_matrix_phi.setZero();
+	
+	// Fill 3x3 diagonal blocks with coordinateSystemE
+	for (int i = 0; i < 18; i += 3)
+	{
+		this->transformation_matrix_phi.block<3, 3>(i, i) = coordinateSystemE;
+
+	}
+
+
 }
 
 
@@ -226,8 +238,7 @@ void triCKZ_element::computeJacobianCoefficients()
 	//  | dL1/dy  dL2/dy  dL3/dy |
 	//
 
-	this->jacobianMatrix.resize(2, 3);
-	this->jacobianMatrix.setZero();
+	this->jacobianMatrix.setZero(); // 2 x 3
 
 	this->jacobianMatrix(0, 0) = b1 * invTwoArea;
 	this->jacobianMatrix(0, 1) = b2 * invTwoArea;
@@ -244,8 +255,8 @@ void triCKZ_element::computeJacobianCoefficients()
 	// | (dL1/dx dL1/dy)  (dL2/dx dL2/dy)  (dL3/dx dL3/dy)  (dL1/dx dL2/dy)+(dL1/dy dL2/dx)  (dL2/dx dL3/dy)+(dL2/dy dL3/dx)  (dL3/dx dL1/dy)+(dL3/dy dL1/dx)  |
 	//
 
-	this->jacobianProducts.resize(3, 6);
-	this->jacobianProducts.setZero();
+
+	this->jacobianProducts.setZero(); // 3 x 6
 
 	for (int j = 0; j < 3; ++j)
 	{
@@ -285,14 +296,12 @@ void triCKZ_element::computeShapeFunctions(const double& L1, const double& L2, c
 	double c3 = this->x2 - this->x1;
 
 
-	this->shapeFunction.resize(9);
-	shapeFunction.setZero();
+	this->shapeFunction.setZero(); // 9 x 1
 
 	Eigen::MatrixXd shapeGradient(3, 9);
-	shapeGradient.setZero(3, 9);
+	shapeGradient.setZero(); // 3 x 9
 
-	this->shapefunction_secondDerivativeMatrix.resize(6, 9);
-	this->shapefunction_secondDerivativeMatrix.setZero();
+	this->shapefunction_secondDerivativeMatrix.setZero(); // 6 x 9
 
 	//__________________________________________________________________________________________________________________
 	// Shape functions AN0

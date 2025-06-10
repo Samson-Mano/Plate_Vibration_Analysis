@@ -27,16 +27,21 @@ private:
 
 	double triangle_area = 0.0;
 
+	
+	Eigen::MatrixXd transformation_matrix_phi = Eigen::MatrixXd::Zero(18, 18); // 18x18 transformation matrices
 
-	Eigen::MatrixXd elasticity_matrix; // 3 x 3 matrix saves the elasticity matrix based on youngsmodulus and poissons ratio
-	Eigen::MatrixXd integration_points; // 4 x 4 Triangle integration points
-	Eigen::MatrixXd jacobianMatrix; // 2 x 3 matrix stores the jacobian J (dL/dx, dL/dy, etc)
-	Eigen::MatrixXd jacobianProducts; // 3 x 6 matrix store the jacobian products J^2 ((dL/dx)^2, (dL/dy)^2, (dL/dx dL/dy), etc )
-	Eigen::VectorXd shapeFunction; // 9 x 1 stores the shape function N
-	Eigen::MatrixXd shapefunction_secondDerivativeMatrix; // 6 x 9 stores the d^2N second derivatives of the shape function
-	Eigen::MatrixXd strainDisplacementMatrix; // 3 x 9 matrix stores the B strain Displacment matrix
-	Eigen::MatrixXd element_consistentmassMatrix; // 9 x 9 matrix Element consistent mass matrix
-	Eigen::MatrixXd element_stiffness_matrix; // 9 x 9 matrix Element stiffness matrix
+	Eigen::MatrixXd elasticity_matrix = Eigen::MatrixXd::Zero(3, 3); // 3 x 3 matrix saves the elasticity matrix based on youngsmodulus and poissons ratio
+	Eigen::MatrixXd integration_points = Eigen::MatrixXd::Zero(4, 4); // 4 x 4 Triangle integration points
+	Eigen::MatrixXd jacobianMatrix = Eigen::MatrixXd::Zero(2, 3); // 2 x 3 matrix stores the jacobian J (dL/dx, dL/dy, etc)
+	Eigen::MatrixXd jacobianProducts = Eigen::MatrixXd::Zero(3, 6); // 3 x 6 matrix store the jacobian products J^2 ((dL/dx)^2, (dL/dy)^2, (dL/dx dL/dy), etc )
+	Eigen::VectorXd shapeFunction = Eigen::VectorXd::Zero(9); // 9 x 1 stores the shape function N
+	Eigen::MatrixXd shapefunction_secondDerivativeMatrix = Eigen::MatrixXd::Zero(6, 9); // 6 x 9 stores the d^2N second derivatives of the shape function
+	Eigen::MatrixXd strainDisplacementMatrix = Eigen::MatrixXd::Zero(3, 9); // 3 x 9 matrix stores the B strain Displacment matrix
+	Eigen::MatrixXd element_consistentmassMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element consistent mass matrix
+	Eigen::MatrixXd element_stiffness_matrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element stiffness matrix
+
+
+
 
 	void computeElasticityMatrix(const double& youngsmodulus,
 		const double& poissonsratio);
