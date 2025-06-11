@@ -96,7 +96,11 @@ Eigen::MatrixXd triCKZ_element::get_triCKZ_element_stiffness_matrix(const double
 	// Step 1: Set the local co-ordinate system for the triangle
 	computeLocalCoordinateSystem(x1, y1, z1, x2, y2, z2, x3, y3, z3);
 
-	// Step 2: Set the Jacobian Co-efficients
+
+
+
+
+	// Step 3: Set the Jacobian Co-efficients
 	computeJacobianCoefficients();
 
 	// Parameters for calculating Consistent mass matrix
@@ -107,7 +111,7 @@ Eigen::MatrixXd triCKZ_element::get_triCKZ_element_stiffness_matrix(const double
 	// Initialize the element consistent mass matrix and element stiffness matrix
 	this->element_consistentmassMatrix.setZero();
 	this->element_stiffness_matrix.setZero();
-	
+
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -204,7 +208,7 @@ void triCKZ_element::computeLocalCoordinateSystem(const double& x1, const double
 	// It fills the 18 × 18 matrices PHI in 3×3 diagonal blocks with the local transformation matrix E0 (3×3)
 	// So for blocks at positions [0:3, 0:3], [3:6, 3:6], ..., [15:18, 15:18], inserting E0
 	this->transformation_matrix_phi.setZero();
-	
+
 	// Fill 3x3 diagonal blocks with coordinateSystemE
 	for (int i = 0; i < 18; i += 3)
 	{
@@ -214,6 +218,341 @@ void triCKZ_element::computeLocalCoordinateSystem(const double& x1, const double
 
 
 }
+
+
+void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
+{
+	// Calculate element stiffness matrix and stress matrices for  
+	// membrane deformations based on the free formulation.  
+
+	// Reference: P.G. Bergan and C.A. Felippa,  
+	// "A Triangular Membrane Element with Rotational Degrees of Freedom",  
+	// CMAME, Vol. 50, pp. 25–69 (1985).
+
+	double alpha = 1.50;
+	double beta = 0.50;
+
+	// Reciprocal of Sqrt(triangle area) 
+	double invSqrtArea = 1.0 / std::sqrt(this->triangle_area);
+
+	// Triangle vertex coordinates
+	Eigen::Vector2d p1(this->x1, this->y1);
+	Eigen::Vector2d p2(this->x2, this->y2);
+	Eigen::Vector2d p3(this->x3, this->y3);
+
+
+	// Helper structure for edge parameters
+	struct EdgeParams 
+	{
+		double a1, a2, a3;
+		double b1, b2, b3;
+		double cos_c, sin_s;
+	};
+
+
+	auto computeEdgeParams = [](const Eigen::Vector2d& pi, const Eigen::Vector2d& pj, const Eigen::Vector2d& pk) -> EdgeParams 
+	{
+		Eigen::Vector2d mid = 0.5 * (pj + pk);
+		Eigen::Vector2d vec = mid - pi;
+		double xl = vec.norm();
+		double cos_c = vec.x() / xl;
+		double sin_s = vec.y() / xl;
+
+		return 
+		{
+			-sin_s * cos_c * cos_c * 0.5, // a1
+			cos_c * cos_c * cos_c, // a2
+			sin_s* ((0.5 * sin_s * sin_s) + (cos_c * cos_c)), // a3
+			-cos_c * ((sin_s * sin_s) + (0.5 * cos_c * cos_c)), // b1
+			-sin_s * sin_s * sin_s, // b2
+			0.5 * sin_s * sin_s * cos_c, // b3
+			cos_c, sin_s
+		};
+	};
+
+	// Compute edge parameters
+	EdgeParams edge1 = computeEdgeParams(p1, p2, p3);
+	EdgeParams edge2 = computeEdgeParams(p2, p3, p1);
+	EdgeParams edge3 = computeEdgeParams(p3, p1, p2);
+
+	// Compute centroid
+	Eigen::Vector2d centroid = (p1 + p2 + p3) / 3.0;
+
+	// G matrix
+	Eigen::MatrixXd g_matrix = Eigen::MatrixXd::Zero(9, 9);
+
+	// Helper lambda to populate g_matrix rows for each node
+	auto fillNodeContrib = [&](int baseRow, const Eigen::Vector2d& p, const EdgeParams& e1, const EdgeParams& e2, const EdgeParams& e3) 
+	{
+		double xp = invSqrtArea * (p.x() - centroid.x());
+		double yp = invSqrtArea * (p.y() - centroid.y());
+
+		g_matrix.coeffRef(baseRow + 0, 0) = 1.0;
+		g_matrix.coeffRef(baseRow + 1, 1) = 1.0;
+		g_matrix.coeffRef(baseRow + 0, 2) = -yp;
+		g_matrix.coeffRef(baseRow + 1, 2) = xp;
+		g_matrix.coeffRef(baseRow + 2, 2) = invSqrtArea;
+		g_matrix.coeffRef(baseRow + 0, 3) = xp;
+		g_matrix.coeffRef(baseRow + 1, 4) = yp;
+		g_matrix.coeffRef(baseRow + 0, 5) = yp;
+		g_matrix.coeffRef(baseRow + 1, 5) = xp;
+
+		auto fillEdgeTerms = [&](int col, const EdgeParams& edge) 
+		{
+			double xpxp = xp * xp;
+			double xpyp = xp * yp;
+			double ypyp = yp * yp;
+
+			g_matrix.coeffRef(baseRow + 0, col) = (edge.a1 * xpxp) + (edge.a2 * xpyp) + (edge.a3 * ypyp);
+			g_matrix.coeffRef(baseRow + 1, col) = (edge.b1 * xpxp) + (edge.b2 * xpyp) + (edge.b3 * ypyp);
+			g_matrix.coeffRef(baseRow + 2, col) = -invSqrtArea * ((edge.cos_c * xp) + (edge.sin_s * yp));
+		};
+
+		fillEdgeTerms(6, e1);
+		fillEdgeTerms(7, e2);
+		fillEdgeTerms(8, e3);
+	};
+
+
+
+	// Fill contributions for all 3 nodes
+	fillNodeContrib(0, p1, edge1, edge2, edge3);
+	fillNodeContrib(3, p2, edge1, edge2, edge3);
+	fillNodeContrib(6, p3, edge1, edge2, edge3);
+
+
+	// Inverse of G Matrix
+	Eigen::MatrixXd g_matrix_inverse = g_matrix.inverse();
+
+
+	//_____________________________________________________________________________________________
+	// Formulate lumping matrix Q
+
+	Eigen::MatrixXd q_matrix = Eigen::MatrixXd::Zero(9, 3);
+
+	// Lambda to help fill q_matrix compactly
+	auto fill_q_block = [&](int row_offset,
+		double x1, double y1,
+		double x2, double y2,
+		double x3, double y3) 
+		{
+			double yki = y2 - y3;
+			double xik = x3 - x2;
+			double yji = x1 - y3;
+			double ykj = y2 - y1;
+			double xij = x3 - x1;
+			double xjk = x1 - x2;
+
+			q_matrix.coeffRef(row_offset + 0, 0) = 0.5 * yki;
+			q_matrix.coeffRef(row_offset + 0, 2) = 0.5 * xik;
+			q_matrix.coeffRef(row_offset + 1, 1) = 0.5 * xik;
+			q_matrix.coeffRef(row_offset + 1, 2) = 0.5 * yki;
+			q_matrix.coeffRef(row_offset + 2, 0) = (alpha / 12.0) * ((yji * yji) - (ykj * ykj));
+			q_matrix.coeffRef(row_offset + 2, 1) = (alpha / 12.0) * ((xij * xij) - (xjk * xjk));
+			q_matrix.coeffRef(row_offset + 2, 2) = (alpha / 6.0) * ((xij * yji) - (xjk * ykj));
+		};
+
+	// First set (Node 1)
+	fill_q_block(0, x1, y1, x2, y2, x3, y3);
+	// Second set (Node 2)
+	fill_q_block(3, x2, y2, x3, y3, x1, y1);
+	// Third set (Node 3)
+	fill_q_block(6, x3, y3, x1, y1, x2, y2);
+
+	//_____________________________________________________________________________________________
+	// Assemble basic membrane stiffness matrix
+
+	std::vector<int> iadm = { 0, 1, 5, 6, 7, 11, 12, 13, 17 };  // DOF mapping 
+	Eigen::MatrixXd basic_membrane_stiffness_matrix = Eigen::MatrixXd::Zero(18, 18);
+
+	// Step 1: Compute SMM = DM * Q^T (manually, but could also use Eigen)
+	Eigen::MatrixXd smm_matrix = this->elasticity_matrix * q_matrix.transpose();  // 3x9
+
+	// Step 2: Assemble stiffness matrix (upper triangle only)
+	for (int i = 0; i < 9; i++) 
+	{
+		int ii = iadm[i];
+
+		for (int j = i; j < 9; j++) 
+		{
+			int jj = iadm[j];
+			double contribution = q_matrix.row(i).dot(smm_matrix.col(j));  // Efficient dot product
+			double value = contribution * (thickness / this->triangle_area);
+
+			basic_membrane_stiffness_matrix(ii, jj) = basic_membrane_stiffness_matrix(ii, jj) + value;
+
+			// Optional: Fill symmetric part if needed
+			// if (ii != jj) basic_membrane_stiffness_matrix(jj, ii) += value;
+		}
+	}
+
+
+	//_____________________________________________________________________________________________
+	// Calculate higher order stiffness matrix
+
+	Eigen::Matrix3d eh_stiffness_matrix = Eigen::Matrix3d::Zero();
+	Eigen::Matrix3d b1_matrix = Eigen::Matrix3d::Zero();
+	Eigen::Matrix3d b2_matrix = Eigen::Matrix3d::Zero();
+
+	// Step 1: Build B1 and B2 matrices
+	b1_matrix.coeffRef(0, 0) = 2.0 * edge1.a1;
+	b1_matrix.coeffRef(0, 1) = 2.0 * edge2.a1;
+	b1_matrix.coeffRef(0, 2) = 2.0 * edge3.a1;
+	b1_matrix.coeffRef(1, 0) = edge1.b2;
+	b1_matrix.coeffRef(1, 1) = edge2.b2;
+	b1_matrix.coeffRef(1, 2) = edge3.b2;
+	b1_matrix.coeffRef(2, 0) = -4.0 * edge1.b3;
+	b1_matrix.coeffRef(2, 1) = -4.0 * edge2.b3;
+	b1_matrix.coeffRef(2, 2) = -4.0 * edge3.b3;
+
+	b2_matrix.coeffRef(0, 0) = edge1.a2;
+	b2_matrix.coeffRef(0, 1) = edge2.a2;
+	b2_matrix.coeffRef(0, 2) = edge3.a2;
+	b2_matrix.coeffRef(1, 0) = 2.0 * edge1.b3;
+	b2_matrix.coeffRef(1, 1) = 2.0 * edge2.b3;
+	b2_matrix.coeffRef(1, 2) = 2.0 * edge3.b3;
+	b2_matrix.coeffRef(2, 0) = -4.0 * edge1.a1;
+	b2_matrix.coeffRef(2, 1) = -4.0 * edge2.a1;
+	b2_matrix.coeffRef(2, 2) = -4.0 * edge3.a1;
+
+
+	Eigen::Vector2d xy_p1 = invSqrtArea * (p1 - centroid);
+	Eigen::Vector2d xy_p2 = invSqrtArea * (p2 - centroid);
+	Eigen::Vector2d xy_p3 = invSqrtArea * (p3 - centroid);
+
+	// Step 2: Compute x_j, y_j, xy_j term
+	double x_j = -((xy_p1.x() * xy_p2.x()) + (xy_p2.x() * xy_p3.x()) + (xy_p3.x() * xy_p1.x())) / 6.0;
+	double y_j = -((xy_p1.y() * xy_p2.y()) + (xy_p2.y() * xy_p3.y()) + (xy_p3.y() * xy_p1.y())) / 6.0;
+	double xy_j = ((xy_p1.x() * xy_p1.y()) + (xy_p2.x() * xy_p2.y()) + (xy_p3.x() * xy_p3.y())) / 12.0;
+
+	// Step 3: Comput the higher order stiffness
+	// EH += XJ * (B1^T * DM * B1)
+	eh_stiffness_matrix = eh_stiffness_matrix + x_j * (b1_matrix.transpose() * this->elasticity_matrix * b1_matrix);
+
+	// EH += YJ * (B2^T * DM * B2)
+	eh_stiffness_matrix = eh_stiffness_matrix + y_j * (b2_matrix.transpose() * this->elasticity_matrix * b2_matrix);
+
+	// EH += XYJ * (B1^T * DM * B2 + B2^T * DM * B1)
+	Eigen::Matrix3d term1 = b1_matrix.transpose() * (this->elasticity_matrix * b1_matrix);
+	Eigen::Matrix3d term2 = b2_matrix.transpose() * (this->elasticity_matrix * b2_matrix);
+
+	eh_stiffness_matrix = eh_stiffness_matrix + xy_j * (term1 + term2);
+
+
+	//Reinitialize the smm_matrix
+	Eigen::MatrixXd higher_order_stiffness_matrix = Eigen::MatrixXd::Zero(18, 18);
+	smm_matrix.setZero(); // 3 x 9
+
+	// Step 1: Compute smm = EH * G_sub, where G_sub is G(6:8, :)
+	for (int i = 0; i < 3; i++) // i = 0 to 2 for rows of EH
+	{
+		for (int j = 0; j < 9; j++) // j = 0 to 8
+		{
+			double sum = 0.0;
+			for (int k = 0; k < 3; k++) // k = 0 to 2 (corresponding to EH col and G row)
+			{
+				sum = sum + eh_stiffness_matrix.coeff(i, k) * g_matrix.coeff(6 + k, j);
+			}
+			smm_matrix.coeffRef(i, j) = sum;
+		}
+	}
+
+	// Step 2: Accumulate into higher_order_stiffness_matrix_18 using DOF mapping
+	for (int i = 0; i < 9; i++)
+	{
+		int ii = iadm[i];
+		for (int j = i; j < 9; j++) // j = i to 8 for upper triangle
+		{
+			int jj = iadm[j];
+			double sum = 0.0;
+			for (int k = 0; k < 3; k++)
+			{
+				sum = sum + g_matrix.coeff(6 + k, i) * smm_matrix.coeff(k, j);
+			}
+
+			higher_order_stiffness_matrix.coeffRef(ii, jj) = higher_order_stiffness_matrix.coeff(ii, jj) + (beta * sum * thickness);
+
+			// Optional: Fill symmetric part if needed
+			// if (ii != jj) higher_order_stiffness_matrix(jj, ii) += higher_order_stiffness_matrix.coeffRef(ii, jj);
+
+		}
+	}
+
+
+	//__________________________________________________________________________________________________________________________________
+
+	Eigen::MatrixXd stress_matrix = Eigen::MatrixXd::Zero(9, 9);  // 9x9 final stress matrix
+
+	double SqrtBeta = std::sqrt(beta);
+
+	computeStressContribution(stress_matrix, g_matrix, b1_matrix, b2_matrix,
+		xy_p1, SqrtBeta, invSqrtArea, 0);   // First corner
+	computeStressContribution(stress_matrix, g_matrix, b1_matrix, b2_matrix,
+		xy_p2, SqrtBeta, invSqrtArea, 3);   // Second corner
+	computeStressContribution(stress_matrix, g_matrix, b1_matrix, b2_matrix,
+		xy_p3, SqrtBeta, invSqrtArea, 6);   // Third corner
+
+
+
+}
+
+
+void triCKZ_element::computeStressContribution(
+	Eigen::MatrixXd& stress_matrix,     // 9x9 final stress matrix to update
+	const Eigen::MatrixXd& g_matrix,    // 6x9 G matrix
+	const Eigen::MatrixXd& b1_matrix,   // 3x3 matrix B1
+	const Eigen::MatrixXd& b2_matrix,   // 3x3 matrix B2
+	const Eigen::Vector2d& xy_p,        // X and Y coordinate of the point
+	double sqrt_beta,                   // sqrt(BETA)
+	double inv_sqrt_area,               // XLAM
+	int smm_row_offset                  // Offset for placing result in smm3 (0, 3, or 6)
+)
+{
+	// Step 1: Initialize BB (3x6)
+	Eigen::MatrixXd bb = Eigen::MatrixXd::Zero(3, 6);
+	bb.coeffRef(0, 0) = 1.0;
+	bb.coeffRef(1, 1) = 1.0;
+	bb.coeffRef(2, 2) = 2.0;
+
+	// Update BB(0:2, 3:5)
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			bb.coeffRef(i, 3 + j) = ((b1_matrix.coeff(i, j) * xy_p.x()) + (b2_matrix.coeff(i, j) * xy_p.y())) * sqrt_beta;
+		}
+	}
+
+	// Step 2: Compute BG = BB * G_lower (3x9)
+	Eigen::MatrixXd bg = Eigen::MatrixXd::Zero(3, 9);
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 9; j++)
+		{
+			for (int k = 0; k < 6; k++)
+			{
+				bg.coeffRef(i, j) = bg.coeff(i, j) + bb.coeff(i, k) * g_matrix.coeff(3 + k, j); // G(3+K, J)
+			}
+		}
+	}
+
+	// Step 3: Compute stress = DM * BG * XLAM
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 9; j++)
+		{
+			double zz = 0.0;
+			for (int k = 0; k < 3; k++)
+			{
+				zz = zz + this->elasticity_matrix.coeff(i, k) * bg(k, j);
+			}
+			stress_matrix.coeffRef(smm_row_offset + i, j) = zz * inv_sqrt_area;
+		}
+	}
+
+
+}
+
 
 
 

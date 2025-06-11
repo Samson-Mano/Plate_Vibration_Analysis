@@ -1,0 +1,385 @@
+
+void triCKZ_element::computeMembraneStiffnessMatrix()
+{
+	// Calculate element stiffness matrix and stress matrices for  
+	// membrane deformations based on the free formulation.  
+
+	// Reference: P.G. Bergan and C.A. Felippa,  
+	// "A Triangular Membrane Element with Rotational Degrees of Freedom",  
+	// CMAME, Vol. 50, pp. 25–69 (1985).
+
+	double alpha = 1.50;
+	double beta = 0.50;
+
+	// Reciprocal of Sqrt(triangle area) 
+	double invSqrtArea = 1.0 / std::sqrt(this->triangle_area);
+
+
+	// Calculate parameters associated with higher modes
+	// Midpoint and vector calculations for edge 1-2
+	double xm = 0.5 * (this->x2 + this->x3);
+	double ym = 0.5 * (this->y2 + this->y3);
+	double xl = std::sqrt((xm - this->x1) * (xm - this->x1) + (ym - this->y1) * (ym - this->y1));
+	double cos_c = (xm - this->x1) / xl;
+	double sin_s = (ym - this->y1) / xl;
+
+	double a11 = -sin_s * cos_c * cos_c * 0.5;
+	double a21 = cos_c * cos_c * cos_c;
+	double a31 = sin_s * (0.5 * sin_s * sin_s + cos_c * cos_c);
+	double b11 = -cos_c * (sin_s * sin_s + 0.5 * cos_c * cos_c);
+	double b21 = -sin_s * sin_s * sin_s;
+	double b31 = 0.5 * sin_s * sin_s * cos_c;
+	double cos_c1 = cos_c;
+	double sin_s1 = sin_s;
+
+	// Midpoint and vector calculations for edge 2-3
+	xm = 0.5 * (this->x3 + this->x1);
+	ym = 0.5 * (this->y3 + this->y1);
+	xl = std::sqrt((xm - this->x2) * (xm - this->x2) + (ym - this->y2) * (ym - this->y2));
+	cos_c = (xm - this->x2) / xl;
+	sin_s = (ym - this->y2) / xl;
+
+	double a12 = -sin_s * cos_c * cos_c * 0.5;
+	double a22 = cos_c * cos_c * cos_c;
+	double a32 = sin_s * (0.5 * sin_s * sin_s + cos_c * cos_c);
+	double b12 = -cos_c * (sin_s * sin_s + 0.5 * cos_c * cos_c);
+	double b22 = -sin_s * sin_s * sin_s;
+	double b32 = 0.5 * sin_s * sin_s * cos_c;
+	double cos_c2 = cos_c;
+	double sin_s2 = sin_s;
+
+	// Midpoint and vector calculations for edge 3-1
+	xm = 0.5 * (this->x1 + this->x2);
+	ym = 0.5 * (this->y1 + this->y2);
+	xl = std::sqrt((xm - this->x3) * (xm - this->x3) + (ym - this->y3) * (ym - this->y3));
+	cos_c = (xm - this->x3) / xl;
+	sin_s = (ym - this->y3) / xl;
+
+	double a13 = -sin_s * cos_c * cos_c * 0.5;
+	double a23 = cos_c * cos_c * cos_c;
+	double a33 = sin_s * (0.5 * sin_s * sin_s + cos_c * cos_c);
+	double b13 = -cos_c * (sin_s * sin_s + 0.5 * cos_c * cos_c);
+	double b23 = -sin_s * sin_s * sin_s;
+	double b33 = 0.5 * sin_s * sin_s * cos_c;
+	double cos_c3 = cos_c;
+	double sin_s3 = sin_s;
+
+	// Step 1: Formulate G Matrix
+	Eigen::MatrixXd g_matrix = Eigen::MatrixXd::Zero(9, 9);
+
+	double x_centroid = (this->x1 + this->x2 + this->x3) / 3.0;
+	double y_centroid = (this->y1 + this->y2 + this->y3) / 3.0;
+
+	//__________________________________________________________________________________________________
+	// Node 1 contribution to g_matrix
+	double xp = invSqrtArea * (this->x1 - x_centroid);
+	double yp = invSqrtArea * (this->y1 - y_centroid);
+	double xp1 = xp;
+	double yp1 = yp;
+	g_matrix.coeffRef(0, 0) = 1.0;
+	g_matrix.coeffRef(1, 1) = 1.0;
+	g_matrix.coeffRef(0, 2) = -yp;
+	g_matrix.coeffRef(1, 2) = xp;
+	g_matrix.coeffRef(2, 2) = invSqrtArea;
+	g_matrix.coeffRef(0, 3) = xp;
+	g_matrix.coeffRef(1, 4) = yp;
+	g_matrix.coeffRef(0, 5) = yp;
+	g_matrix.coeffRef(1, 5) = xp;
+	g_matrix.coeffRef(0, 6) = a11 * xp * xp + a21 * xp * yp + a31 * yp * yp;
+	g_matrix.coeffRef(1, 6) = b11 * xp * xp + b21 * xp * yp + b31 * yp * yp;
+	g_matrix.coeffRef(3, 6) = -invSqrtArea * (cos_c1 * xp + sin_s1 * yp);
+	g_matrix.coeffRef(0, 7) = a12 * xp * xp + a22 * xp * yp + a32 * yp * yp;
+	g_matrix.coeffRef(1, 7) = b12 * xp * xp + b22 * xp * yp + b32 * yp * yp;
+	g_matrix.coeffRef(3, 7) = -invSqrtArea * (cos_c2 * xp + sin_s2 * yp);
+	g_matrix.coeffRef(0, 8) = a13 * xp * xp + a23 * xp * yp + a33 * yp * yp;
+	g_matrix.coeffRef(1, 8) = b13 * xp * xp + b23 * xp * yp + b33 * yp * yp;
+	g_matrix.coeffRef(3, 8) = -invSqrtArea * (cos_c3 * xp + sin_s3 * yp);
+
+		//__________________________________________________________________________________________________
+		// Node 2 contribution to g_matrix
+	double xp2 = invSqrtArea * (this->x2 - x_centroid);
+	double yp2 = invSqrtArea * (this->y2 - y_centroid);
+
+	g_matrix.coeffRef(3, 0) = 1.0;
+	g_matrix.coeffRef(4, 1) = 1.0;
+	g_matrix.coeffRef(3, 2) = -yp2;
+	g_matrix.coeffRef(4, 2) = xp2;
+	g_matrix.coeffRef(5, 2) = invSqrtArea;
+	g_matrix.coeffRef(3, 3) = xp2;
+	g_matrix.coeffRef(4, 4) = yp2;
+	g_matrix.coeffRef(3, 5) = yp2;
+	g_matrix.coeffRef(4, 5) = xp2;
+	g_matrix.coeffRef(3, 6) = a11 * xp2 * xp2 + a21 * xp2 * yp2 + a31 * yp2 * yp2;
+	g_matrix.coeffRef(4, 6) = b11 * xp2 * xp2 + b21 * xp2 * yp2 + b31 * yp2 * yp2;
+	g_matrix.coeffRef(5, 6) = -invSqrtArea * (cos_c1 * xp2 + sin_s1 * yp2);
+	g_matrix.coeffRef(3, 7) = a12 * xp2 * xp2 + a22 * xp2 * yp2 + a32 * yp2 * yp2;
+	g_matrix.coeffRef(4, 7) = b12 * xp2 * xp2 + b22 * xp2 * yp2 + b32 * yp2 * yp2;
+	g_matrix.coeffRef(5, 7) = -invSqrtArea * (cos_c2 * xp2 + sin_s2 * yp2);
+	g_matrix.coeffRef(3, 8) = a13 * xp2 * xp2 + a23 * xp2 * yp2 + a33 * yp2 * yp2;
+	g_matrix.coeffRef(4, 8) = b13 * xp2 * xp2 + b23 * xp2 * yp2 + b33 * yp2 * yp2;
+	g_matrix.coeffRef(5, 8) = -invSqrtArea * (cos_c3 * xp2 + sin_s3 * yp2);
+
+	//__________________________________________________________________________________________________
+	// Node 3 contribution to g_matrix
+	double xp3 = invSqrtArea * (this->x3 - x_centroid);
+	double yp3 = invSqrtArea * (this->y3 - y_centroid);
+
+	g_matrix.coeffRef(6, 0) = 1.0;
+	g_matrix.coeffRef(7, 1) = 1.0;
+	g_matrix.coeffRef(6, 2) = -yp3;
+	g_matrix.coeffRef(7, 2) = xp3;
+	g_matrix.coeffRef(8, 2) = invSqrtArea;
+	g_matrix.coeffRef(6, 3) = xp3;
+	g_matrix.coeffRef(7, 4) = yp3;
+	g_matrix.coeffRef(6, 5) = yp3;
+	g_matrix.coeffRef(7, 5) = xp3;
+	g_matrix.coeffRef(6, 6) = a11 * xp3 * xp3 + a21 * xp3 * yp3 + a31 * yp3 * yp3;
+	g_matrix.coeffRef(7, 6) = b11 * xp3 * xp3 + b21 * xp3 * yp3 + b31 * yp3 * yp3;
+	g_matrix.coeffRef(8, 6) = -invSqrtArea * (cos_c1 * xp3 + sin_s1 * yp3);
+	g_matrix.coeffRef(6, 7) = a12 * xp3 * xp3 + a22 * xp3 * yp3 + a32 * yp3 * yp3;
+	g_matrix.coeffRef(7, 7) = b12 * xp3 * xp3 + b22 * xp3 * yp3 + b32 * yp3 * yp3;
+	g_matrix.coeffRef(8, 7) = -invSqrtArea * (cos_c2 * xp3 + sin_s2 * yp3);
+	g_matrix.coeffRef(6, 8) = a13 * xp3 * xp3 + a23 * xp3 * yp3 + a33 * yp3 * yp3;
+	g_matrix.coeffRef(7, 8) = b13 * xp3 * xp3 + b23 * xp3 * yp3 + b33 * yp3 * yp3;
+	g_matrix.coeffRef(8, 8) = -invSqrtArea * (cos_c3 * xp3 + sin_s3 * yp3);
+
+		
+	// Inverse of G Matrix
+	Eigen::MatrixXd g_matrix_inverse = g_matrix.inverse();
+
+
+	//_____________________________________________________________________________________________
+	// Formulate Lumping matrix Q
+
+	Eigen::MatrixXd q_matrix = Eigen::MatrixXd::Zero(9, 3);
+
+	// First set (Node 1)
+	double yki = y2 - y3;
+	double xik = x3 - x2;
+	double yji = y1 - y3;
+	double ykj = y2 - y1;
+	double xij = x3 - x1;
+	double xjk = x1 - x2;
+
+	q_matrix.coeffRef(0, 0) = 0.5 * yki;
+	q_matrix.coeffRef(0, 2) = 0.5 * xik;
+	q_matrix.coeffRef(1, 1) = 0.5 * xik;
+	q_matrix.coeffRef(1, 2) = 0.5 * yki;
+	q_matrix.coeffRef(2, 0) = alpha / 12.0 * (yji * yji - ykj * ykj);
+	q_matrix.coeffRef(2, 1) = alpha / 12.0 * (xij * xij - xjk * xjk);
+	q_matrix.coeffRef(2, 2) = alpha / 6.0 * (xij * yji - xjk * ykj);
+
+	// Second set (Node 2)
+	yki = y3 - y1;
+	xik = x1 - x3;
+	yji = y2 - y1;
+	ykj = y3 - y2;
+	xij = x1 - x2;
+	xjk = x2 - x3;
+
+	q_matrix.coeffRef(3, 0) = 0.5 * yki;
+	q_matrix.coeffRef(3, 2) = 0.5 * xik;
+	q_matrix.coeffRef(4, 1) = 0.5 * xik;
+	q_matrix.coeffRef(4, 2) = 0.5 * yki;
+	q_matrix.coeffRef(5, 0) = alpha / 12.0 * (yji * yji - ykj * ykj);
+	q_matrix.coeffRef(5, 1) = alpha / 12.0 * (xij * xij - xjk * xjk);
+	q_matrix.coeffRef(5, 2) = alpha / 6.0 * (xij * yji - xjk * ykj);
+
+	// Third set (Node 3)
+	yki = y1 - y2;
+	xik = x2 - x1;
+	yji = y3 - y2;
+	ykj = y1 - y3;
+	xij = x2 - x3;
+	xjk = x3 - x1;
+
+	q_matrix.coeffRef(6, 0) = 0.5 * yki;
+	q_matrix.coeffRef(6, 2) = 0.5 * xik;
+	q_matrix.coeffRef(7, 1) = 0.5 * xik;
+	q_matrix.coeffRef(7, 2) = 0.5 * yki;
+	q_matrix.coeffRef(8, 0) = alpha / 12.0 * (yji * yji - ykj * ykj);
+	q_matrix.coeffRef(8, 1) = alpha / 12.0 * (xij * xij - xjk * xjk);
+	q_matrix.coeffRef(8, 2) = alpha / 6.0 * (xij * yji - xjk * ykj);
+
+
+
+	std::vector<int> iadm = { 0, 1, 5, 6, 7, 11, 12, 13, 17 };  // Fortran is 1-based; C++ is 0-based
+	Eigen::MatrixXd membrane_stiffness_matrix = Eigen::MatrixXd::Zero(18, 18);       // Element stiffness matrix
+
+	// Step 1: Compute SMM = DM * Q^T, where SMM is 3x9
+	Eigen::MatrixXd SMM = Eigen::MatrixXd::Zero(3, 9);
+
+	for (int i = 0; i < 3; ++i) 
+	{
+		for (int j = 0; j < 9; ++j) 
+		{
+			double zz = 0.0;
+			for (int k = 0; k < 3; ++k) 
+			{
+				zz = zz + this->elasticity_matrix(i, k) * q_matrix(j, k);
+			}
+			SMM(i, j) = zz;
+		}
+	}
+
+	// Step 2: Assemble EK matrix (upper triangle only)
+	for (int i = 0; i < 9; ++i) 
+	{
+		int ii = iadm[i];  // global DOF index
+		for (int j = i; j < 9; ++j) 
+		{
+			int jj = iadm[j];  // global DOF index
+			double zz = 0.0;
+			for (int k = 0; k < 3; ++k) 
+			{
+				zz = zz + q_matrix(i, k) * SMM(k, j);
+			}
+			membrane_stiffness_matrix(ii, jj) = membrane_stiffness_matrix(ii, jj) + (zz * thickness / this->triangle_area);
+		}
+	}
+
+
+
+
+//_____________________________________________________________________________________________
+	// Calculate higher order stiffness matrix
+
+	Eigen::Matrix3d higher_order_stiffness_matrix = Eigen::Matrix3d::Zero();
+	Eigen::Matrix3d b1_matrix = Eigen::Matrix3d::Zero();
+	Eigen::Matrix3d b2_matrix = Eigen::Matrix3d::Zero();
+
+	// Step 1: Build B1 and B2 matrices
+	b1_matrix.coeffRef(0, 0) = 2.0 * a11;
+	b1_matrix.coeffRef(0, 1) = 2.0 * a12;
+	b1_matrix.coeffRef(0, 2) = 2.0 * a13;
+	b1_matrix.coeffRef(1, 0) = b21;
+	b1_matrix.coeffRef(1, 1) = b22;
+	b1_matrix.coeffRef(1, 2) = b23;
+	b1_matrix.coeffRef(2, 0) = -4.0 * b31;
+	b1_matrix.coeffRef(2, 1) = -4.0 * b32;
+	b1_matrix.coeffRef(2, 2) = -4.0 * b33;
+
+	b2_matrix.coeffRef(0, 0) = a21;
+	b2_matrix.coeffRef(0, 1) = a22;
+	b2_matrix.coeffRef(0, 2) = a23;
+	b2_matrix.coeffRef(1, 0) = 2.0 * b31;
+	b2_matrix.coeffRef(1, 1) = 2.0 * b32;
+	b2_matrix.coeffRef(1, 2) = 2.0 * b33;
+	b2_matrix.coeffRef(2, 0) = -4.0 * a11;
+	b2_matrix.coeffRef(2, 1) = -4.0 * a12;
+	b2_matrix.coeffRef(2, 2) = -4.0 * a13;
+
+
+	Eigen::Vector2d xy_p1 = invSqrtArea * (p1 - centroid);
+	Eigen::Vector2d xy_p2 = invSqrtArea * (p2 - centroid);
+	Eigen::Vector2d xy_p3 = invSqrtArea * (p3 - centroid);
+
+	// Step 2: Compute x_j, y_j, xy_j term
+	double x_j = -((xy_p1.x() * xy_p2.x()) + (xy_p2.x() * xy_p3.x()) + (xy_p3.x() * xy_p1.x())) / 6.0;
+	double y_j = -((xy_p1.y() * xy_p2.y()) + (xy_p2.y() * xy_p3.y()) + (xy_p3.y() * xy_p1.y())) / 6.0;
+	double xy_j = ((xy_p1.x() * xy_p1.y()) + (xy_p2.x() * xy_p2.y()) + (xy_p3.x() * xy_p3.y())) / 12.0;
+
+	// Step 3: Comput the higher order stiffness
+	// EH += XJ * (B1^T * DM * B1)
+	higher_order_stiffness_matrix = higher_order_stiffness_matrix + x_j * (b1_matrix.transpose() * this->elasticity_matrix * b1_matrix);
+
+	// EH += YJ * (B2^T * DM * B2)
+	higher_order_stiffness_matrix = higher_order_stiffness_matrix + y_j * (b2_matrix.transpose() * this->elasticity_matrix * b2_matrix);
+
+	// EH += XYJ * (B1^T * DM * B2 + B2^T * DM * B1)
+	Eigen::Matrix3d term1 = b1_matrix.transpose() * (this->elasticity_matrix * b1_matrix);
+	Eigen::Matrix3d term2 = b2_matrix.transpose() * (this->elasticity_matrix * b2_matrix);
+
+	higher_order_stiffness_matrix = higher_order_stiffness_matrix + xy_j * (term1 + term2);
+
+
+
+
+
+
+	Eigen::MatrixXd smm3(9, 9); // 9x9 final stress matrix
+smm3.setZero();
+
+computeStressContribution(smm3, g_matrix, elasticity_matrix, b1, b2,
+                          xp1, yp1, sqrt_beta, inv_sqrt_area, 0);   // First corner
+computeStressContribution(smm3, g_matrix, elasticity_matrix, b1, b2,
+                          xp2, yp2, sqrt_beta, inv_sqrt_area, 3);   // Second corner
+computeStressContribution(smm3, g_matrix, elasticity_matrix, b1, b2,
+                          xp3, yp3, sqrt_beta, inv_sqrt_area, 6);   // Third corner
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Helper function to compute BB, BG, and stress contribution at one point
+void computeStressContribution(
+    Eigen::MatrixXd& smm3,              // 9x9 final stress matrix to update
+    const Eigen::MatrixXd& g_matrix,    // 6x9 G matrix
+    const Eigen::MatrixXd& elasticity_matrix, // 3x3 DM matrix
+    const Eigen::MatrixXd& b1,          // 3x3 matrix B1
+    const Eigen::MatrixXd& b2,          // 3x3 matrix B2
+    double xp, double yp,               // X and Y coordinate of the point
+    double sqrt_beta,                   // sqrt(BETA)
+    double inv_sqrt_area,               // XLAM
+    int smm_row_offset                  // Offset for placing result in smm3 (0, 3, or 6)
+) {
+    // Step 1: Initialize BB (3x6)
+    Eigen::MatrixXd bb = Eigen::MatrixXd::Zero(3, 6);
+    bb(0, 0) = 1.0;
+    bb(1, 1) = 1.0;
+    bb(2, 2) = 2.0;
+
+    // Update BB(0:2, 3:5)
+    for (int i = 0; i < 3; ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+        {
+            bb(i, 3 + j) = (b1(i, j) * xp + b2(i, j) * yp) * sqrt_beta;
+        }
+    }
+
+    // Step 2: Compute BG = BB * G_lower (3x9)
+    Eigen::MatrixXd bg = Eigen::MatrixXd::Zero(3, 9);
+    for (int i = 0; i < 3; ++i)
+    {
+        for (int j = 0; j < 9; ++j)
+        {
+            for (int k = 0; k < 6; ++k)
+            {
+                bg(i, j) += bb(i, k) * g_matrix(3 + k, j); // G(3+K, J)
+            }
+        }
+    }
+
+    // Step 3: Compute stress = DM * BG * XLAM
+    for (int i = 0; i < 3; ++i)
+    {
+        for (int j = 0; j < 9; ++j)
+        {
+            double zz = 0.0;
+            for (int k = 0; k < 3; ++k)
+            {
+                zz += elasticity_matrix(i, k) * bg(k, j);
+            }
+            smm3(smm_row_offset + i, j) = zz * inv_sqrt_area;
+        }
+    }
+}

@@ -290,6 +290,7 @@
     <Text Include="example_model\rect1_mesh.txt" />
     <Text Include="example_model\rect2_mesh.txt" />
     <Text Include="example_model\rect3_mesh.txt" />
+    <Text Include="src\junk\membrane_stiffness.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
