@@ -56,7 +56,7 @@ void triCKZ_element::computeElasticityMatrix(const double& youngsmodulus, const 
 void triCKZ_element::computeTriangleIntegrationPoints()
 {
 
-	// compute the Triangle Area coordinates Integration Points
+	// Set the Triangle Area coordinates Integration Points
 	integration_points.setZero();
 
 	// Row 1 coordinate 1
@@ -84,6 +84,24 @@ void triCKZ_element::computeTriangleIntegrationPoints()
 	integration_points.coeffRef(3, 3) = -27.0 / 48.0;  // weight 4
 
 
+	// Set the bending stress integration points
+	bendingstress_integration_points.setZero();
+
+	// Row 1 coordinate 1
+	bendingstress_integration_points.coeffRef(0, 0) = 1.0;
+	bendingstress_integration_points.coeffRef(0, 1) = 0.0;
+	bendingstress_integration_points.coeffRef(0, 2) = 0.0;
+
+	// Row 2 coordinate 2
+	bendingstress_integration_points.coeffRef(1, 0) = 0.0;
+	bendingstress_integration_points.coeffRef(1, 1) = 1.0;
+	bendingstress_integration_points.coeffRef(1, 2) = 0.0;
+
+	// Row 3 coordinate 3
+	bendingstress_integration_points.coeffRef(2, 0) = 0.0;
+	bendingstress_integration_points.coeffRef(2, 1) = 0.0;
+	bendingstress_integration_points.coeffRef(2, 2) = 1.0;
+
 }
 
 
@@ -100,54 +118,8 @@ Eigen::MatrixXd triCKZ_element::get_triCKZ_element_stiffness_matrix(const double
 
 
 
-	// Step 3: Set the Jacobian Co-efficients
-	computeJacobianCoefficients();
+	
 
-	// Parameters for calculating Consistent mass matrix
-	double elem_volume = this->triangle_area * thickness;
-	double element_mass = elem_volume * materialdensity;
-
-
-	// Initialize the element consistent mass matrix and element stiffness matrix
-	this->element_consistentmassMatrix.setZero();
-	this->element_stiffness_matrix.setZero();
-
-
-	for (int i = 0; i < 4; i++)
-	{
-		double L1 = integration_points.coeffRef(0, 0) = 0.6;
-		double L2 = integration_points.coeffRef(0, 1) = 0.2;
-		double L3 = integration_points.coeffRef(0, 2) = 0.2;
-		double int_wt = integration_points.coeffRef(0, 3) = 25.0 / 48.0; // weight 1
-		double hxy = this->triangle_area * int_wt;
-
-		double t_eff = (std::pow(thickness, 3)) / 12.0;
-		double factor = t_eff * hxy;
-
-		//___________________________________________________________________________________________________________________
-		// Calculate the consistent mass matrix
-		// Compute outer product N^T * N 9 x 1 * 1 x 9
-		Eigen::MatrixXd mass_matrix_ip = this->shapeFunction * this->shapeFunction.transpose(); // 9x9
-
-		// Scale and accumulate Mass
-		this->element_consistentmassMatrix = this->element_consistentmassMatrix + (element_mass * int_wt * mass_matrix_ip);
-
-
-		//___________________________________________________________________________________________________________________
-		// Strain Displacement Matrix at Integration Points
-		Eigen::MatrixXd  strainDisplacement_Bmatrix = computeStrainDisplacementMatrix();  // B is 3x9 matrix
-
-		// Compute E = B^T * D * B
-		Eigen::MatrixXd bending_stiffness_matrix_IP = strainDisplacement_Bmatrix.transpose() * this->elasticity_matrix * strainDisplacement_Bmatrix;
-
-		// Apply integration weight factor
-		bending_stiffness_matrix_IP = factor * bending_stiffness_matrix_IP;
-
-
-		this->element_stiffness_matrix = this->element_stiffness_matrix + bending_stiffness_matrix_IP;
-
-
-	}
 
 
 
@@ -478,21 +450,29 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 		}
 	}
 
+	// Set the total membrane stiffness matrix
+	this->element_MembraneStiffnessMatrix.setZero();
+
+	this->element_MembraneStiffnessMatrix = basic_membrane_stiffness_matrix + higher_order_stiffness_matrix;
+
+
 
 	//__________________________________________________________________________________________________________________________________
 
-	Eigen::MatrixXd stress_matrix = Eigen::MatrixXd::Zero(9, 9);  // 9x9 final stress matrix
+	this->element_MembraneStressMatrix.setZero();  // 9x9 final stress matrix
 
 	double SqrtBeta = std::sqrt(beta);
 
-	computeStressContribution(stress_matrix, g_matrix, b1_matrix, b2_matrix,
+	computeStressContribution(this->element_MembraneStressMatrix, g_matrix, b1_matrix, b2_matrix,
 		xy_p1, SqrtBeta, invSqrtArea, 0);   // First corner
-	computeStressContribution(stress_matrix, g_matrix, b1_matrix, b2_matrix,
+	computeStressContribution(this->element_MembraneStressMatrix, g_matrix, b1_matrix, b2_matrix,
 		xy_p2, SqrtBeta, invSqrtArea, 3);   // Second corner
-	computeStressContribution(stress_matrix, g_matrix, b1_matrix, b2_matrix,
+	computeStressContribution(this->element_MembraneStressMatrix, g_matrix, b1_matrix, b2_matrix,
 		xy_p3, SqrtBeta, invSqrtArea, 6);   // Third corner
 
 
+	// Break point
+	int end0 = 1;
 
 }
 
@@ -553,6 +533,87 @@ void triCKZ_element::computeStressContribution(
 
 }
 
+
+
+void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
+{
+	// Step 1: Set the Jacobian Co-efficients
+	computeJacobianCoefficients();
+
+	std::vector<int> iadb = { 2, 3, 4, 8, 9, 10, 14, 15, 16 };  // DOF mapping 
+
+	// Parameters for calculating Consistent mass matrix
+	double elem_volume = this->triangle_area * thickness;
+
+	// Initialize the element stiffness matrix
+	this->element_BendingStiffnessMatrix.setZero();
+
+	double t_eff = (std::pow(thickness, 3)) / 12.0;
+
+	double L1 = 0.0;
+	double L2 = 0.0;
+	double L3 = 0.0;
+
+	for (int ip = 0; ip < 4; ip++)
+	{
+		L1 = integration_points.coeff(ip, 0);
+		L2 = integration_points.coeff(ip, 1);
+		L3 = integration_points.coeff(ip, 2);
+		double int_wt = integration_points.coeff(ip, 3); // weight
+		
+		double hxy = this->triangle_area * int_wt;
+		double factor = t_eff * hxy;
+
+		//___________________________________________________________________________________________________________________
+		// Strain Displacement Matrix at Integration Points
+		Eigen::MatrixXd  strainDisplacement_Bmatrix = computeStrainDisplacementMatrix(L1, L2, L3);  // B is 3x9 matrix
+
+		// Compute E = B^T * D * B
+		Eigen::MatrixXd bending_stiffness_matrix_IP = strainDisplacement_Bmatrix.transpose() * this->elasticity_matrix * strainDisplacement_Bmatrix;
+
+		// Apply integration weight factor
+		bending_stiffness_matrix_IP = factor * bending_stiffness_matrix_IP; // 9 x 9 matrix
+
+
+		// Map to the element stiffness matrix 18 x 18
+		for (int i = 0; i < 9; i++)
+		{
+			int ii = iadb[i];
+			for (int j = 0; j < 9; j++)
+			{
+				int jj = iadb[j];
+
+				this->element_BendingStiffnessMatrix.coeffRef(ii, jj) += bending_stiffness_matrix_IP(i, j);
+			}
+		}
+				
+	}
+
+
+	// Initialize the element stress matrix
+	this->element_BendingStressMatrix.setZero();
+
+
+	for (int i = 0; i < 3; i++)
+	{
+		L1 = bendingstress_integration_points.coeff(i, 0);
+		L2 = bendingstress_integration_points.coeff(i, 1);
+		L3 = bendingstress_integration_points.coeff(i, 2);
+
+		//___________________________________________________________________________________________________________________
+		// Strain Displacement Matrix at Integration Points
+		Eigen::MatrixXd  strainDisplacement_Bmatrix = computeStrainDisplacementMatrix(L1, L2, L3);  // B is 3x9 matrix
+
+		int row_offset = i * 3;
+
+		this->element_BendingStressMatrix.block<3, 9>(row_offset, 0) =
+			this->elasticity_matrix * strainDisplacement_Bmatrix;
+
+	}
+
+
+
+}
 
 
 
@@ -621,7 +682,6 @@ void triCKZ_element::computeJacobianCoefficients()
 
 
 
-
 void triCKZ_element::computeShapeFunctions(const double& L1, const double& L2, const double& L3)
 {
 	// Differences in y-coordinates for B vector components
@@ -637,9 +697,8 @@ void triCKZ_element::computeShapeFunctions(const double& L1, const double& L2, c
 
 	this->shapeFunction.setZero(); // 9 x 1
 
-	Eigen::MatrixXd shapeGradient(3, 9);
-	shapeGradient.setZero(); // 3 x 9
-
+	Eigen::MatrixXd shapeGradient = Eigen::MatrixXd::Zero(3, 9); // 3 x 9
+	
 	this->shapefunction_secondDerivativeMatrix.setZero(); // 6 x 9
 
 	//__________________________________________________________________________________________________________________
@@ -774,8 +833,12 @@ void triCKZ_element::computeShapeFunctions(const double& L1, const double& L2, c
 
 
 
-Eigen::MatrixXd triCKZ_element::computeStrainDisplacementMatrix()
+Eigen::MatrixXd triCKZ_element::computeStrainDisplacementMatrix(const double& L1, const double& L2, const double& L3)
 {
+
+	// Compute the shape function
+	computeShapeFunctions(L1, L2, L3);
+
 	// Jacobian Products is a 3x6 matrix, Second derivative shape function is a 6x9 matrix
 	Eigen::MatrixXd strainDisplacement_Bmatrix = this->jacobianProducts * this->shapefunction_secondDerivativeMatrix;  // Result is 3x9
 

@@ -31,16 +31,20 @@ private:
 	Eigen::MatrixXd transformation_matrix_phi = Eigen::MatrixXd::Zero(18, 18); // 18x18 transformation matrices
 
 	Eigen::MatrixXd elasticity_matrix = Eigen::MatrixXd::Zero(3, 3); // 3 x 3 matrix saves the elasticity matrix based on youngsmodulus and poissons ratio
-	Eigen::MatrixXd integration_points = Eigen::MatrixXd::Zero(4, 4); // 4 x 4 Triangle integration points
+	Eigen::MatrixXd integration_points = Eigen::MatrixXd::Zero(4, 4); // 4 x 4 Triangle stiffness integration points
+	Eigen::MatrixXd bendingstress_integration_points = Eigen::MatrixXd::Zero(3, 3); // 3 x 3 Triangle bending stress integration points
 	Eigen::MatrixXd jacobianMatrix = Eigen::MatrixXd::Zero(2, 3); // 2 x 3 matrix stores the jacobian J (dL/dx, dL/dy, etc)
 	Eigen::MatrixXd jacobianProducts = Eigen::MatrixXd::Zero(3, 6); // 3 x 6 matrix store the jacobian products J^2 ((dL/dx)^2, (dL/dy)^2, (dL/dx dL/dy), etc )
 	Eigen::VectorXd shapeFunction = Eigen::VectorXd::Zero(9); // 9 x 1 stores the shape function N
 	Eigen::MatrixXd shapefunction_secondDerivativeMatrix = Eigen::MatrixXd::Zero(6, 9); // 6 x 9 stores the d^2N second derivatives of the shape function
 	Eigen::MatrixXd strainDisplacementMatrix = Eigen::MatrixXd::Zero(3, 9); // 3 x 9 matrix stores the B strain Displacment matrix
-	Eigen::MatrixXd element_consistentmassMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element consistent mass matrix
-	Eigen::MatrixXd element_stiffness_matrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element stiffness matrix
+	// Eigen::MatrixXd element_consistentmassMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element consistent mass matrix
 
+	Eigen::MatrixXd element_MembraneStiffnessMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element membrane stiffness matrix
+	Eigen::MatrixXd element_BendingStiffnessMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element bending stiffness matrix
 
+	Eigen::MatrixXd element_MembraneStressMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element membrane stress matrix
+	Eigen::MatrixXd element_BendingStressMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element bending stress matrix
 
 
 	void computeElasticityMatrix(const double& youngsmodulus,
@@ -58,6 +62,8 @@ private:
 
 	void computeMembraneStiffnessMatrix(const double& thickness);
 
+	void computeBendingStiffnessMatrix(const double& thickness);
+
 
 	void computeStressContribution(
 		Eigen::MatrixXd& stress_matrix,     // 9x9 final stress matrix to update
@@ -74,11 +80,12 @@ private:
 	void computeJacobianCoefficients();
 
 
+	
 
 	void computeShapeFunctions(const double& L1, const double& L2, const double& L3);
 
 
-	Eigen::MatrixXd computeStrainDisplacementMatrix();
+	Eigen::MatrixXd computeStrainDisplacementMatrix(const double& L1, const double& L2, const double& L3);
 
 
 };
