@@ -94,8 +94,8 @@ private:
 	elementtri_list_store model_trielements;
 	elementquad_list_store model_quadelements;
 
-	// Material data
-	material_data mat_data;
+	//// Material data
+	//material_data mat_data;
 
 	// Node initial condition, loads & Constraints
 	nodeload_list_store node_loads;

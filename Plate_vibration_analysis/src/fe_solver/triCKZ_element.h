@@ -1,5 +1,5 @@
 #pragma once
-#include "modal_analysis_solver.h"
+#include <Eigen/Dense>
 
 
 class triCKZ_element
@@ -8,14 +8,19 @@ public:
 	triCKZ_element();
 	~triCKZ_element();
 
-	void init(const double& youngsmodulus, const double& poissonsratio);
+	void init();
 
-	Eigen::MatrixXd get_triCKZ_element_stiffness_matrix(const double& x1, const double& y1, const double& z1,
+	void set_triCKZ_element_stiffness_matrix(const double& x1, const double& y1, const double& z1,
 		const double& x2, const double& y2, const double& z2,
 		const double& x3, const double& y3, const double& z3,
 		const double& thickness,
-		const double& materialdensity);
+		const double& materialdensity,
+		const double& youngsmodulus, 
+		const double& poissonsratio);
 
+	Eigen::MatrixXd get_element_stiffness_matrix();
+
+	Eigen::MatrixXd get_element_stress_matrix();
 
 private:
 	double x1 = 0.0;
@@ -40,8 +45,8 @@ private:
 	Eigen::MatrixXd strainDisplacementMatrix = Eigen::MatrixXd::Zero(3, 9); // 3 x 9 matrix stores the B strain Displacment matrix
 	// Eigen::MatrixXd element_consistentmassMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element consistent mass matrix
 
-	Eigen::MatrixXd element_MembraneStiffnessMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element membrane stiffness matrix
-	Eigen::MatrixXd element_BendingStiffnessMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element bending stiffness matrix
+	Eigen::MatrixXd element_MembraneStiffnessMatrix = Eigen::MatrixXd::Zero(18, 18); // 18 x 18 matrix Element membrane stiffness matrix
+	Eigen::MatrixXd element_BendingStiffnessMatrix = Eigen::MatrixXd::Zero(18, 18); // 18 x 18 matrix Element bending stiffness matrix
 
 	Eigen::MatrixXd element_MembraneStressMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element membrane stress matrix
 	Eigen::MatrixXd element_BendingStressMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element bending stress matrix

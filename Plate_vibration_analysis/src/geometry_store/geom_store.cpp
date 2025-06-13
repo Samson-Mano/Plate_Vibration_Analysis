@@ -1303,48 +1303,49 @@ void geom_store::paint_modal_analysis_results()
 	//	modal_solver_window->execute_modal_open = false;
 	//}
 
-	//// Modal Analysis 
-	//if (modal_solver_window->execute_modal_analysis == true)
-	//{
-	//	// reset the result mesh data
-	//	mesh_modal_rslt_data.clear_mesh();
-	//	mesh_pulse_rslt_data.clear_mesh();
+	// Modal Analysis 
+	if (modal_solver_window->execute_modal_analysis == true)
+	{
+		// reset the result mesh data
+		mesh_modal_rslt_data.clear_mesh();
+		mesh_pulse_rslt_data.clear_mesh();
 
-	//	// reset the frequency response and pulse response solution
-	//	pulse_solver.clear_results();
+		// reset the frequency response and pulse response solution
+		pulse_solver.clear_results();
 
-	//	// Execute the Modal Analysis
-	//	modal_solver.modal_analysis_start(model_nodes,
-	//		model_trielements,
-	//		model_quadelements,
-	//		mat_data,
-	//		modal_result_nodes,
-	//		modal_result_trielements,
-	//		modal_result_quadelements);
-
-
-	//	// Check whether the modal analysis is complete or not
-	//	if (modal_solver.is_modal_analysis_complete == true)
-	//	{
-	//		// update the modal window list box
-	//		modal_solver_window->mode_result_str = modal_solver.mode_result_str;
-
-	//		mesh_modal_rslt_data.set_mesh_wireframe();
-
-	//		// Set the buffer (nodes, mesh boundaries, tria/ quad)
-	//		mesh_modal_rslt_data.set_buffer(); // Set the node buffer
-
-	//		std::cout << "Modal Analysis Complete" << std::endl;
-
-	//		modal_solver_window->is_mode_selection_changed = true;
-
-	//		// Modal analysis is already complete so set the transparency for the model
-	//		update_model_transperency(true);
-	//	}
+		// Execute the Modal Analysis
+		modal_solver.modal_analysis_start(model_nodes,
+			model_trielements,
+			model_quadelements,
+			node_cnst,
+			mat_window->material_list,
+			modal_result_nodes,
+			modal_result_trielements,
+			modal_result_quadelements);
 
 
-	//	modal_solver_window->execute_modal_analysis = false;
-	//}
+		// Check whether the modal analysis is complete or not
+		if (modal_solver.is_modal_analysis_complete == true)
+		{
+			// update the modal window list box
+			modal_solver_window->mode_result_str = modal_solver.mode_result_str;
+
+			mesh_modal_rslt_data.set_mesh_wireframe();
+
+			// Set the buffer (nodes, mesh boundaries, tria/ quad)
+			mesh_modal_rslt_data.set_buffer(); // Set the node buffer
+
+			std::cout << "Modal Analysis Complete" << std::endl;
+
+			modal_solver_window->is_mode_selection_changed = true;
+
+			// Modal analysis is already complete so set the transparency for the model
+			update_model_transperency(true);
+		}
+
+
+		modal_solver_window->execute_modal_analysis = false;
+	}
 
 }
 

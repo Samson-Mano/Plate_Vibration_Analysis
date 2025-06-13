@@ -13,6 +13,9 @@
 #include "../geometry_store/result_objects/rslt_elementtri_list_store.h"
 #include "../geometry_store/result_objects/rslt_elementquad_list_store.h"
 
+// Element stiffness support
+#include "triCKZ_element.h"
+
 // Stop watch
 #include "../events_handler/Stopwatch_events.h"
 
@@ -82,7 +85,7 @@ public:
 		const elementtri_list_store& model_trielements,
 		const elementquad_list_store& model_quadelements,
 		const nodecnst_list_store& node_cnst,
-		const material_data& mat_data,
+		std::unordered_map<int, material_data>& material_list,
 		rslt_nodes_list_store& modal_result_nodes,
 		rslt_elementtri_list_store& modal_result_trielements,
 		rslt_elementquad_list_store& modal_result_quadelements);
@@ -94,44 +97,6 @@ private:
 
 	Stopwatch_events stopwatch;
 	std::stringstream stopwatch_elapsed_str;
-
-	void computeLocalCoordinateSystem(
-		const Eigen::Vector3d& p,  // Point P
-		const Eigen::Vector3d& q,  // Point Q
-		const Eigen::Vector3d& r,  // Point R
-		double& sin_angle,
-		double& cos_angle,
-		double& dpq,
-		double& dpr, Eigen::Matrix3d& coordinateSystemE);
-
-
-	Eigen::MatrixXd generateTriangleIntegrationPoints(int nip);
-
-
-	void computeJacobianCoefficients(
-		double x1, double y1,
-		double x2, double y2,
-		double x3, double y3,
-		double triangle_area,
-		Eigen::Matrix<double, 2, 3>& jacobianMatrix,
-		Eigen::Matrix<double, 3, 6>& jacobianProducts);
-
-
-	void computeShapeFunctions(
-		double B1, double B2, double B3,
-		double C1, double C2, double C3,
-		double L1, double L2, double L3,
-		const Eigen::Matrix<double, 2, 3>& jacobianMatrix,
-		const Eigen::Matrix<double, 3, 6>& jacobianProducts,
-		Eigen::VectorXd& shapeFunction,         // Size 9
-		Eigen::MatrixXd& shapeGradient,         // Size 2x9
-		Eigen::MatrixXd& secondDerivativeMatrix); // Size 6x9
-
-
-
-	Eigen::MatrixXd computeStrainDisplacementMatrix(const Eigen::Matrix<double, 3, 6>& jacobianProducts,
-		const Eigen::MatrixXd& shapefunction_secondDerivativeMatrix);
-
 
 	
 };

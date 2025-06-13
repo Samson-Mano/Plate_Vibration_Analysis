@@ -11,44 +11,12 @@ triCKZ_element::~triCKZ_element()
 	// Empty destructor
 }
 
-void triCKZ_element::init(const double& youngsmodulus, const double& poissonsratio)
+void triCKZ_element::init()
 {
 	// Intialize the CKZ triangle element module
-		// Step 0A: Set the elasticity matrix (from youngs modulus, poissons ratio)
-	computeElasticityMatrix(youngsmodulus, poissonsratio);
 
-	// Step 0B: Set the Triangle Numerical Integration Point
+	// Step 0A: Set the Triangle Numerical Integration Point
 	computeTriangleIntegrationPoints();
-
-}
-
-
-void triCKZ_element::computeElasticityMatrix(const double& youngsmodulus, const double& poissonsratio)
-{
-
-	// compute the elasticity matrix
-	elasticity_matrix.setZero();
-
-	double k_const = youngsmodulus / (1.0 - (poissonsratio * poissonsratio));
-
-	// Row 1
-	elasticity_matrix.coeffRef(0, 0) = 1.0;
-	elasticity_matrix.coeffRef(0, 1) = poissonsratio;
-	elasticity_matrix.coeffRef(0, 2) = 0.0;
-
-	// Row 2
-	elasticity_matrix.coeffRef(1, 0) = poissonsratio;
-	elasticity_matrix.coeffRef(1, 1) = 1.0;
-	elasticity_matrix.coeffRef(1, 2) = 0.0;
-
-	// Row 3
-	elasticity_matrix.coeffRef(2, 0) = 0.0;
-	elasticity_matrix.coeffRef(2, 1) = 0.0;
-	elasticity_matrix.coeffRef(2, 2) = (1.0 - poissonsratio) * 0.5;
-
-
-	elasticity_matrix = k_const * elasticity_matrix;
-
 
 }
 
@@ -105,11 +73,14 @@ void triCKZ_element::computeTriangleIntegrationPoints()
 }
 
 
-Eigen::MatrixXd triCKZ_element::get_triCKZ_element_stiffness_matrix(const double& x1, const double& y1, const double& z1,
+void triCKZ_element::set_triCKZ_element_stiffness_matrix(const double& x1, const double& y1, const double& z1,
 	const double& x2, const double& y2, const double& z2,
 	const double& x3, const double& y3, const double& z3,
-	const double& thickness, const double& materialdensity)
+	const double& thickness, const double& materialdensity,
+	const double& youngsmodulus, const double& poissonsratio)
 {
+	// Step 0: Compute the elasticity matrix
+	computeElasticityMatrix(youngsmodulus, poissonsratio);
 
 	// Step 1: Set the local co-ordinate system for the triangle
 	computeLocalCoordinateSystem(x1, y1, z1, x2, y2, z2, x3, y3, z3);
@@ -118,13 +89,55 @@ Eigen::MatrixXd triCKZ_element::get_triCKZ_element_stiffness_matrix(const double
 
 
 
-	
 
-
-
-
-	return Eigen::MatrixXd();
 }
+
+
+Eigen::MatrixXd triCKZ_element::get_element_stiffness_matrix()
+{
+
+	// Return the element stiffness matrix
+	return (this->element_MembraneStiffnessMatrix + this->element_BendingStiffnessMatrix);
+}
+
+
+Eigen::MatrixXd triCKZ_element::get_element_stress_matrix()
+{
+
+	// Return the element membrane matrix
+	return (this->element_MembraneStressMatrix + this->element_BendingStressMatrix);
+}
+
+
+void triCKZ_element::computeElasticityMatrix(const double& youngsmodulus, const double& poissonsratio)
+{
+
+	// compute the elasticity matrix
+	elasticity_matrix.setZero();
+
+	double k_const = youngsmodulus / (1.0 - (poissonsratio * poissonsratio));
+
+	// Row 1
+	elasticity_matrix.coeffRef(0, 0) = 1.0;
+	elasticity_matrix.coeffRef(0, 1) = poissonsratio;
+	elasticity_matrix.coeffRef(0, 2) = 0.0;
+
+	// Row 2
+	elasticity_matrix.coeffRef(1, 0) = poissonsratio;
+	elasticity_matrix.coeffRef(1, 1) = 1.0;
+	elasticity_matrix.coeffRef(1, 2) = 0.0;
+
+	// Row 3
+	elasticity_matrix.coeffRef(2, 0) = 0.0;
+	elasticity_matrix.coeffRef(2, 1) = 0.0;
+	elasticity_matrix.coeffRef(2, 2) = (1.0 - poissonsratio) * 0.5;
+
+
+	elasticity_matrix = k_const * elasticity_matrix;
+
+
+}
+
 
 
 void triCKZ_element::computeLocalCoordinateSystem(const double& x1, const double& y1, const double& z1,
@@ -214,7 +227,7 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 
 
 	// Helper structure for edge parameters
-	struct EdgeParams 
+	struct EdgeParams
 	{
 		double a1, a2, a3;
 		double b1, b2, b3;
@@ -222,25 +235,25 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 	};
 
 
-	auto computeEdgeParams = [](const Eigen::Vector2d& pi, const Eigen::Vector2d& pj, const Eigen::Vector2d& pk) -> EdgeParams 
-	{
-		Eigen::Vector2d mid = 0.5 * (pj + pk);
-		Eigen::Vector2d vec = mid - pi;
-		double xl = vec.norm();
-		double cos_c = vec.x() / xl;
-		double sin_s = vec.y() / xl;
-
-		return 
+	auto computeEdgeParams = [](const Eigen::Vector2d& pi, const Eigen::Vector2d& pj, const Eigen::Vector2d& pk) -> EdgeParams
 		{
-			-sin_s * cos_c * cos_c * 0.5, // a1
-			cos_c * cos_c * cos_c, // a2
-			sin_s* ((0.5 * sin_s * sin_s) + (cos_c * cos_c)), // a3
-			-cos_c * ((sin_s * sin_s) + (0.5 * cos_c * cos_c)), // b1
-			-sin_s * sin_s * sin_s, // b2
-			0.5 * sin_s * sin_s * cos_c, // b3
-			cos_c, sin_s
+			Eigen::Vector2d mid = 0.5 * (pj + pk);
+			Eigen::Vector2d vec = mid - pi;
+			double xl = vec.norm();
+			double cos_c = vec.x() / xl;
+			double sin_s = vec.y() / xl;
+
+			return
+			{
+				-sin_s * cos_c * cos_c * 0.5, // a1
+				cos_c * cos_c * cos_c, // a2
+				sin_s * ((0.5 * sin_s * sin_s) + (cos_c * cos_c)), // a3
+				-cos_c * ((sin_s * sin_s) + (0.5 * cos_c * cos_c)), // b1
+				-sin_s * sin_s * sin_s, // b2
+				0.5 * sin_s * sin_s * cos_c, // b3
+				cos_c, sin_s
+			};
 		};
-	};
 
 	// Compute edge parameters
 	EdgeParams edge1 = computeEdgeParams(p1, p2, p3);
@@ -254,36 +267,36 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 	Eigen::MatrixXd g_matrix = Eigen::MatrixXd::Zero(9, 9);
 
 	// Helper lambda to populate g_matrix rows for each node
-	auto fillNodeContrib = [&](int baseRow, const Eigen::Vector2d& p, const EdgeParams& e1, const EdgeParams& e2, const EdgeParams& e3) 
-	{
-		double xp = invSqrtArea * (p.x() - centroid.x());
-		double yp = invSqrtArea * (p.y() - centroid.y());
-
-		g_matrix.coeffRef(baseRow + 0, 0) = 1.0;
-		g_matrix.coeffRef(baseRow + 1, 1) = 1.0;
-		g_matrix.coeffRef(baseRow + 0, 2) = -yp;
-		g_matrix.coeffRef(baseRow + 1, 2) = xp;
-		g_matrix.coeffRef(baseRow + 2, 2) = invSqrtArea;
-		g_matrix.coeffRef(baseRow + 0, 3) = xp;
-		g_matrix.coeffRef(baseRow + 1, 4) = yp;
-		g_matrix.coeffRef(baseRow + 0, 5) = yp;
-		g_matrix.coeffRef(baseRow + 1, 5) = xp;
-
-		auto fillEdgeTerms = [&](int col, const EdgeParams& edge) 
+	auto fillNodeContrib = [&](int baseRow, const Eigen::Vector2d& p, const EdgeParams& e1, const EdgeParams& e2, const EdgeParams& e3)
 		{
-			double xpxp = xp * xp;
-			double xpyp = xp * yp;
-			double ypyp = yp * yp;
+			double xp = invSqrtArea * (p.x() - centroid.x());
+			double yp = invSqrtArea * (p.y() - centroid.y());
 
-			g_matrix.coeffRef(baseRow + 0, col) = (edge.a1 * xpxp) + (edge.a2 * xpyp) + (edge.a3 * ypyp);
-			g_matrix.coeffRef(baseRow + 1, col) = (edge.b1 * xpxp) + (edge.b2 * xpyp) + (edge.b3 * ypyp);
-			g_matrix.coeffRef(baseRow + 2, col) = -invSqrtArea * ((edge.cos_c * xp) + (edge.sin_s * yp));
+			g_matrix.coeffRef(baseRow + 0, 0) = 1.0;
+			g_matrix.coeffRef(baseRow + 1, 1) = 1.0;
+			g_matrix.coeffRef(baseRow + 0, 2) = -yp;
+			g_matrix.coeffRef(baseRow + 1, 2) = xp;
+			g_matrix.coeffRef(baseRow + 2, 2) = invSqrtArea;
+			g_matrix.coeffRef(baseRow + 0, 3) = xp;
+			g_matrix.coeffRef(baseRow + 1, 4) = yp;
+			g_matrix.coeffRef(baseRow + 0, 5) = yp;
+			g_matrix.coeffRef(baseRow + 1, 5) = xp;
+
+			auto fillEdgeTerms = [&](int col, const EdgeParams& edge)
+				{
+					double xpxp = xp * xp;
+					double xpyp = xp * yp;
+					double ypyp = yp * yp;
+
+					g_matrix.coeffRef(baseRow + 0, col) = (edge.a1 * xpxp) + (edge.a2 * xpyp) + (edge.a3 * ypyp);
+					g_matrix.coeffRef(baseRow + 1, col) = (edge.b1 * xpxp) + (edge.b2 * xpyp) + (edge.b3 * ypyp);
+					g_matrix.coeffRef(baseRow + 2, col) = -invSqrtArea * ((edge.cos_c * xp) + (edge.sin_s * yp));
+				};
+
+			fillEdgeTerms(6, e1);
+			fillEdgeTerms(7, e2);
+			fillEdgeTerms(8, e3);
 		};
-
-		fillEdgeTerms(6, e1);
-		fillEdgeTerms(7, e2);
-		fillEdgeTerms(8, e3);
-	};
 
 
 
@@ -306,7 +319,7 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 	auto fill_q_block = [&](int row_offset,
 		double x1, double y1,
 		double x2, double y2,
-		double x3, double y3) 
+		double x3, double y3)
 		{
 			double yki = y2 - y3;
 			double xik = x3 - x2;
@@ -341,11 +354,11 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 	Eigen::MatrixXd smm_matrix = this->elasticity_matrix * q_matrix.transpose();  // 3x9
 
 	// Step 2: Assemble stiffness matrix (upper triangle only)
-	for (int i = 0; i < 9; i++) 
+	for (int i = 0; i < 9; i++)
 	{
 		int ii = iadm[i];
 
-		for (int j = i; j < 9; j++) 
+		for (int j = i; j < 9; j++)
 		{
 			int jj = iadm[j];
 			double contribution = q_matrix.row(i).dot(smm_matrix.col(j));  // Efficient dot product
@@ -560,7 +573,7 @@ void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
 		L2 = integration_points.coeff(ip, 1);
 		L3 = integration_points.coeff(ip, 2);
 		double int_wt = integration_points.coeff(ip, 3); // weight
-		
+
 		double hxy = this->triangle_area * int_wt;
 		double factor = t_eff * hxy;
 
@@ -586,7 +599,7 @@ void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
 				this->element_BendingStiffnessMatrix.coeffRef(ii, jj) += bending_stiffness_matrix_IP(i, j);
 			}
 		}
-				
+
 	}
 
 
@@ -698,7 +711,7 @@ void triCKZ_element::computeShapeFunctions(const double& L1, const double& L2, c
 	this->shapeFunction.setZero(); // 9 x 1
 
 	Eigen::MatrixXd shapeGradient = Eigen::MatrixXd::Zero(3, 9); // 3 x 9
-	
+
 	this->shapefunction_secondDerivativeMatrix.setZero(); // 6 x 9
 
 	//__________________________________________________________________________________________________________________
