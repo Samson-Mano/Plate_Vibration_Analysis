@@ -70,27 +70,20 @@ private:
 	void computeBendingStiffnessMatrix(const double& thickness);
 
 
-	void computeStressContribution(
-		Eigen::MatrixXd& stress_matrix,     // 9x9 final stress matrix to update
-		const Eigen::MatrixXd& g_matrix,    // 6x9 G matrix
-		const Eigen::MatrixXd& b1_matrix,   // 3x3 matrix B1
-		const Eigen::MatrixXd& b2_matrix,   // 3x3 matrix B2
-		const Eigen::Vector2d& xy_p,        // X and Y coordinate of the point
-		double sqrt_beta,                   // sqrt(BETA)
-		double inv_sqrt_area,               // XLAM
-		int smm_row_offset);                // Offset for placing result in smm3 (0, 3, or 6)
-	
-
-
 	void computeJacobianCoefficients();
-
-
-	
+		
 
 	void computeShapeFunctions(const double& L1, const double& L2, const double& L3);
 
 
 	Eigen::MatrixXd computeStrainDisplacementMatrix(const double& L1, const double& L2, const double& L3);
+
+
+
+	void matrixToString(const Eigen::MatrixXd& mat);
+
+
+	void vectorToString(const Eigen::VectorXd& vec);
 
 
 };

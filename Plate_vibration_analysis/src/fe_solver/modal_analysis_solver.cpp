@@ -92,7 +92,7 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 			mat_data.material_youngsmodulus, mat_data.poissons_ratio);
 
 		Eigen::MatrixXd trielement_stiffness_matrix = triCKZ.get_element_stiffness_matrix();
-
+		Eigen::MatrixXd trielement_stress_matrix = triCKZ.get_element_stress_matrix();
 
 		if (tri_elem.tri_id == 1)
 		{
@@ -103,14 +103,26 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 
 			if (outFile.is_open())
 			{
-				// Define formatting: 3 decimal places, aligned columns
-				Eigen::IOFormat CleanFmt(3, 0, " ", "\n", "", "", "", "");
+				// Define formatting: high precision, fixed-point notation, aligned columns
+				Eigen::IOFormat FullPrecisionFmt(
+					Eigen::FullPrecision,      // use full precision
+					0,                         // don't align columns
+					"\t",                      // coefficient separator (tab)
+					"\n",                      // row separator
+					"", "", "", "");           // prefix/suffix
 
 				outFile << "Element Stiffness Matrix for Triangle ID " << tri_elem.tri_id << ":\n";
-				outFile << trielement_stiffness_matrix.format(CleanFmt);
+				outFile << trielement_stiffness_matrix.format(FullPrecisionFmt);
+				outFile << "\n";
+
+				outFile << "Element Stress Matrix for Triangle ID " << tri_elem.tri_id << ":\n";
+				outFile << trielement_stress_matrix.format(FullPrecisionFmt);
 
 				outFile.close();
 				std::cout << "Stiffness matrix written to tri_element_stiffness_matrix.txt\n";
+
+
+
 			}
 			else
 			{

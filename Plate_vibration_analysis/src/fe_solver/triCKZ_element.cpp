@@ -86,7 +86,11 @@ void triCKZ_element::set_triCKZ_element_stiffness_matrix(const double& x1, const
 	computeLocalCoordinateSystem(x1, y1, z1, x2, y2, z2, x3, y3, z3);
 
 
+	// Membrane stiffness and stress matrix
+	computeMembraneStiffnessMatrix(thickness);
 
+
+	// Bending stiffness and stress matrix
 
 
 
@@ -97,7 +101,7 @@ Eigen::MatrixXd triCKZ_element::get_element_stiffness_matrix()
 {
 
 	// Return the element stiffness matrix
-	return (this->element_MembraneStiffnessMatrix + this->element_BendingStiffnessMatrix);
+	return (this->element_MembraneStiffnessMatrix); // +this->element_BendingStiffnessMatrix);
 }
 
 
@@ -105,7 +109,7 @@ Eigen::MatrixXd triCKZ_element::get_element_stress_matrix()
 {
 
 	// Return the element membrane matrix
-	return (this->element_MembraneStressMatrix + this->element_BendingStressMatrix);
+	return (this->element_MembraneStressMatrix); // +this->element_BendingStressMatrix);
 }
 
 
@@ -134,7 +138,6 @@ void triCKZ_element::computeElasticityMatrix(const double& youngsmodulus, const 
 
 
 	elasticity_matrix = k_const * elasticity_matrix;
-
 
 }
 
@@ -323,7 +326,7 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 		{
 			double yki = y2 - y3;
 			double xik = x3 - x2;
-			double yji = x1 - y3;
+			double yji = y1 - y3;
 			double ykj = y2 - y1;
 			double xij = x3 - x1;
 			double xjk = x1 - x2;
@@ -343,6 +346,7 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 	fill_q_block(3, x2, y2, x3, y3, x1, y1);
 	// Third set (Node 3)
 	fill_q_block(6, x3, y3, x1, y1, x2, y2);
+
 
 	//_____________________________________________________________________________________________
 	// Assemble basic membrane stiffness matrix
@@ -418,8 +422,8 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 	eh_stiffness_matrix = eh_stiffness_matrix + y_j * (b2_matrix.transpose() * this->elasticity_matrix * b2_matrix);
 
 	// EH += XYJ * (B1^T * DM * B2 + B2^T * DM * B1)
-	Eigen::Matrix3d term1 = b1_matrix.transpose() * (this->elasticity_matrix * b1_matrix);
-	Eigen::Matrix3d term2 = b2_matrix.transpose() * (this->elasticity_matrix * b2_matrix);
+	Eigen::Matrix3d term1 = b1_matrix.transpose() * (this->elasticity_matrix * b2_matrix);
+	Eigen::Matrix3d term2 = b2_matrix.transpose() * (this->elasticity_matrix * b1_matrix);
 
 	eh_stiffness_matrix = eh_stiffness_matrix + xy_j * (term1 + term2);
 
@@ -436,7 +440,7 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 			double sum = 0.0;
 			for (int k = 0; k < 3; k++) // k = 0 to 2 (corresponding to EH col and G row)
 			{
-				sum = sum + eh_stiffness_matrix.coeff(i, k) * g_matrix.coeff(6 + k, j);
+				sum = sum + eh_stiffness_matrix.coeff(i, k) * g_matrix_inverse.coeff(6 + k, j);
 			}
 			smm_matrix.coeffRef(i, j) = sum;
 		}
@@ -452,7 +456,7 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 			double sum = 0.0;
 			for (int k = 0; k < 3; k++)
 			{
-				sum = sum + g_matrix.coeff(6 + k, i) * smm_matrix.coeff(k, j);
+				sum = sum + g_matrix_inverse.coeff(6 + k, i) * smm_matrix.coeff(k, j);
 			}
 
 			higher_order_stiffness_matrix.coeffRef(ii, jj) = higher_order_stiffness_matrix.coeff(ii, jj) + (beta * sum * thickness);
@@ -462,6 +466,7 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 
 		}
 	}
+
 
 	// Set the total membrane stiffness matrix
 	this->element_MembraneStiffnessMatrix.setZero();
@@ -474,78 +479,64 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 
 	this->element_MembraneStressMatrix.setZero();  // 9x9 final stress matrix
 
-	double SqrtBeta = std::sqrt(beta);
-
-	computeStressContribution(this->element_MembraneStressMatrix, g_matrix, b1_matrix, b2_matrix,
-		xy_p1, SqrtBeta, invSqrtArea, 0);   // First corner
-	computeStressContribution(this->element_MembraneStressMatrix, g_matrix, b1_matrix, b2_matrix,
-		xy_p2, SqrtBeta, invSqrtArea, 3);   // Second corner
-	computeStressContribution(this->element_MembraneStressMatrix, g_matrix, b1_matrix, b2_matrix,
-		xy_p3, SqrtBeta, invSqrtArea, 6);   // Third corner
+	double sqrtBeta = std::sqrt(beta);
 
 
-	// Break point
-	int end0 = 1;
+	// Lambda to help fill stress matrix compactly
+	auto computeStressContribution = [&](const Eigen::Vector2d& xy_p,        // X and Y coordinate of the point
+		int smm_row_offset)                 // Offset for placing result in smm3 (0, 3, or 6)
+		{
+			// Step 1: Build BB (3x6)
+			Eigen::MatrixXd bb = Eigen::MatrixXd::Zero(3, 6);
+			bb.coeffRef(0, 0) = 1.0;
+			bb.coeffRef(1, 1) = 1.0;
+			bb.coeffRef(2, 2) = 2.0;
+
+			// Update BB(0:2, 3:5)
+			for (int i = 0; i < 3; i++)
+			{
+				for (int j = 0; j < 3; j++)
+				{
+					bb.coeffRef(i, 3 + j) = ((b1_matrix.coeff(i, j) * xy_p.x()) + (b2_matrix.coeff(i, j) * xy_p.y())) * sqrtBeta;
+				}
+			}
+
+			// Step 2: Compute BG = BB * G_lower (3x9)
+			Eigen::MatrixXd bg = Eigen::MatrixXd::Zero(3, 9);
+			for (int i = 0; i < 3; i++)
+			{
+				for (int j = 0; j < 9; j++)
+				{
+					for (int k = 0; k < 6; k++)
+					{
+						bg.coeffRef(i, j) = bg.coeff(i, j) + (bb.coeff(i, k) * g_matrix_inverse.coeff(3 + k, j)); // G_inv(3+K, J)
+					}
+				}
+			}
+
+			// Step 3: Compute stress = DM * BG * XLAM
+			for (int i = 0; i < 3; i++)
+			{
+				for (int j = 0; j < 9; j++)
+				{
+					double zz = 0.0;
+					for (int k = 0; k < 3; k++)
+					{
+						zz = zz + this->elasticity_matrix.coeff(i, k) * bg(k, j);
+					}
+					this->element_MembraneStressMatrix.coeffRef(smm_row_offset + i, j) =
+						this->element_MembraneStressMatrix.coeff(smm_row_offset + i, j) + (zz * invSqrtArea);
+				}
+			}
+
+		};
+
+
+	computeStressContribution(xy_p1, 0);   // First corner
+	computeStressContribution(xy_p2, 3);   // Second corner
+	computeStressContribution(xy_p3, 6);   // Third corner
 
 }
-
-
-void triCKZ_element::computeStressContribution(
-	Eigen::MatrixXd& stress_matrix,     // 9x9 final stress matrix to update
-	const Eigen::MatrixXd& g_matrix,    // 6x9 G matrix
-	const Eigen::MatrixXd& b1_matrix,   // 3x3 matrix B1
-	const Eigen::MatrixXd& b2_matrix,   // 3x3 matrix B2
-	const Eigen::Vector2d& xy_p,        // X and Y coordinate of the point
-	double sqrt_beta,                   // sqrt(BETA)
-	double inv_sqrt_area,               // XLAM
-	int smm_row_offset                  // Offset for placing result in smm3 (0, 3, or 6)
-)
-{
-	// Step 1: Initialize BB (3x6)
-	Eigen::MatrixXd bb = Eigen::MatrixXd::Zero(3, 6);
-	bb.coeffRef(0, 0) = 1.0;
-	bb.coeffRef(1, 1) = 1.0;
-	bb.coeffRef(2, 2) = 2.0;
-
-	// Update BB(0:2, 3:5)
-	for (int i = 0; i < 3; i++)
-	{
-		for (int j = 0; j < 3; j++)
-		{
-			bb.coeffRef(i, 3 + j) = ((b1_matrix.coeff(i, j) * xy_p.x()) + (b2_matrix.coeff(i, j) * xy_p.y())) * sqrt_beta;
-		}
-	}
-
-	// Step 2: Compute BG = BB * G_lower (3x9)
-	Eigen::MatrixXd bg = Eigen::MatrixXd::Zero(3, 9);
-	for (int i = 0; i < 3; i++)
-	{
-		for (int j = 0; j < 9; j++)
-		{
-			for (int k = 0; k < 6; k++)
-			{
-				bg.coeffRef(i, j) = bg.coeff(i, j) + bb.coeff(i, k) * g_matrix.coeff(3 + k, j); // G(3+K, J)
-			}
-		}
-	}
-
-	// Step 3: Compute stress = DM * BG * XLAM
-	for (int i = 0; i < 3; i++)
-	{
-		for (int j = 0; j < 9; j++)
-		{
-			double zz = 0.0;
-			for (int k = 0; k < 3; k++)
-			{
-				zz = zz + this->elasticity_matrix.coeff(i, k) * bg(k, j);
-			}
-			stress_matrix.coeffRef(smm_row_offset + i, j) = zz * inv_sqrt_area;
-		}
-	}
-
-
-}
-
 
 
 void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
@@ -863,6 +854,45 @@ Eigen::MatrixXd triCKZ_element::computeStrainDisplacementMatrix(const double& L1
 	return strainDisplacement_Bmatrix;  // B is 3x9 matrix
 
 }
+
+
+
+
+
+
+void triCKZ_element::matrixToString(const Eigen::MatrixXd& mat)
+{
+	std::ostringstream oss;
+	oss.precision(4);
+	oss << std::fixed;
+
+	for (int i = 0; i < mat.rows(); ++i) {
+		for (int j = 0; j < mat.cols(); ++j) {
+			oss << mat(i, j);
+			if (j < mat.cols() - 1) oss << ", ";
+		}
+		oss << "\n";
+	}
+	std::string result = oss.str();
+
+}
+
+
+void triCKZ_element::vectorToString(const Eigen::VectorXd& vec)
+{
+	std::ostringstream oss;
+	oss.precision(4);
+	oss << std::fixed;
+
+	for (int i = 0; i < vec.size(); ++i)
+	{
+		oss << vec(i);
+		oss << "\n";
+	}
+	std::string result = oss.str();
+
+}
+
 
 
 

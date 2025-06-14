@@ -383,3 +383,87 @@ void computeStressContribution(
         }
     }
 }
+
+
+
+
+
+
+
+
+
+// Helper function to compute BB, BG, and stress contribution at one point (Improved)
+void triCKZ_element::computeStressContribution(
+	Eigen::MatrixXd& stress_matrix,     // 9x9 final stress matrix to update
+	const Eigen::MatrixXd& g_matrix,    // 6x9 G matrix
+	const Eigen::MatrixXd& b1_matrix,   // 3x3 matrix B1
+	const Eigen::MatrixXd& b2_matrix,   // 3x3 matrix B2
+	const Eigen::Vector2d& xy_p,        // X and Y coordinate of the point
+	double sqrt_beta,                   // sqrt(BETA)
+	double inv_sqrt_area,               // XLAM
+	int smm_row_offset                  // Offset for placing result in smm3 (0, 3, or 6)
+)
+{
+	// Step 1: Initialize BB (3x6)
+	Eigen::MatrixXd bb = Eigen::MatrixXd::Zero(3, 6);
+	bb.coeffRef(0, 0) = 1.0;
+	bb.coeffRef(1, 1) = 1.0;
+	bb.coeffRef(2, 2) = 2.0;
+
+	// Update BB(0:2, 3:5)
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			bb.coeffRef(i, 3 + j) = ((b1_matrix.coeff(i, j) * xy_p.x()) + (b2_matrix.coeff(i, j) * xy_p.y())) * sqrt_beta;
+		}
+	}
+
+	// Step 2: Compute BG = BB * G_lower (3x9)
+	Eigen::MatrixXd bg = Eigen::MatrixXd::Zero(3, 9);
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 9; j++)
+		{
+			for (int k = 0; k < 6; k++)
+			{
+				bg.coeffRef(i, j) = bg.coeff(i, j) + bb.coeff(i, k) * g_matrix.coeff(3 + k, j); // G(3+K, J)
+			}
+		}
+	}
+
+	// Step 3: Compute stress = DM * BG * XLAM
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 9; j++)
+		{
+			double zz = 0.0;
+			for (int k = 0; k < 3; k++)
+			{
+				zz = zz + this->elasticity_matrix.coeff(i, k) * bg(k, j);
+			}
+			stress_matrix.coeffRef(smm_row_offset + i, j) = zz * inv_sqrt_area;
+		}
+	}
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
