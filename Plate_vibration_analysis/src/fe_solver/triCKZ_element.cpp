@@ -73,9 +73,9 @@ void triCKZ_element::computeTriangleIntegrationPoints()
 }
 
 
-void triCKZ_element::set_triCKZ_element_stiffness_matrix(const double& x1, const double& y1, const double& z1,
-	const double& x2, const double& y2, const double& z2,
-	const double& x3, const double& y3, const double& z3,
+void triCKZ_element::set_triCKZ_element_stiffness_matrix(const double& x1_g_coord, const double& y1_g_coord, const double& z1_g_coord,
+	const double& x2_g_coord, const double& y2_g_coord, const double& z2_g_coord,
+	const double& x3_g_coord, const double& y3_g_coord, const double& z3_g_coord,
 	const double& thickness, const double& materialdensity,
 	const double& youngsmodulus, const double& poissonsratio)
 {
@@ -83,7 +83,8 @@ void triCKZ_element::set_triCKZ_element_stiffness_matrix(const double& x1, const
 	computeElasticityMatrix(youngsmodulus, poissonsratio);
 
 	// Step 1: Set the local co-ordinate system for the triangle
-	computeLocalCoordinateSystem(x1, y1, z1, x2, y2, z2, x3, y3, z3);
+	computeLocalCoordinateSystem(x1_g_coord, y1_g_coord, z1_g_coord,
+		x2_g_coord, y2_g_coord, z2_g_coord, x3_g_coord, y3_g_coord, z3_g_coord);
 
 
 	// Membrane stiffness and stress matrix
@@ -91,7 +92,19 @@ void triCKZ_element::set_triCKZ_element_stiffness_matrix(const double& x1, const
 
 
 	// Bending stiffness and stress matrix
+	computeBendingStiffnessMatrix(thickness);
 
+
+	// Create the total stiffness (Membrane and Bending stiffness)
+	this->element_StiffnessMatrix = this->element_MembraneStiffnessMatrix + this->element_BendingStiffnessMatrix;
+
+	// Transform the element matrices to global coordinates
+	this->element_StiffnessMatrix =
+		this->transformation_matrix_phi.transpose() * this->element_StiffnessMatrix * this->transformation_matrix_phi;
+
+
+	// Compute the lumped mass matrix
+	computeLumpedMassMatrix(thickness, materialdensity);
 
 
 }
@@ -101,15 +114,15 @@ Eigen::MatrixXd triCKZ_element::get_element_stiffness_matrix()
 {
 
 	// Return the element stiffness matrix
-	return (this->element_MembraneStiffnessMatrix); // +this->element_BendingStiffnessMatrix);
+	return this->element_StiffnessMatrix;
 }
 
 
-Eigen::MatrixXd triCKZ_element::get_element_stress_matrix()
+Eigen::MatrixXd triCKZ_element::get_element_mass_matrix()
 {
 
-	// Return the element membrane matrix
-	return (this->element_MembraneStressMatrix); // +this->element_BendingStressMatrix);
+	// Return the element mass matrix
+	return this->element_LumpedMassMatrix;
 }
 
 
@@ -143,14 +156,14 @@ void triCKZ_element::computeElasticityMatrix(const double& youngsmodulus, const 
 
 
 
-void triCKZ_element::computeLocalCoordinateSystem(const double& x1, const double& y1, const double& z1,
-	const double& x2, const double& y2, const double& z2,
-	const double& x3, const double& y3, const double& z3)
+void triCKZ_element::computeLocalCoordinateSystem(const double& x1_g_coord, const double& y1_g_coord, const double& z1_g_coord,
+	const double& x2_g_coord, const double& y2_g_coord, const double& z2_g_coord,
+	const double& x3_g_coord, const double& y3_g_coord, const double& z3_g_coord)
 {
 
-	Eigen::Vector3d p(x1, y1, z1);  // Point P
-	Eigen::Vector3d q(x2, y2, z2);  // Point Q
-	Eigen::Vector3d r(x3, y3, z3);  // Point R
+	Eigen::Vector3d p(x1_g_coord, y1_g_coord, z1_g_coord);  // Point P
+	Eigen::Vector3d q(x2_g_coord, y2_g_coord, z2_g_coord);  // Point Q
+	Eigen::Vector3d r(x3_g_coord, y3_g_coord, z3_g_coord);  // Point R
 
 
 	// Vectors PQ and PR
@@ -189,7 +202,7 @@ void triCKZ_element::computeLocalCoordinateSystem(const double& x1, const double
 	this->x3 = dpr * cos_angle;
 	this->y3 = dpr * sin_angle;
 
-	this->triangle_area = 0.5 * x2 * y3;
+	this->triangle_area = 0.5 * this->x2 * this->y3;
 
 
 	// 18x18 transformation matrices
@@ -368,10 +381,14 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 			double contribution = q_matrix.row(i).dot(smm_matrix.col(j));  // Efficient dot product
 			double value = contribution * (thickness / this->triangle_area);
 
-			basic_membrane_stiffness_matrix(ii, jj) = basic_membrane_stiffness_matrix(ii, jj) + value;
+			basic_membrane_stiffness_matrix.coeffRef(ii, jj) = basic_membrane_stiffness_matrix.coeff(ii, jj) + value;
 
-			// Optional: Fill symmetric part if needed
-			// if (ii != jj) basic_membrane_stiffness_matrix(jj, ii) += value;
+			// Fill symmetric part
+			if (ii != jj)
+			{
+				basic_membrane_stiffness_matrix.coeffRef(jj, ii) = basic_membrane_stiffness_matrix.coeff(jj, ii) + value;
+			}
+
 		}
 	}
 
@@ -461,20 +478,24 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 
 			higher_order_stiffness_matrix.coeffRef(ii, jj) = higher_order_stiffness_matrix.coeff(ii, jj) + (beta * sum * thickness);
 
-			// Optional: Fill symmetric part if needed
-			// if (ii != jj) higher_order_stiffness_matrix(jj, ii) += higher_order_stiffness_matrix.coeffRef(ii, jj);
+			// Fill symmetric part
+			if (ii != jj)
+			{
+				higher_order_stiffness_matrix.coeffRef(jj, ii) = 
+					higher_order_stiffness_matrix.coeff(jj, ii) + higher_order_stiffness_matrix.coeff(ii, jj);
+			}
 
 		}
 	}
 
-
+	
 	// Set the total membrane stiffness matrix
 	this->element_MembraneStiffnessMatrix.setZero();
 
 	this->element_MembraneStiffnessMatrix = basic_membrane_stiffness_matrix + higher_order_stiffness_matrix;
 
 
-
+/*
 	//__________________________________________________________________________________________________________________________________
 
 	this->element_MembraneStressMatrix.setZero();  // 9x9 final stress matrix
@@ -535,6 +556,9 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 	computeStressContribution(xy_p1, 0);   // First corner
 	computeStressContribution(xy_p2, 3);   // Second corner
 	computeStressContribution(xy_p3, 6);   // Third corner
+	*/
+
+
 
 }
 
@@ -573,7 +597,8 @@ void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
 		Eigen::MatrixXd  strainDisplacement_Bmatrix = computeStrainDisplacementMatrix(L1, L2, L3);  // B is 3x9 matrix
 
 		// Compute E = B^T * D * B
-		Eigen::MatrixXd bending_stiffness_matrix_IP = strainDisplacement_Bmatrix.transpose() * this->elasticity_matrix * strainDisplacement_Bmatrix;
+		Eigen::MatrixXd bending_stiffness_matrix_IP =
+			strainDisplacement_Bmatrix.transpose() * this->elasticity_matrix * strainDisplacement_Bmatrix;
 
 		// Apply integration weight factor
 		bending_stiffness_matrix_IP = factor * bending_stiffness_matrix_IP; // 9 x 9 matrix
@@ -587,13 +612,17 @@ void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
 			{
 				int jj = iadb[j];
 
-				this->element_BendingStiffnessMatrix.coeffRef(ii, jj) += bending_stiffness_matrix_IP(i, j);
+				this->element_BendingStiffnessMatrix.coeffRef(ii, jj) =
+					this->element_BendingStiffnessMatrix.coeff(ii, jj) + bending_stiffness_matrix_IP(i, j);
 			}
 		}
 
 	}
 
 
+	// matrixToString(this->element_BendingStiffnessMatrix);
+
+	/*
 	// Initialize the element stress matrix
 	this->element_BendingStressMatrix.setZero();
 
@@ -615,6 +644,35 @@ void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
 
 	}
 
+	// matrixToString(this->element_BendingStressMatrix);
+	*/
+
+}
+
+
+void triCKZ_element::computeLumpedMassMatrix(const double& thickness, const double& materialdensity)
+{
+
+	// Volument of the element
+	double elem_volume = this->triangle_area * thickness;
+	double elem_mass = materialdensity * elem_volume *  (1.0/ 3.0);
+
+	this->element_LumpedMassMatrix.setZero();
+
+	// Node 1
+	this->element_LumpedMassMatrix.coeffRef(0, 0) = elem_mass;
+	this->element_LumpedMassMatrix.coeffRef(1, 1) = elem_mass;
+	this->element_LumpedMassMatrix.coeffRef(2, 2) = elem_mass;
+
+	// Node 2
+	this->element_LumpedMassMatrix.coeffRef(6, 6) = elem_mass;
+	this->element_LumpedMassMatrix.coeffRef(7, 7) = elem_mass;
+	this->element_LumpedMassMatrix.coeffRef(8, 8) = elem_mass;
+
+	// Node 3
+	this->element_LumpedMassMatrix.coeffRef(12, 12) = elem_mass;
+	this->element_LumpedMassMatrix.coeffRef(13, 13) = elem_mass;
+	this->element_LumpedMassMatrix.coeffRef(14, 14) = elem_mass;
 
 
 }
@@ -856,7 +914,44 @@ Eigen::MatrixXd triCKZ_element::computeStrainDisplacementMatrix(const double& L1
 }
 
 
+void triCKZ_element::coupleStressMatrices()
+{
 
+	//Eigen::MatrixXd element_combinedStressMatrix = Eigen::MatrixXd::Zero(18, 18);
+	//std::vector<int> iadm = { 0, 1, 5, 6, 7, 11, 12, 13, 17 };  // DOF mapping 
+
+	//for (int j = 0; j < 9; ++j)
+	//{
+	//	int jj = iadm[j];  // mapped column index for membrane DOFs
+
+	//	for (int i = 0; i < 6; ++i)
+	//	{
+	//		element_combinedStressMatrix.coeffRef(i, jj) = 0.0;
+	//		element_combinedStressMatrix.coeffRef(i + 6, jj) = 0.0;
+	//		element_combinedStressMatrix.coeffRef(i + 12, jj) = 0.0;
+	//	}
+
+	//	for (int i = 0; i < 3; ++i)
+	//	{
+	//		int ii = i + 3;
+
+	//		// Fill membrane matrix into upper block
+	//		element_combinedStressMatrix.coeffRef(i, jj) = this->element_BendingStressMatrix.coeff(i, j);
+	//		element_combinedStressMatrix.coeffRef(ii, jj) = this->element_BendingStressMatrix.coeff(i, j);
+
+	//		// Fill membrane stress matrix into middle and lower blocks
+	//		element_combinedStressMatrix.coeffRef(i, jj) = this->element_MembraneStressMatrix.coeff(i, j);
+	//		element_combinedStressMatrix.coeffRef(i + 6, jj) = this->element_MembraneStressMatrix.coeff(i + 3, j);
+	//		element_combinedStressMatrix.coeffRef(i + 12, jj) = this->element_MembraneStressMatrix.coeff(i + 6, j);
+
+	//		element_combinedStressMatrix.coeffRef(ii, jj) = this->element_MembraneStressMatrix.coeff(i, j);
+	//		element_combinedStressMatrix.coeffRef(ii + 6, jj) = this->element_MembraneStressMatrix.coeff(i + 3, j);
+	//		element_combinedStressMatrix.coeffRef(ii + 12, jj) = this->element_MembraneStressMatrix.coeff(i + 6, j);
+	//	}
+	//}
+
+
+}
 
 
 

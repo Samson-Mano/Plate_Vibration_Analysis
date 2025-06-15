@@ -92,12 +92,12 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 			mat_data.material_youngsmodulus, mat_data.poissons_ratio);
 
 		Eigen::MatrixXd trielement_stiffness_matrix = triCKZ.get_element_stiffness_matrix();
-		Eigen::MatrixXd trielement_stress_matrix = triCKZ.get_element_stress_matrix();
+		Eigen::MatrixXd trielement_mass_matrix = triCKZ.get_element_mass_matrix();
 
 		if (tri_elem.tri_id == 1)
 		{
 			// Print the element stiffness matrix for testing
-			
+
 			 // Open output file
 			std::ofstream outFile("tri_element_stiffness_matrix.txt");
 
@@ -115,8 +115,8 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 				outFile << trielement_stiffness_matrix.format(FullPrecisionFmt);
 				outFile << "\n";
 
-				outFile << "Element Stress Matrix for Triangle ID " << tri_elem.tri_id << ":\n";
-				outFile << trielement_stress_matrix.format(FullPrecisionFmt);
+				outFile << "Element Mass Matrix for Triangle ID " << tri_elem.tri_id << ":\n";
+				outFile << trielement_mass_matrix.format(FullPrecisionFmt);
 
 				outFile.close();
 				std::cout << "Stiffness matrix written to tri_element_stiffness_matrix.txt\n";

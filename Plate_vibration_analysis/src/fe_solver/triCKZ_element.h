@@ -10,9 +10,9 @@ public:
 
 	void init();
 
-	void set_triCKZ_element_stiffness_matrix(const double& x1, const double& y1, const double& z1,
-		const double& x2, const double& y2, const double& z2,
-		const double& x3, const double& y3, const double& z3,
+	void set_triCKZ_element_stiffness_matrix(const double& x1_g_coord, const double& y1_g_coord, const double& z1_g_coord,
+		const double& x2_g_coord, const double& y2_g_coord, const double& z2_g_coord,
+		const double& x3_g_coord, const double& y3_g_coord, const double& z3_g_coord,
 		const double& thickness,
 		const double& materialdensity,
 		const double& youngsmodulus, 
@@ -20,7 +20,7 @@ public:
 
 	Eigen::MatrixXd get_element_stiffness_matrix();
 
-	Eigen::MatrixXd get_element_stress_matrix();
+	Eigen::MatrixXd get_element_mass_matrix();
 
 private:
 	double x1 = 0.0;
@@ -48,8 +48,12 @@ private:
 	Eigen::MatrixXd element_MembraneStiffnessMatrix = Eigen::MatrixXd::Zero(18, 18); // 18 x 18 matrix Element membrane stiffness matrix
 	Eigen::MatrixXd element_BendingStiffnessMatrix = Eigen::MatrixXd::Zero(18, 18); // 18 x 18 matrix Element bending stiffness matrix
 
-	Eigen::MatrixXd element_MembraneStressMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element membrane stress matrix
-	Eigen::MatrixXd element_BendingStressMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element bending stress matrix
+	Eigen::MatrixXd element_StiffnessMatrix = Eigen::MatrixXd::Zero(18, 18); // 18 x 18 matrix Element combined bending and membrane stiffness matrix
+
+	Eigen::MatrixXd element_LumpedMassMatrix = Eigen::MatrixXd::Zero(18, 18); // 18 x 18 matrix Element lumped mass matrix
+
+	// Eigen::MatrixXd element_MembraneStressMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element membrane stress matrix
+	// Eigen::MatrixXd element_BendingStressMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element bending stress matrix
 
 
 	void computeElasticityMatrix(const double& youngsmodulus,
@@ -60,14 +64,17 @@ private:
 
 
 
-	void computeLocalCoordinateSystem(const double& x1, const double& y1, const double& z1,
-		const double& x2, const double& y2, const double& z2,
-		const double& x3, const double& y3, const double& z3);
+	void computeLocalCoordinateSystem(const double& x1_g_coord, const double& y1_g_coord, const double& z1_g_coord,
+		const double& x2_g_coord, const double& y2_g_coord, const double& z2_g_coord,
+		const double& x3_g_coord, const double& y3_g_coord, const double& z3_g_coord);
 
 
 	void computeMembraneStiffnessMatrix(const double& thickness);
 
 	void computeBendingStiffnessMatrix(const double& thickness);
+
+
+	void computeLumpedMassMatrix(const double& thickness, const double& materialdensity);
 
 
 	void computeJacobianCoefficients();
@@ -76,8 +83,10 @@ private:
 	void computeShapeFunctions(const double& L1, const double& L2, const double& L3);
 
 
+
 	Eigen::MatrixXd computeStrainDisplacementMatrix(const double& L1, const double& L2, const double& L3);
 
+	void coupleStressMatrices();
 
 
 	void matrixToString(const Eigen::MatrixXd& mat);
