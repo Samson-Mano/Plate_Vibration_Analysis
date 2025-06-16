@@ -1,5 +1,6 @@
 
 #include "triCKZ_element.h"
+#include "quadMITC4_element.h"
 
 triCKZ_element::triCKZ_element()
 {
@@ -267,7 +268,7 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 				-cos_c * ((sin_s * sin_s) + (0.5 * cos_c * cos_c)), // b1
 				-sin_s * sin_s * sin_s, // b2
 				0.5 * sin_s * sin_s * cos_c, // b3
-				cos_c, sin_s
+				cos_c, sin_s // cos & sin
 			};
 		};
 
@@ -558,9 +559,8 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 	computeStressContribution(xy_p3, 6);   // Third corner
 	*/
 
+	}
 
-
-}
 
 
 void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
@@ -648,6 +648,7 @@ void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
 	*/
 
 }
+
 
 
 void triCKZ_element::computeLumpedMassMatrix(const double& thickness, const double& materialdensity)

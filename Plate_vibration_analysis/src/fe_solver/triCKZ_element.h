@@ -56,11 +56,11 @@ private:
 	// Eigen::MatrixXd element_BendingStressMatrix = Eigen::MatrixXd::Zero(9, 9); // 9 x 9 matrix Element bending stress matrix
 
 
+	void computeTriangleIntegrationPoints();
+
+
 	void computeElasticityMatrix(const double& youngsmodulus,
 		const double& poissonsratio);
-
-
-	void computeTriangleIntegrationPoints();
 
 
 
@@ -70,6 +70,7 @@ private:
 
 
 	void computeMembraneStiffnessMatrix(const double& thickness);
+
 
 	void computeBendingStiffnessMatrix(const double& thickness);
 
@@ -83,8 +84,8 @@ private:
 	void computeShapeFunctions(const double& L1, const double& L2, const double& L3);
 
 
-
 	Eigen::MatrixXd computeStrainDisplacementMatrix(const double& L1, const double& L2, const double& L3);
+
 
 	void coupleStressMatrices();
 

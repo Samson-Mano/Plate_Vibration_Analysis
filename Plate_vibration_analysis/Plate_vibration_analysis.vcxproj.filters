@@ -177,6 +177,9 @@
     <ClCompile Include="src\fe_solver\triCKZ_element.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\fe_solver\quadMITC4_element.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\dlls\freetype.dll" />
@@ -379,6 +382,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\fe_solver\triCKZ_element.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fe_solver\quadMITC4_element.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
