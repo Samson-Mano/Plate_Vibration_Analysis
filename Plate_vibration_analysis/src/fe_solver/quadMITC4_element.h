@@ -29,6 +29,7 @@ private:
 
 	std::array<Eigen::Matrix3d, 4> p_matrix_global;
 	std::array<Eigen::Vector3d, 4> quad_local_coords;
+	Eigen::Vector3d ref_vector; // Reference vector in element local coordinate system
 	std::array<Eigen::Matrix3d, 4> p_matrix_local;
 
 
@@ -39,7 +40,9 @@ private:
 	Eigen::Vector4d nat_xi = Eigen::Vector4d(-1.0, +1.0, +1.0, -1.0); // Natural xi co-ordinate
 	Eigen::Vector4d nat_yi = Eigen::Vector4d(-1.0, -1.0, +1.0, +1.0); // Natural yi co-ordinate
 	Eigen::Vector4d nat_zi = Eigen::Vector4d(+1.0, +1.0, +1.0, +1.0); // Natural zi co-ordinate
-
+	// Eigen::VectorXd shapeFunction = Eigen::VectorXd::Zero(4); // 4 x 1 stores the shape function N
+	// Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // 2 x 4 stores the dN first derivatives of the shape function
+	// Eigen::MatrixXd jacobianMatrix = Eigen::MatrixXd(3, 3); // 3 x 3 store the Jacobian Coefficients
 
 	Eigen::MatrixXd element_StiffnessMatrix = Eigen::MatrixXd::Zero(24, 24); // 24 x 24 matrix Element combined bending and membrane stiffness matrix
 
@@ -72,6 +75,20 @@ private:
 		const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord);
 
 
+	Eigen::MatrixXd computStrainDisplacementMatrix(const double& thickness);
+
+
+	Eigen::Matrix3d computeJacobianMatrix(const double& xp, const double& yp, const double& zp, const double& thickness);
+
+
+	Eigen::Matrix3d computeInitialTransformationMatrix(const Eigen::Matrix3d& jacobianMatrix);
+
+
+	Eigen::Matrix3d computeTransformationMatrixFromReference(const Eigen::Matrix3d& jacobianMatrix,
+		const Eigen::Vector3d& ref_vector);
+
+	Eigen::MatrixXd computePHIMatrix(const Eigen::Matrix3d& inverse_jacobian,
+		const Eigen::Matrix3d& transformation_matrix);
 
 
 };

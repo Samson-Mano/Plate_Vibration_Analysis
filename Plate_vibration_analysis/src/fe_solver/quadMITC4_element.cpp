@@ -148,7 +148,7 @@ void quadMITC4_element::computeTriadPMatrix(const double& x1_g_coord, const doub
 	this->p_matrix_global[2].col(2) = v34.cross(v32) / (al34 * al32);
 	this->p_matrix_global[3].col(2) = v34.cross(v41) / (al34 * al41);
 
-	const double TOL1 = m_pi / 180.0;
+	const double tolerance_1 = m_pi / 180.0;
 
 	for (int i = 0; i < 4; ++i)
 	{
@@ -162,7 +162,7 @@ void quadMITC4_element::computeTriadPMatrix(const double& x1_g_coord, const doub
 		double av1i = std::sqrt(yuli * yuli + zuli * zuli);
 		double av2i = std::sqrt(std::pow(yuli * yuli + zuli * zuli, 2) + xuli * xuli * (yuli * yuli + zuli * zuli));
 
-		if (av1i / av3i >= TOL1)
+		if ((av1i / av3i) >= tolerance_1)
 		{
 			// Case 1
 			this->p_matrix_global[i].col(0) = Eigen::Vector3d(0.0, -zuli / av1i, yuli / av1i);
@@ -240,7 +240,7 @@ void quadMITC4_element::computeLocalCoordinateSystem(const double& x1_g_coord, c
 
 	// Step 4: Project A onto ez, then remove projection
 	double XL = A.dot(ez);
-	A = A - XL * ez;
+	A = A - (XL * ez);
 	D = A.norm();
 
 	// Unit x axis
@@ -304,21 +304,309 @@ void quadMITC4_element::computeLocalCoordinateSystem(const double& x1_g_coord, c
 
 
 	// Step 4: Form reference vector in element local coordinate system
-	Eigen::Vector3d ref_vector;
+	this->ref_vector.setZero();
 
 	// Compute vector from node 1 to node 2 in local coordinates
-	ref_vector = this->quad_local_coords[1] - this->quad_local_coords[0];
+	this->ref_vector = this->quad_local_coords[1] - this->quad_local_coords[0];
 
 
 	// Project VR onto local z-axis (p_matrix_local[0].col(2) * ref_vector)
 	double vrn = this->p_matrix_local[0].col(2).dot(ref_vector);
 
-	ref_vector = ref_vector - (vrn * this->p_matrix_local[0].col(2));
+	this->ref_vector = ref_vector - (vrn * this->p_matrix_local[0].col(2));
 
-	ref_vector.normalize();// Normalize
+	this->ref_vector.normalize();// Normalize
 
 
 }
+
+Eigen::MatrixXd quadMITC4_element::computStrainDisplacementMatrix(const double& thickness)
+{
+
+	double xp, yp, zp;
+	xp = 0.0;
+	yp = 0.0;
+	zp = 0.0;
+
+	// Compute shape function initial
+	Eigen::Matrix3d jacobianMatrix = computeJacobianMatrix(xp, yp, zp, thickness);
+	Eigen::Matrix3d invjacobianMatrix = Eigen::Matrix3d::Zero();
+
+	// Calculate the initial transformation matrix
+	Eigen::Matrix3d transform_ic_matrix = computeInitialTransformationMatrix(jacobianMatrix);
+
+
+	for (int i = 0; i < 2; i++)
+	{
+		// integration point z
+		zp = -1.0 * integration_points.coeff(i, 0);
+
+		for (int j = 0; j < 2; j++)
+		{
+			// integration point y
+			yp = 1.0 * integration_points.coeff(j, 0);
+
+			for (int k = 0; k < 2; k++)
+			{
+				// integration point x
+				if (yp < 0.0)
+				{
+					xp = 1.0 * integration_points.coeff(k, 0);
+				}
+				else if (yp > 0.0)
+				{
+					xp = -1.0 * integration_points.coeff(k, 0);
+				}
+
+				// Jacobian matrix 
+				jacobianMatrix = computeJacobianMatrix(xp, yp, zp, thickness);
+
+				// Calculate inverse Jacobian Matrix
+				invjacobianMatrix = jacobianMatrix.inverse();
+
+				// Calculate the transformation matrix at the integration point
+				Eigen::Matrix3d transform_matrix = computeTransformationMatrixFromReference(jacobianMatrix, this->ref_vector);
+
+
+				// Calculate the transformation matrix phi
+
+
+
+
+			}
+
+		}
+
+	}
+
+
+
+
+	return Eigen::MatrixXd();
+}
+
+
+
+
+Eigen::Matrix3d quadMITC4_element::computeJacobianMatrix(const double& xp, const double& yp, const double& zp, const double& thickness)
+{
+	// Step 1: Shape functions and their derivatives
+	Eigen::Vector4d shapeFunction = Eigen::VectorXd::Zero(); // 4 x 1 stores the shape function N
+	Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // 2 x 4 stores the dN first derivatives of the shape function
+
+	shapefunction_firstDerivativeMatrix.setZero();
+
+	for (int i = 0; i < 4; ++i)
+	{
+		const double xi = nat_xi(i);
+		const double yi = nat_yi(i);
+
+		const double fxi = 1.0 + (xp * xi);
+		const double fyi = 1.0 + (yp * yi);
+
+		// Shape functions
+		shapeFunction.coeffRef(i) = 0.25 * fxi * fyi;
+
+		// First derivative shape function
+		shapefunction_firstDerivativeMatrix.coeffRef(0, i) = 0.25 * fyi * xi; // dN(1, I)
+		shapefunction_firstDerivativeMatrix.coeffRef(1, i) = 0.25 * fxi * yi; // dN(2, I)
+	}
+
+
+	// Step 2: Initialize Jacobian Coefficient Matrix to zero
+	Eigen::Matrix3d jacobianMatrix = Eigen::Matrix3d::Zero();
+
+	// Step 3: Compute the Jacobian matrix
+	for (int i = 0; i < 4; i++)
+	{
+
+		const Eigen::MatrixXd& p_local = p_matrix_local[i];
+
+		// Eigen::VectorXd p_ul2 = 0.5 * thickness * p_local.col(2);
+
+
+		double xul2 = 0.5 * thickness * p_local(0, 2); // P(1,3,i)
+		double yul2 = 0.5 * thickness * p_local(1, 2); // P(2,3,i)
+		double zul2 = 0.5 * thickness * p_local(2, 2); // P(3,3,i)
+
+		const Eigen::Vector3d& coord = quad_local_coords[i];
+
+		for (int j = 0; j < 2; j++)
+		{
+			jacobianMatrix.coeffRef(j, 0) +=
+				shapefunction_firstDerivativeMatrix(j, i) * (coord.x() + (zp * xul2));
+			jacobianMatrix.coeffRef(j, 1) +=
+				shapefunction_firstDerivativeMatrix(j, i) * (coord.y() + (zp * yul2));
+			jacobianMatrix.coeffRef(j, 2) +=
+				shapefunction_firstDerivativeMatrix(j, i) * (coord.z() + (zp * zul2));
+		}
+
+		jacobianMatrix.coeffRef(2, 0) += shapeFunction(i) * xul2;
+		jacobianMatrix.coeffRef(2, 1) += shapeFunction(i) * yul2;
+		jacobianMatrix.coeffRef(2, 2) += shapeFunction(i) * zul2;
+	}
+
+	return jacobianMatrix;
+
+
+}
+
+
+
+Eigen::Matrix3d quadMITC4_element::computeInitialTransformationMatrix(const Eigen::Matrix3d& jacobianMatrix)
+{
+	// The transformation matrix is built from three orthonormal vectors :
+	// -v1 : tangent vector(in - plane)
+	// -v2 : second tangent vector(in - plane, orthogonal to v1)
+	// -v3 : normal vector(out - of - plane)
+
+
+	Eigen::Matrix3d initial_transformation_matrix = Eigen::Matrix3d::Zero();
+
+	// Step 1: Compute V3 = cross product of row 0 and row 1 of JC
+	Eigen::Vector3d v3(
+		jacobianMatrix(0, 1) * jacobianMatrix(1, 2) - jacobianMatrix(0, 2) * jacobianMatrix(1, 1),
+		jacobianMatrix(0, 2) * jacobianMatrix(1, 0) - jacobianMatrix(0, 0) * jacobianMatrix(1, 2),
+		jacobianMatrix(0, 0) * jacobianMatrix(1, 1) - jacobianMatrix(0, 1) * jacobianMatrix(1, 0)
+	);
+	v3.normalize();
+
+	// Third column of TIC
+	initial_transformation_matrix.col(2) = v3;
+
+	// Step 2: Compute V1 = cross product of row 1 of JC and V3
+	Eigen::Vector3d v1(
+		jacobianMatrix(1, 1) * v3.z() - jacobianMatrix(1, 2) * v3.y(),
+		jacobianMatrix(1, 2) * v3.x() - jacobianMatrix(1, 0) * v3.z(),
+		jacobianMatrix(1, 0) * v3.y() - jacobianMatrix(1, 1) * v3.x()
+	);
+	v1.normalize();
+
+	// First column of Transformation matrix
+	initial_transformation_matrix.col(0) = v1;
+
+	// Step 3: Compute V2 = cross product of V3 and V1
+	Eigen::Vector3d v2 = v3.cross(v1);
+	v2.normalize();
+
+	// Second column of Transformation matrix
+	initial_transformation_matrix.col(1) = v2;
+
+
+	return initial_transformation_matrix;
+
+
+}
+
+
+
+Eigen::Matrix3d quadMITC4_element::computeTransformationMatrixFromReference(
+	const Eigen::Matrix3d& jacobianMatrix,
+	const Eigen::Vector3d& ref_vector)
+{
+
+	Eigen::Matrix3d transformation_matrix = Eigen::Matrix3d::Zero();
+
+	// Step 1: Compute v3 = normal vector (cross product of Jacobian row 0 and 1)
+	Eigen::Vector3d v3(
+		jacobianMatrix(0, 1) * jacobianMatrix(1, 2) - jacobianMatrix(0, 2) * jacobianMatrix(1, 1),
+		jacobianMatrix(0, 2) * jacobianMatrix(1, 0) - jacobianMatrix(0, 0) * jacobianMatrix(1, 2),
+		jacobianMatrix(0, 0) * jacobianMatrix(1, 1) - jacobianMatrix(0, 1) * jacobianMatrix(1, 0)
+	);
+	v3.normalize();
+	transformation_matrix.col(2) = v3;  // Set third column of T
+
+	// Step 2: Compute v2 = cross product of v3 and ref_vector
+	Eigen::Vector3d v2(
+		v3.y() * ref_vector.z() - v3.z() * ref_vector.y(),
+		v3.z() * ref_vector.x() - v3.x() * ref_vector.z(),
+		v3.x() * ref_vector.y() - v3.y() * ref_vector.x()
+	);
+	v2.normalize();
+	transformation_matrix.col(1) = v2;  // Set second column of T
+
+	// Step 3: Compute v1 = cross product of v2 and v3
+	Eigen::Vector3d v1 = v2.cross(v3);
+	v1.normalize();
+	transformation_matrix.col(0) = v1;  // Set first column of T
+
+	return transformation_matrix;
+
+}
+
+
+
+Eigen::MatrixXd quadMITC4_element::computePHIMatrix(const Eigen::Matrix3d& inverse_jacobian,
+	const Eigen::Matrix3d& transformation_matrix)
+{
+
+
+	Eigen::MatrixXd phi_matrix = Eigen::MatrixXd::Zero(5,6);
+	
+	// Step 1: Compute XL, XM, XN components for each T column
+	Eigen::Vector3d col1 = transformation_matrix.col(0);
+	Eigen::Vector3d col2 = transformation_matrix.col(1);
+	Eigen::Vector3d col3 = transformation_matrix.col(2);
+
+
+	double xl1 = inverse_jacobian(0, 0) * col1.x() + inverse_jacobian(1, 0) * col1.y() + inverse_jacobian(2, 0) * col1.z();
+	double xm1 = inverse_jacobian(0, 1) * col1.x() + inverse_jacobian(1, 1) * col1.y() + inverse_jacobian(2, 1) * col1.z();
+	double xn1 = inverse_jacobian(0, 2) * col1.x() + inverse_jacobian(1, 2) * col1.y() + inverse_jacobian(2, 2) * col1.z();
+
+	double xl2 = inverse_jacobian(0, 0) * col2.x() + inverse_jacobian(1, 0) * col2.y() + inverse_jacobian(2, 0) * col2.z();
+	double xm2 = inverse_jacobian(0, 1) * col2.x() + inverse_jacobian(1, 1) * col2.y() + inverse_jacobian(2, 1) * col2.z();
+	double xn2 = inverse_jacobian(0, 2) * col2.x() + inverse_jacobian(1, 2) * col2.y() + inverse_jacobian(2, 2) * col2.z();
+
+	double xl3 = inverse_jacobian(0, 0) * col3.x() + inverse_jacobian(1, 0) * col3.y() + inverse_jacobian(2, 0) * col3.z();
+	double xm3 = inverse_jacobian(0, 1) * col3.x() + inverse_jacobian(1, 1) * col3.y() + inverse_jacobian(2, 1) * col3.z();
+	double xn3 = inverse_jacobian(0, 2) * col3.x() + inverse_jacobian(1, 2) * col3.y() + inverse_jacobian(2, 2) * col3.z();
+
+	// Step 2: Fill phi matrix
+	// Row 1
+	phi_matrix.coeffRef(0, 0) = xl1 * xl1;
+	phi_matrix.coeffRef(0, 1) = xm1 * xm1;
+	phi_matrix.coeffRef(0, 2) = xn1 * xn1;
+	phi_matrix.coeffRef(0, 3) = 2.0 * xl1 * xm1;
+	phi_matrix.coeffRef(0, 4) = 2.0 * xm1 * xn1;
+	phi_matrix.coeffRef(0, 5) = 2.0 * xn1 * xl1;
+
+	// Row 2
+	phi_matrix.coeffRef(1, 0) = xl2 * xl2;
+	phi_matrix.coeffRef(1, 1) = xm2 * xm2;
+	phi_matrix.coeffRef(1, 2) = xn2 * xn2;
+	phi_matrix.coeffRef(1, 3) = 2.0 * xl2 * xm2;
+	phi_matrix.coeffRef(1, 4) = 2.0 * xm2 * xn2;
+	phi_matrix.coeffRef(1, 5) = 2.0 * xn2 * xl2;
+
+	// Row 3
+	phi_matrix.coeffRef(2, 0) = 2.0 * xl1 * xl2;
+	phi_matrix.coeffRef(2, 1) = 2.0 * xm1 * xm2;
+	phi_matrix.coeffRef(2, 2) = 2.0 * xn1 * xn2;
+	phi_matrix.coeffRef(2, 3) = 2.0 * (xl1 * xm2 + xl2 * xm1);
+	phi_matrix.coeffRef(2, 4) = 2.0 * (xm1 * xn2 + xm2 * xn1);
+	phi_matrix.coeffRef(2, 5) = 2.0 * (xn1 * xl2 + xn2 * xl1);
+
+	// Row 4
+	phi_matrix.coeffRef(3, 0) = 2.0 * xl2 * xl3;
+	phi_matrix.coeffRef(3, 1) = 2.0 * xm2 * xm3;
+	phi_matrix.coeffRef(3, 2) = 2.0 * xn2 * xn3;
+	phi_matrix.coeffRef(3, 3) = 2.0 * (xl2 * xm3 + xl3 * xm2);
+	phi_matrix.coeffRef(3, 4) = 2.0 * (xm2 * xn3 + xm3 * xn2);
+	phi_matrix.coeffRef(3, 5) = 2.0 * (xn2 * xl3 + xn3 * xl2);
+
+	// Row 5
+	phi_matrix.coeffRef(4, 0) = 2.0 * xl3 * xl1;
+	phi_matrix.coeffRef(4, 1) = 2.0 * xm3 * xm1;
+	phi_matrix.coeffRef(4, 2) = 2.0 * xn3 * xn1;
+	phi_matrix.coeffRef(4, 3) = 2.0 * (xl3 * xm1 + xl1 * xm3);
+	phi_matrix.coeffRef(4, 4) = 2.0 * (xm3 * xn1 + xm1 * xn3);
+	phi_matrix.coeffRef(4, 5) = 2.0 * (xn3 * xl1 + xn1 * xl3);
+
+	return phi_matrix;
+
+
+}
+
 
 
 

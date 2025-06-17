@@ -1,0 +1,48 @@
+
+
+
+
+
+Eigen::Matrix3d computeTransformationMatrix(const Eigen::Matrix3d& jacobianMatrix)
+{
+	Eigen::Matrix3d transformation_matrix = Eigen::Matrix3d::Zero();
+
+	// Step 1: Compute V3 = cross product of row 0 and row 1 of JC
+	double v31 = jacobianMatrix(0, 1) * jacobianMatrix(1, 2) - jacobianMatrix(0, 2) * jacobianMatrix(1, 1);
+	double v32 = jacobianMatrix(0, 2) * jacobianMatrix(1, 0) - jacobianMatrix(0, 0) * jacobianMatrix(1, 2);
+	double v33 = jacobianMatrix(0, 0) * jacobianMatrix(1, 1) - jacobianMatrix(0, 1) * jacobianMatrix(1, 0);
+	double av3 = std::sqrt(v31 * v31 + v32 * v32 + v33 * v33);
+
+	// Third column of TIC
+	transformation_matrix(0, 2) = v31 / av3;
+	transformation_matrix(1, 2) = v32 / av3;
+	transformation_matrix(2, 2) = v33 / av3;
+
+	// Step 2: Compute V1 = cross product of row 1 of JC and V3
+	double v11 = jacobianMatrix(1, 1) * v33 - jacobianMatrix(1, 2) * v32;
+	double v12 = jacobianMatrix(1, 2) * v31 - jacobianMatrix(1, 0) * v33;
+	double v13 = jacobianMatrix(1, 0) * v32 - jacobianMatrix(1, 1) * v31;
+
+	// Step 3: Compute V2 = cross product of V3 and V1
+	double v21 = v32 * v13 - v33 * v12;
+	double v22 = v33 * v11 - v31 * v13;
+	double v23 = v31 * v12 - v32 * v11;
+
+	// Normalize V1
+	double av1 = std::sqrt(v11 * v11 + v12 * v12 + v13 * v13);
+	transformation_matrix(0, 0) = v11 / av1;
+	transformation_matrix(1, 0) = v12 / av1;
+	transformation_matrix(2, 0) = v13 / av1;
+
+	// Normalize V2
+	double av2 = std::sqrt(v21 * v21 + v22 * v22 + v23 * v23);
+	transformation_matrix(0, 1) = v21 / av2;
+	transformation_matrix(1, 1) = v22 / av2;
+	transformation_matrix(2, 1) = v23 / av2;
+
+	return transformation_matrix;
+
+
+}
+
+

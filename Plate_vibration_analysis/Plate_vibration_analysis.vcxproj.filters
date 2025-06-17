@@ -396,5 +396,6 @@
     <Text Include="example_model\rect2_mesh.txt" />
     <Text Include="example_model\rect3_mesh.txt" />
     <Text Include="src\junk\membrane_stiffness.txt" />
+    <Text Include="src\junk\mitc4_code.txt" />
   </ItemGroup>
 </Project>
