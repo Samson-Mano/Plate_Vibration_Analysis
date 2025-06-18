@@ -320,79 +320,73 @@ void quadMITC4_element::computeLocalCoordinateSystem(const double& x1_g_coord, c
 
 }
 
-Eigen::MatrixXd quadMITC4_element::computStrainDisplacementMatrix(const double& thickness)
+void quadMITC4_element::computInlStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
+	const int& integrationpt_sum, const double& thickness,
+	Eigen::MatrixXd StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi)
 {
-
-	double xp, yp, zp;
-	xp = 0.0;
-	yp = 0.0;
-	zp = 0.0;
-
-	// Compute shape function initial
-	Eigen::Matrix3d jacobianMatrix = computeJacobianMatrix(xp, yp, zp, thickness);
-	Eigen::Matrix3d invjacobianMatrix = Eigen::Matrix3d::Zero();
-
-	// Calculate the initial transformation matrix
-	Eigen::Matrix3d transform_ic_matrix = computeInitialTransformationMatrix(jacobianMatrix);
+	// Computes the strain displacement matrix (B) and
+	// Transformation matric phi
+	StrainDisplacementMatrix = Eigen::MatrixXd::Zero(6, 28);
+	transformation_matrix_phi = Eigen::MatrixXd::Zero(5, 6);
 
 
-	for (int i = 0; i < 2; i++)
+	Eigen::Vector4d shapeFunction = Eigen::Vector4d::Zero(); // Shape function
+	Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // Shape function First derivative
+	Eigen::Matrix3d jacobianMatrix = Eigen::Matrix3d::Zero(); // Jacobian Matrix
+
+	if (integrationpt_sum == 1)
 	{
-		// integration point z
-		zp = -1.0 * integration_points.coeff(i, 0);
-
-		for (int j = 0; j < 2; j++)
-		{
-			// integration point y
-			yp = 1.0 * integration_points.coeff(j, 0);
-
-			for (int k = 0; k < 2; k++)
-			{
-				// integration point x
-				if (yp < 0.0)
-				{
-					xp = 1.0 * integration_points.coeff(k, 0);
-				}
-				else if (yp > 0.0)
-				{
-					xp = -1.0 * integration_points.coeff(k, 0);
-				}
-
-				// Jacobian matrix 
-				jacobianMatrix = computeJacobianMatrix(xp, yp, zp, thickness);
-
-				// Calculate inverse Jacobian Matrix
-				invjacobianMatrix = jacobianMatrix.inverse();
-
-				// Calculate the transformation matrix at the integration point
-				Eigen::Matrix3d transform_matrix = computeTransformationMatrixFromReference(jacobianMatrix, this->ref_vector);
+		// At zero point
+		computeShapeFunctonNJacobianMatrix(0, 0, 0, thickness, 
+			shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
 
-				// Calculate the transformation matrix phi
-
-
-
-
-			}
-
-		}
+		Eigen::Matrix3d initial_transformation_matrix = computeInitialTransformationMatrix(jacobianMatrix);
 
 	}
 
 
+	// Compute the shape function, derivative shape function and jacobian matrix at integration points
+	computeShapeFunctonNJacobianMatrix(integration_ptx, integration_pty, integration_ptz, thickness,
+		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
 
-	return Eigen::MatrixXd();
+	// Calculate the inverse of jacobian
+	Eigen::Matrix3d invjacobianMatrix = jacobianMatrix.inverse();
+	
+	// Calculate the transformation matrix at the integration point
+	Eigen::Matrix3d transformation_matrix = computeTransformationMatrixFromReference(jacobianMatrix, this->ref_vector);
+
+
+	// Calculate the phi transformation matrix
+	transformation_matrix_phi = computePhiMatrix(invjacobianMatrix, transformation_matrix);
+
+	// Extra shape functions (always calculated)
+	double GT11 = jacobianMatrix.row(0).dot(transformation_matrix.col(0));
+	double GT12 = jacobianMatrix.row(0).dot(transformation_matrix.col(1));
+	double GT21 = jacobianMatrix.row(1).dot(transformation_matrix.col(0));
+	double GT22 = jacobianMatrix.row(1).dot(transformation_matrix.col(1));
+
+	StrainDisplacementMatrix(0, 24) = -2.0 * integration_ptx * GT11;
+	StrainDisplacementMatrix(0, 25) = -2.0 * integration_ptx * GT12;
+	StrainDisplacementMatrix(1, 26) = -2.0 * integration_pty * GT21;
+	StrainDisplacementMatrix(1, 27) = -2.0 * integration_pty * GT22;
+	StrainDisplacementMatrix(3, 24) = -integration_ptx * GT21;
+	StrainDisplacementMatrix(3, 25) = -integration_ptx * GT22;
+	StrainDisplacementMatrix(3, 26) = -integration_pty * GT11;
+	StrainDisplacementMatrix(3, 27) = -integration_pty * GT12;
+
 }
 
 
 
 
-Eigen::Matrix3d quadMITC4_element::computeJacobianMatrix(const double& xp, const double& yp, const double& zp, const double& thickness)
+void quadMITC4_element::computeShapeFunctonNJacobianMatrix(const double& xp, const double& yp, const double& zp, const double& thickness,
+	Eigen::Vector4d& shapeFunction, Eigen::MatrixXd& shapefunction_firstDerivativeMatrix, Eigen::Matrix3d& jacobianMatrix)
 {
 	// Step 1: Shape functions and their derivatives
-	Eigen::Vector4d shapeFunction = Eigen::VectorXd::Zero(); // 4 x 1 stores the shape function N
-	Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // 2 x 4 stores the dN first derivatives of the shape function
+	shapeFunction = Eigen::VectorXd::Zero(4); // 4 x 1 stores the shape function N
+	shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // 2 x 4 stores the dN first derivatives of the shape function
 
 	shapefunction_firstDerivativeMatrix.setZero();
 
@@ -414,7 +408,7 @@ Eigen::Matrix3d quadMITC4_element::computeJacobianMatrix(const double& xp, const
 
 
 	// Step 2: Initialize Jacobian Coefficient Matrix to zero
-	Eigen::Matrix3d jacobianMatrix = Eigen::Matrix3d::Zero();
+	jacobianMatrix = Eigen::Matrix3d::Zero();
 
 	// Step 3: Compute the Jacobian matrix
 	for (int i = 0; i < 4; i++)
@@ -445,9 +439,6 @@ Eigen::Matrix3d quadMITC4_element::computeJacobianMatrix(const double& xp, const
 		jacobianMatrix.coeffRef(2, 1) += shapeFunction(i) * yul2;
 		jacobianMatrix.coeffRef(2, 2) += shapeFunction(i) * zul2;
 	}
-
-	return jacobianMatrix;
-
 
 }
 
@@ -536,7 +527,7 @@ Eigen::Matrix3d quadMITC4_element::computeTransformationMatrixFromReference(
 
 
 
-Eigen::MatrixXd quadMITC4_element::computePHIMatrix(const Eigen::Matrix3d& inverse_jacobian,
+Eigen::MatrixXd quadMITC4_element::computePhiMatrix(const Eigen::Matrix3d& inverse_jacobian,
 	const Eigen::Matrix3d& transformation_matrix)
 {
 
@@ -606,6 +597,118 @@ Eigen::MatrixXd quadMITC4_element::computePHIMatrix(const Eigen::Matrix3d& inver
 
 
 }
+
+
+
+void quadMITC4_element::compute_B_matrix(
+	int ID,
+	const Eigen::Vector4d& shape_function_values,                // N(1..4)
+	const Eigen::MatrixXd& shapefunction_firstDerivativeMatrix,  // 2x4
+	const Eigen::Matrix3d& jacobianMatrix,                       // 3x3
+	const std::array<Eigen::Matrix3d, 4>& p_matrix_local,        // P(:,:,i) 4 (3x3)
+	const Eigen::MatrixXd& jacobianMatrixbb2,                    // 4x24 (bb2)
+	const Eigen::Matrix3d& transformation_matrix,                // TIC
+	const double& xp, const double& yp, const double& zp, const double& zp0,
+	const double& thickness,
+	Eigen::MatrixXd& B_matrix                                    // 6x28 (output)
+)
+{
+	B_matrix = Eigen::MatrixXd::Zero(6, 28);
+
+	if (ID == 1) 
+	{
+		// Only extra shape functions part
+		double GT11 = (jacobianMatrix.row(0).dot(transformation_matrix.col(0)));
+		double GT12 = (jacobianMatrix.row(0).dot(transformation_matrix.col(1)));
+		double GT21 = (jacobianMatrix.row(1).dot(transformation_matrix.col(0)));
+		double GT22 = (jacobianMatrix.row(1).dot(transformation_matrix.col(1)));
+
+		B_matrix(0, 24) = -2.0 * xp * GT11;
+		B_matrix(0, 25) = -2.0 * xp * GT12;
+		B_matrix(1, 26) = -2.0 * yp * GT21;
+		B_matrix(1, 27) = -2.0 * yp * GT22;
+		B_matrix(3, 24) = -xp * GT21;
+		B_matrix(3, 25) = -xp * GT22;
+		B_matrix(3, 26) = -yp * GT11;
+		B_matrix(3, 27) = -yp * GT12;
+		return;
+	}
+
+	for (int i = 0; i < 4; i++) 
+	{
+		int ii = 6 * i;
+		const Eigen::Matrix3d& P = p_matrix_local[i];
+
+		double dn1 = shapefunction_firstDerivativeMatrix(0, i);
+		double dn2 = shapefunction_firstDerivativeMatrix(1, i);
+		double N = shape_function_values(i);
+
+		// Row 1
+		B_matrix(0, ii + 0) = dn1 * jacobianMatrix(0, 0);
+		B_matrix(0, ii + 1) = dn1 * jacobianMatrix(0, 1);
+		B_matrix(0, ii + 2) = dn1 * jacobianMatrix(0, 2);
+		double GV22 = jacobianMatrix.row(0).dot(P.col(1));
+		B_matrix(0, ii + 3) = -(zp - zp0) * dn1 * GV22 * thickness / 2.0;
+		double GV21 = jacobianMatrix.row(0).dot(P.col(0));
+		B_matrix(0, ii + 4) = (zp - zp0) * dn1 * GV21 * thickness / 2.0;
+
+		// Row 2
+		B_matrix(1, ii + 0) = dn2 * jacobianMatrix(1, 0);
+		B_matrix(1, ii + 1) = dn2 * jacobianMatrix(1, 1);
+		B_matrix(1, ii + 2) = dn2 * jacobianMatrix(1, 2);
+		GV22 = jacobianMatrix.row(1).dot(P.col(1));
+		B_matrix(1, ii + 3) = -(zp - zp0) * dn2 * GV22 * thickness / 2.0;
+		GV21 = jacobianMatrix.row(1).dot(P.col(0));
+		B_matrix(1, ii + 4) = (zp - zp0) * dn2 * GV21 * thickness / 2.0;
+
+		// Row 3
+		GV22 = jacobianMatrix.row(2).dot(P.col(1));
+		GV21 = jacobianMatrix.row(2).dot(P.col(0));
+		B_matrix(2, ii + 3) = -N * GV22 * thickness / 2.0;
+		B_matrix(2, ii + 4) = N * GV21 * thickness / 2.0;
+
+		// Row 4
+		B_matrix(3, ii + 0) = 0.5 * (dn1 * jacobianMatrix(1, 0) + dn2 * jacobianMatrix(0, 0));
+		B_matrix(3, ii + 1) = 0.5 * (dn1 * jacobianMatrix(1, 1) + dn2 * jacobianMatrix(0, 1));
+		B_matrix(3, ii + 2) = 0.5 * (dn1 * jacobianMatrix(1, 2) + dn2 * jacobianMatrix(0, 2));
+		double GV21_alt = jacobianMatrix.row(0).dot(P.col(1));
+		double GV22_alt = jacobianMatrix.row(1).dot(P.col(1));
+		B_matrix(3, ii + 3) = -(zp - zp0) * (dn2 * GV21_alt + dn1 * GV22_alt) * thickness / 4.0;
+
+		double GV11 = jacobianMatrix.row(0).dot(P.col(0));
+		double GV12 = jacobianMatrix.row(1).dot(P.col(0));
+		B_matrix(3, ii + 4) = (zp - zp0) * (dn2 * GV11 + dn1 * GV12) * thickness / 4.0;
+	}
+
+	// Rows 5 and 6 (using jacobianMatrix2 / BB)
+	for (int j = 0; j < 24; j++) 
+	{
+		B_matrix(4, j) = 0.5 * ((1.0 - xp) * jacobianMatrixbb2(0, j) + (1.0 + xp) * jacobianMatrixbb2(1, j));
+		B_matrix(5, j) = 0.5 * ((1.0 - yp) * jacobianMatrixbb2(2, j) + (1.0 + yp) * jacobianMatrixbb2(3, j));
+	}
+
+	// Extra shape functions (always calculated)
+	double GT11 = jacobianMatrix.row(0).dot(transformation_matrix.col(0));
+	double GT12 = jacobianMatrix.row(0).dot(transformation_matrix.col(1));
+	double GT21 = jacobianMatrix.row(1).dot(transformation_matrix.col(0));
+	double GT22 = jacobianMatrix.row(1).dot(transformation_matrix.col(1));
+
+	B_matrix(0, 24) = -2.0 * xp * GT11;
+	B_matrix(0, 25) = -2.0 * xp * GT12;
+	B_matrix(1, 26) = -2.0 * yp * GT21;
+	B_matrix(1, 27) = -2.0 * yp * GT22;
+	B_matrix(3, 24) = -xp * GT21;
+	B_matrix(3, 25) = -xp * GT22;
+	B_matrix(3, 26) = -yp * GT11;
+	B_matrix(3, 27) = -yp * GT12;
+
+
+}
+
+
+
+
+
 
 
 

@@ -33,7 +33,7 @@ private:
 	std::array<Eigen::Matrix3d, 4> p_matrix_local;
 
 
-	Eigen::MatrixXd transformation_matrix_phi = Eigen::MatrixXd::Zero(24, 24); // 24x24 transformation matrices
+	// Eigen::MatrixXd transformation_matrix_phi = Eigen::MatrixXd::Zero(24, 24); // 24x24 transformation matrices
 
 	Eigen::MatrixXd elasticity_matrix = Eigen::MatrixXd::Zero(5, 5); // 5 x 5 matrix saves the elasticity matrix based on youngsmodulus and poissons ratio
 	Eigen::MatrixXd integration_points = Eigen::MatrixXd::Zero(2, 2); // 2 x 2 integration points
@@ -75,10 +75,13 @@ private:
 		const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord);
 
 
-	Eigen::MatrixXd computStrainDisplacementMatrix(const double& thickness);
+	void computInlStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
+		const int& integrationpt_sum, const double& thickness,
+		Eigen::MatrixXd StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi);
 
 
-	Eigen::Matrix3d computeJacobianMatrix(const double& xp, const double& yp, const double& zp, const double& thickness);
+	void computeShapeFunctonNJacobianMatrix(const double& xp, const double& yp, const double& zp, const double& thickness,
+		Eigen::Vector4d& shapeFunction, Eigen::MatrixXd& shapefunction_firstDerivativeMatrix, Eigen::Matrix3d& jacobianMatrix);
 
 
 	Eigen::Matrix3d computeInitialTransformationMatrix(const Eigen::Matrix3d& jacobianMatrix);
@@ -87,8 +90,24 @@ private:
 	Eigen::Matrix3d computeTransformationMatrixFromReference(const Eigen::Matrix3d& jacobianMatrix,
 		const Eigen::Vector3d& ref_vector);
 
-	Eigen::MatrixXd computePHIMatrix(const Eigen::Matrix3d& inverse_jacobian,
+
+	Eigen::MatrixXd computePhiMatrix(const Eigen::Matrix3d& inverse_jacobian,
 		const Eigen::Matrix3d& transformation_matrix);
+
+
+	void compute_B_matrix(
+		int ID,
+		const Eigen::Vector4d& shape_function_values,                // N(1..4)
+		const Eigen::MatrixXd& shapefunction_firstDerivativeMatrix,  // 2x4
+		const Eigen::Matrix3d& jacobianMatrix,                       // 3x3
+		const std::array<Eigen::Matrix3d, 4>& p_matrix_local,        // P(:,:,i) 4 (3x3)
+		const Eigen::MatrixXd& jacobianMatrixbb2,                    // 4x24 (bb2)
+		const Eigen::Matrix3d& transformation_matrix,                // TIC
+		const double& xp, const double& yp, const double& zp, const double& zp0,
+		const double& thickness,
+		Eigen::MatrixXd& B_matrix                                    // 6x28 (output)
+	);
+
 
 
 };
