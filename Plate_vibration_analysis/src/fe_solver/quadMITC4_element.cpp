@@ -320,9 +320,414 @@ void quadMITC4_element::computeLocalCoordinateSystem(const double& x1_g_coord, c
 
 }
 
-void quadMITC4_element::computInlStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
-	const int& integrationpt_sum, const double& thickness,
-	Eigen::MatrixXd StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi)
+
+
+void quadMITC4_element::computeStiffnessMatrix(const double& thickness)
+{
+	// track the number of integration point sum
+	int integration_point_sum = 0;
+
+	double integration_ptx = 0.0;
+	double integration_pty = 0.0;
+	double integration_ptz = 0.0;
+
+	for (int i = 0; i < 2; i++)
+	{
+		// integration point z
+		integration_ptz = -1.0 * this->integration_points(i, 0);
+
+		for (int j = 0; j < 2; j++)
+		{
+			// integration point y
+			integration_pty = this->integration_points(j, 0);
+
+			for (int k = 0; k < 2; k++)
+			{
+				// integration point x
+				integration_ptx = (integration_pty < 0.0) ? +this->integration_points(k, 0)
+					: -1.0 * this->integration_points(k, 0);
+
+				integration_point_sum++;
+
+
+				// Compute Strain Displacement Matrix(B) for numerical integration pont
+				// having local coordinates integration_ptx, integration_pty and integration_ptz
+
+				Eigen::MatrixXd StrainDisplacementMatrix = Eigen::MatrixXd::Zero(6, 28);
+				Eigen::MatrixXd transformation_matrix_phi = Eigen::MatrixXd::Zero(5, 6);
+				double jacobian_determinant = 0.0;
+
+
+
+
+
+
+
+			}
+		}
+	}
+
+
+}
+
+
+
+
+void quadMITC4_element::computeStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
+	const int& integrationpt_sum, const double& thickness, double& jacobian_determinant,
+	Eigen::MatrixXd& StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi)
+{
+	// Computes the strain displacement matrix (B) and
+	// Transformation matric phi
+
+	Eigen::Vector4d shapeFunction = Eigen::Vector4d::Zero(); // Shape function
+	Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // Shape function First derivative
+	Eigen::Matrix3d jacobianMatrix = Eigen::Matrix3d::Zero(); // Jacobian Matrix
+	double GV22 = 0.0;
+	double GV21 = 0.0;
+
+	// Formulate the transverse shear strain matrix at edge centers
+	Eigen::MatrixXd StrainDisplacementShearStrainMatrix = Eigen::MatrixXd::Zero(6, 24);
+
+	if (integrationpt_sum == 1)
+	{
+		//________________________________________________________________________________________________
+		// For point A (-1.0, 0.0, 0.0)
+		computeShapeFunctonNJacobianMatrix(-1.0, 0.0, 0.0, thickness,
+			shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
+
+		// First Row (Column 0 to 2)
+		StrainDisplacementShearStrainMatrix(0, 0) = -jacobianMatrix(2, 0) / 4.0;
+		StrainDisplacementShearStrainMatrix(0, 1) = -jacobianMatrix(2, 1) / 4.0;
+		StrainDisplacementShearStrainMatrix(0, 2) = -jacobianMatrix(2, 2) / 4.0;
+
+		// GV22 (1st node)
+		GV22 = jacobianMatrix(1, 0) * p_matrix_local[0](0, 1) +
+			jacobianMatrix(1, 1) * p_matrix_local[0](1, 1) +
+			jacobianMatrix(1, 2) * p_matrix_local[0](2, 1);
+		StrainDisplacementShearStrainMatrix(0, 3) = -GV22 * thickness / 8.0;
+
+		// GV21 (1st node)
+		GV21 = jacobianMatrix(1, 0) * p_matrix_local[0](0, 0) +
+			jacobianMatrix(1, 1) * p_matrix_local[0](1, 0) +
+			jacobianMatrix(1, 2) * p_matrix_local[0](2, 0);
+		StrainDisplacementShearStrainMatrix(0, 4) = GV21 * thickness / 8.0;
+
+		// First Row (Coulmn 18 to 20)
+		StrainDisplacementShearStrainMatrix(0, 18) = jacobianMatrix(2, 0) / 4.0;
+		StrainDisplacementShearStrainMatrix(0, 19) = jacobianMatrix(2, 1) / 4.0;
+		StrainDisplacementShearStrainMatrix(0, 20) = jacobianMatrix(2, 2) / 4.0;
+
+		// GV22 (4th node)
+		GV22 = jacobianMatrix(1, 0) * p_matrix_local[3](0, 1) +
+			jacobianMatrix(1, 1) * p_matrix_local[3](1, 1) +
+			jacobianMatrix(1, 2) * p_matrix_local[3](2, 1);
+		StrainDisplacementShearStrainMatrix(0, 21) = -GV22 * thickness / 8.0;
+
+		// GV21 (4th node)
+		GV21 = jacobianMatrix(1, 0) * p_matrix_local[3](0, 0) +
+			jacobianMatrix(1, 1) * p_matrix_local[3](1, 0) +
+			jacobianMatrix(1, 2) * p_matrix_local[3](2, 0);
+		StrainDisplacementShearStrainMatrix(0, 22) = GV21 * thickness / 8.0;
+
+
+		//________________________________________________________________________________________________
+		// For point B (1.0, 0.0, 0.0)
+		computeShapeFunctonNJacobianMatrix(-1.0, 0.0, 0.0, thickness,
+			shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
+
+		// Second Row (Column 6 to 8)
+		StrainDisplacementShearStrainMatrix(1, 6) = -jacobianMatrix(2, 0) / 4.0;
+		StrainDisplacementShearStrainMatrix(1, 7) = -jacobianMatrix(2, 1) / 4.0;
+		StrainDisplacementShearStrainMatrix(1, 8) = -jacobianMatrix(2, 2) / 4.0;
+
+		// GV22 for node 2
+		double GV22 = jacobianMatrix(1, 0) * p_matrix_local[1](0, 1) +
+			jacobianMatrix(1, 1) * p_matrix_local[1](1, 1) +
+			jacobianMatrix(1, 2) * p_matrix_local[1](2, 1);
+		StrainDisplacementShearStrainMatrix(1, 9) = -GV22 * thickness / 8.0;
+
+		// GV21 for node 2
+		double GV21 = jacobianMatrix(1, 0) * p_matrix_local[1](0, 0) +
+			jacobianMatrix(1, 1) * p_matrix_local[1](1, 0) +
+			jacobianMatrix(1, 2) * p_matrix_local[1](2, 0);
+		StrainDisplacementShearStrainMatrix(1, 10) = GV21 * thickness / 8.0;
+
+		// Second Row (Column 12 to 14)
+		StrainDisplacementShearStrainMatrix(1, 12) = jacobianMatrix(2, 0) / 4.0;
+		StrainDisplacementShearStrainMatrix(1, 13) = jacobianMatrix(2, 1) / 4.0;
+		StrainDisplacementShearStrainMatrix(1, 14) = jacobianMatrix(2, 2) / 4.0;
+
+		// GV22 for node 3
+		GV22 = jacobianMatrix(1, 0) * p_matrix_local[2](0, 1) +
+			jacobianMatrix(1, 1) * p_matrix_local[2](1, 1) +
+			jacobianMatrix(1, 2) * p_matrix_local[2](2, 1);
+		StrainDisplacementShearStrainMatrix(1, 15) = -GV22 * thickness / 8.0;
+
+		// GV21 for node 3
+		GV21 = jacobianMatrix(1, 0) * p_matrix_local[2](0, 0) +
+			jacobianMatrix(1, 1) * p_matrix_local[2](1, 0) +
+			jacobianMatrix(1, 2) * p_matrix_local[2](2, 0);
+		StrainDisplacementShearStrainMatrix(1, 16) = GV21 * thickness / 8.0;
+
+
+		//________________________________________________________________________________________________
+		// For point C (0.0, -1.0, 0.0)
+		computeShapeFunctonNJacobianMatrix(0.0, -1.0, 0.0, thickness,
+			shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
+
+
+		// Third Row (Column 0 to 2)
+		StrainDisplacementShearStrainMatrix(2, 0) = -jacobianMatrix(2, 0) / 4.0;
+		StrainDisplacementShearStrainMatrix(2, 1) = -jacobianMatrix(2, 1) / 4.0;
+		StrainDisplacementShearStrainMatrix(2, 2) = -jacobianMatrix(2, 2) / 4.0;
+
+		// GV22 for node 1 (x-direction)
+		GV22 = jacobianMatrix(0, 0) * p_matrix_local[0](0, 1) +
+			jacobianMatrix(0, 1) * p_matrix_local[0](1, 1) +
+			jacobianMatrix(0, 2) * p_matrix_local[0](2, 1);
+		StrainDisplacementShearStrainMatrix(2, 3) = -GV22 * thickness / 8.0;
+
+		// GV21 for node 1
+		GV21 = jacobianMatrix(0, 0) * p_matrix_local[0](0, 0) +
+			jacobianMatrix(0, 1) * p_matrix_local[0](1, 0) +
+			jacobianMatrix(0, 2) * p_matrix_local[0](2, 0);
+		StrainDisplacementShearStrainMatrix(2, 4) = GV21 * thickness / 8.0;
+
+		// Third Row (Column 6 to 8)
+		StrainDisplacementShearStrainMatrix(2, 6) = jacobianMatrix(2, 0) / 4.0;
+		StrainDisplacementShearStrainMatrix(2, 7) = jacobianMatrix(2, 1) / 4.0;
+		StrainDisplacementShearStrainMatrix(2, 8) = jacobianMatrix(2, 2) / 4.0;
+
+		// GV22 for node 2 (x-direction)
+		GV22 = jacobianMatrix(0, 0) * p_matrix_local[1](0, 1) +
+			jacobianMatrix(0, 1) * p_matrix_local[1](1, 1) +
+			jacobianMatrix(0, 2) * p_matrix_local[1](2, 1);
+		StrainDisplacementShearStrainMatrix(2, 9) = -GV22 * thickness / 8.0;
+
+		// GV21 for node 2
+		GV21 = jacobianMatrix(0, 0) * p_matrix_local[1](0, 0) +
+			jacobianMatrix(0, 1) * p_matrix_local[1](1, 0) +
+			jacobianMatrix(0, 2) * p_matrix_local[1](2, 0);
+		StrainDisplacementShearStrainMatrix(2, 10) = GV21 * thickness / 8.0;
+
+
+		//________________________________________________________________________________________________
+		// For point D (0.0, 1.0, 0.0)
+		computeShapeFunctonNJacobianMatrix(0.0, 1.0, 0.0, thickness,
+			shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
+
+		// Fourth Row (Column 12 to 14)
+		StrainDisplacementShearStrainMatrix(3, 12) = jacobianMatrix(2, 0) / 4.0;
+		StrainDisplacementShearStrainMatrix(3, 13) = jacobianMatrix(2, 1) / 4.0;
+		StrainDisplacementShearStrainMatrix(3, 14) = jacobianMatrix(2, 2) / 4.0;
+
+		// GV22 for node 3 (x-direction)
+		GV22 = jacobianMatrix(0, 0) * p_matrix_local[2](0, 1) +
+			jacobianMatrix(0, 1) * p_matrix_local[2](1, 1) +
+			jacobianMatrix(0, 2) * p_matrix_local[2](2, 1);
+		StrainDisplacementShearStrainMatrix(3, 15) = -GV22 * thickness / 8.0;
+
+		// GV21 for node 3
+		GV21 = jacobianMatrix(0, 0) * p_matrix_local[2](0, 0) +
+			jacobianMatrix(0, 1) * p_matrix_local[2](1, 0) +
+			jacobianMatrix(0, 2) * p_matrix_local[2](2, 0);
+		StrainDisplacementShearStrainMatrix(3, 16) = GV21 * thickness / 8.0;
+
+		// Fourth Row (Column 18 to 20)
+		StrainDisplacementShearStrainMatrix(3, 18) = -jacobianMatrix(2, 0) / 4.0;
+		StrainDisplacementShearStrainMatrix(3, 19) = -jacobianMatrix(2, 1) / 4.0;
+		StrainDisplacementShearStrainMatrix(3, 20) = -jacobianMatrix(2, 2) / 4.0;
+
+		// GV22 for node 4
+		GV22 = jacobianMatrix(0, 0) * p_matrix_local[3](0, 1) +
+			jacobianMatrix(0, 1) * p_matrix_local[3](1, 1) +
+			jacobianMatrix(0, 2) * p_matrix_local[3](2, 1);
+		StrainDisplacementShearStrainMatrix(3, 21) = -GV22 * thickness / 8.0;
+
+		// GV21 for node 4
+		GV21 = jacobianMatrix(0, 0) * p_matrix_local[3](0, 0) +
+			jacobianMatrix(0, 1) * p_matrix_local[3](1, 0) +
+			jacobianMatrix(0, 2) * p_matrix_local[3](2, 0);
+		StrainDisplacementShearStrainMatrix(3, 22) = GV21 * thickness / 8.0;
+
+
+	}
+
+
+	// Compute the shape function, derivative shape function and jacobian matrix at integration points
+	computeShapeFunctonNJacobianMatrix(integration_ptx, integration_pty, integration_ptz, thickness,
+		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
+
+
+	// Calculate the jacobian determinant and  inverse of jacobian
+	jacobian_determinant = jacobianMatrix.determinant();
+	Eigen::Matrix3d invjacobianMatrix = jacobianMatrix.inverse();
+
+	// Calculate the transformation matrix at the integration point
+	Eigen::Matrix3d transformation_matrix = computeTransformationMatrixFromReference(jacobianMatrix, this->ref_vector);
+
+
+	// Calculate the phi transformation matrix
+	transformation_matrix_phi = Eigen::MatrixXd::Zero(5, 6);
+	transformation_matrix_phi = computePhiMatrix(invjacobianMatrix, transformation_matrix);
+
+	// Initialize the Strain Displacement B - matrix
+	StrainDisplacementMatrix = Eigen::MatrixXd::Zero(6, 28);
+
+	for (int i = 0; i < 4; ++i)
+	{
+		int ii = 6 * i;
+
+		// Row 1
+		StrainDisplacementMatrix(0, ii + 0) = shapefunction_firstDerivativeMatrix(0, i) * jacobianMatrix(0, 0);
+		StrainDisplacementMatrix(0, ii + 1) = shapefunction_firstDerivativeMatrix(0, i) * jacobianMatrix(0, 1);
+		StrainDisplacementMatrix(0, ii + 2) = shapefunction_firstDerivativeMatrix(0, i) * jacobianMatrix(0, 2);
+
+		double gv22 = jacobianMatrix.row(0).dot(p_matrix_local[i].col(1));
+		StrainDisplacementMatrix(0, ii + 3) = -integration_ptz * shapefunction_firstDerivativeMatrix(0, i) * gv22 * thickness / 2.0;
+
+		double gv21 = jacobianMatrix.row(0).dot(p_matrix_local[i].col(0));
+		StrainDisplacementMatrix(0, ii + 4) = integration_ptz * shapefunction_firstDerivativeMatrix(0, i) * gv21 * thickness / 2.0;
+
+		// Row 2
+		StrainDisplacementMatrix(1, ii + 0) = shapefunction_firstDerivativeMatrix(1, i) * jacobianMatrix(1, 0);
+		StrainDisplacementMatrix(1, ii + 1) = shapefunction_firstDerivativeMatrix(1, i) * jacobianMatrix(1, 1);
+		StrainDisplacementMatrix(1, ii + 2) = shapefunction_firstDerivativeMatrix(1, i) * jacobianMatrix(1, 2);
+
+		gv22 = jacobianMatrix.row(1).dot(p_matrix_local[i].col(1));
+		StrainDisplacementMatrix(1, ii + 3) = -integration_ptz * shapefunction_firstDerivativeMatrix(1, i) * gv22 * thickness / 2.0;
+
+		gv21 = jacobianMatrix.row(1).dot(p_matrix_local[i].col(0));
+		StrainDisplacementMatrix(1, ii + 4) = integration_ptz * shapefunction_firstDerivativeMatrix(1, i) * gv21 * thickness / 2.0;
+
+		// Row 3 (only rotational DOFs)
+		gv22 = jacobianMatrix.row(2).dot(p_matrix_local[i].col(1));
+		StrainDisplacementMatrix(2, ii + 3) = -shapeFunction(i) * gv22 * thickness / 2.0;
+
+		gv21 = jacobianMatrix.row(2).dot(p_matrix_local[i].col(0));
+		StrainDisplacementMatrix(2, ii + 4) = shapeFunction(i) * gv21 * thickness / 2.0;
+
+		// Row 4 (shear strain)
+		StrainDisplacementMatrix(3, ii + 0) = (shapefunction_firstDerivativeMatrix(0, i) * jacobianMatrix(1, 0) +
+			shapefunction_firstDerivativeMatrix(1, i) * jacobianMatrix(0, 0)) / 2.0;
+		StrainDisplacementMatrix(3, ii + 1) = (shapefunction_firstDerivativeMatrix(0, i) * jacobianMatrix(1, 1) +
+			shapefunction_firstDerivativeMatrix(1, i) * jacobianMatrix(0, 1)) / 2.0;
+		StrainDisplacementMatrix(3, ii + 2) = (shapefunction_firstDerivativeMatrix(0, i) * jacobianMatrix(1, 2) +
+			shapefunction_firstDerivativeMatrix(1, i) * jacobianMatrix(0, 2)) / 2.0;
+
+		double gv21_jc1 = jacobianMatrix.row(0).dot(p_matrix_local[i].col(1));
+		double gv22_jc2 = jacobianMatrix.row(1).dot(p_matrix_local[i].col(1));
+		StrainDisplacementMatrix(3, ii + 3) = -integration_ptz *
+			(shapefunction_firstDerivativeMatrix(1, i) * gv21_jc1 + shapefunction_firstDerivativeMatrix(0, i) * gv22_jc2) * thickness / 4.0;
+
+		double gv11 = jacobianMatrix.row(0).dot(p_matrix_local[i].col(0));
+		double gv12 = jacobianMatrix.row(1).dot(p_matrix_local[i].col(0));
+		StrainDisplacementMatrix(3, ii + 4) = integration_ptz *
+			(shapefunction_firstDerivativeMatrix(1, i) * gv11 + shapefunction_firstDerivativeMatrix(0, i) * gv12) * thickness / 4.0;
+	}
+
+	for (int j = 0; j < 24; ++j)
+	{
+		StrainDisplacementMatrix(4, j) = (1.0 - integration_ptx) * StrainDisplacementShearStrainMatrix(0, j) / 2.0 +
+			(1.0 + integration_ptx) * StrainDisplacementShearStrainMatrix(1, j) / 2.0;
+
+		StrainDisplacementMatrix(5, j) = (1.0 - integration_pty) * StrainDisplacementShearStrainMatrix(2, j) / 2.0 +
+			(1.0 + integration_pty) * StrainDisplacementShearStrainMatrix(3, j) / 2.0;
+	}
+
+	// Calculate the B matrix corresponding to the extra shape function
+
+
+
+
+
+}
+
+
+
+
+void quadMITC4_element::computeBMatrixExtraShapeFunction(const double& thickness, Eigen::MatrixXd& bic_matrix)
+{
+	// Computes the B Matrix for extra shape function (Bulge shape function of quad element)
+
+	double integration_ptx = 0.0;
+	double integration_pty = 0.0;
+	double integration_ptz = 0.0;
+
+	bic_matrix = Eigen::MatrixXd::Zero(5, 4);
+
+	double element_volume = 0.0;
+
+	// At zeroth point
+	Eigen::Vector4d shapeFunction = Eigen::Vector4d::Zero(); // Shape function
+	Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // Shape function First derivative
+	Eigen::Matrix3d jacobianMatrix = Eigen::Matrix3d::Zero(); // Jacobian Matrix
+
+	computeShapeFunctonNJacobianMatrix(0.0, 0.0, 0.0, thickness,
+		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
+
+
+	Eigen::Matrix3d initial_transformation_matrix = computeInitialTransformationMatrix(jacobianMatrix);
+
+
+	for (int i = 0; i < 2; i++)
+	{
+		// integration point z
+		integration_ptz = -1.0 * this->integration_points(i, 0);
+
+		for (int j = 0; j < 2; j++)
+		{
+			// integration point y
+			integration_pty = this->integration_points(j, 0);
+
+			for (int k = 0; k < 2; k++)
+			{
+				// integration point x
+				integration_ptx = (integration_pty < 0.0) ? +this->integration_points(k, 0)
+					: -1.0 * this->integration_points(k, 0);
+
+
+				// Compute Strain Displacement Matrix(B) for numerical integration pont
+				// having local coordinates integration_ptx, integration_pty and integration_ptz
+
+				Eigen::MatrixXd StrainDisplacementMatrix = Eigen::MatrixXd::Zero(6, 28);
+				Eigen::MatrixXd transformation_matrix_phi = Eigen::MatrixXd::Zero(5, 6);
+				double jacobian_determinant = 0.0;
+
+
+				computeExtraStrainDisplacementMatrix(integration_ptx, integration_pty, integration_ptz,
+					thickness, jacobian_determinant, initial_transformation_matrix,
+					StrainDisplacementMatrix, transformation_matrix_phi);
+
+
+				// Transform B to BL: BL = PHI * B_column
+				Eigen::MatrixXd bl_matrix = Eigen::MatrixXd::Zero(5, 4);
+
+				bl_matrix = transformation_matrix_phi * StrainDisplacementMatrix.block(0, 24, 6, 4); // Extract columns 24–27, then multiply
+
+
+				// Accumulate to the bic_matrix
+				bic_matrix.noalias() = bic_matrix - bl_matrix * jacobian_determinant;
+
+				element_volume = element_volume + jacobian_determinant;
+
+			}
+
+		}
+
+	}
+
+	// Normalize the bic matrix
+	bic_matrix = bic_matrix / element_volume;
+
+}
+
+
+
+void quadMITC4_element::computeExtraStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
+	const double& thickness, double& jacobian_determinant, const Eigen::Matrix3d& initial_transformation_matrix,
+	Eigen::MatrixXd& StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi)
 {
 	// Computes the strain displacement matrix (B) and
 	// Transformation matric phi
@@ -334,26 +739,16 @@ void quadMITC4_element::computInlStrainDisplacementMatrix(const double& integrat
 	Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // Shape function First derivative
 	Eigen::Matrix3d jacobianMatrix = Eigen::Matrix3d::Zero(); // Jacobian Matrix
 
-	if (integrationpt_sum == 1)
-	{
-		// At zero point
-		computeShapeFunctonNJacobianMatrix(0, 0, 0, thickness, 
-			shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
-
-
-		Eigen::Matrix3d initial_transformation_matrix = computeInitialTransformationMatrix(jacobianMatrix);
-
-	}
-
 
 	// Compute the shape function, derivative shape function and jacobian matrix at integration points
 	computeShapeFunctonNJacobianMatrix(integration_ptx, integration_pty, integration_ptz, thickness,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
 
-	// Calculate the inverse of jacobian
+	// Calculate the jacobian determinant and  inverse of jacobian
+	jacobian_determinant = jacobianMatrix.determinant();
 	Eigen::Matrix3d invjacobianMatrix = jacobianMatrix.inverse();
-	
+
 	// Calculate the transformation matrix at the integration point
 	Eigen::Matrix3d transformation_matrix = computeTransformationMatrixFromReference(jacobianMatrix, this->ref_vector);
 
@@ -362,10 +757,10 @@ void quadMITC4_element::computInlStrainDisplacementMatrix(const double& integrat
 	transformation_matrix_phi = computePhiMatrix(invjacobianMatrix, transformation_matrix);
 
 	// Extra shape functions (always calculated)
-	double GT11 = jacobianMatrix.row(0).dot(transformation_matrix.col(0));
-	double GT12 = jacobianMatrix.row(0).dot(transformation_matrix.col(1));
-	double GT21 = jacobianMatrix.row(1).dot(transformation_matrix.col(0));
-	double GT22 = jacobianMatrix.row(1).dot(transformation_matrix.col(1));
+	double GT11 = jacobianMatrix.row(0).dot(initial_transformation_matrix.col(0));
+	double GT12 = jacobianMatrix.row(0).dot(initial_transformation_matrix.col(1));
+	double GT21 = jacobianMatrix.row(1).dot(initial_transformation_matrix.col(0));
+	double GT22 = jacobianMatrix.row(1).dot(initial_transformation_matrix.col(1));
 
 	StrainDisplacementMatrix(0, 24) = -2.0 * integration_ptx * GT11;
 	StrainDisplacementMatrix(0, 25) = -2.0 * integration_ptx * GT12;
@@ -532,8 +927,8 @@ Eigen::MatrixXd quadMITC4_element::computePhiMatrix(const Eigen::Matrix3d& inver
 {
 
 
-	Eigen::MatrixXd phi_matrix = Eigen::MatrixXd::Zero(5,6);
-	
+	Eigen::MatrixXd phi_matrix = Eigen::MatrixXd::Zero(5, 6);
+
 	// Step 1: Compute XL, XM, XN components for each T column
 	Eigen::Vector3d col1 = transformation_matrix.col(0);
 	Eigen::Vector3d col2 = transformation_matrix.col(1);
@@ -615,7 +1010,7 @@ void quadMITC4_element::compute_B_matrix(
 {
 	B_matrix = Eigen::MatrixXd::Zero(6, 28);
 
-	if (ID == 1) 
+	if (ID == 1)
 	{
 		// Only extra shape functions part
 		double GT11 = (jacobianMatrix.row(0).dot(transformation_matrix.col(0)));
@@ -634,7 +1029,7 @@ void quadMITC4_element::compute_B_matrix(
 		return;
 	}
 
-	for (int i = 0; i < 4; i++) 
+	for (int i = 0; i < 4; i++)
 	{
 		int ii = 6 * i;
 		const Eigen::Matrix3d& P = p_matrix_local[i];
@@ -681,7 +1076,7 @@ void quadMITC4_element::compute_B_matrix(
 	}
 
 	// Rows 5 and 6 (using jacobianMatrix2 / BB)
-	for (int j = 0; j < 24; j++) 
+	for (int j = 0; j < 24; j++)
 	{
 		B_matrix(4, j) = 0.5 * ((1.0 - xp) * jacobianMatrixbb2(0, j) + (1.0 + xp) * jacobianMatrixbb2(1, j));
 		B_matrix(5, j) = 0.5 * ((1.0 - yp) * jacobianMatrixbb2(2, j) + (1.0 + yp) * jacobianMatrixbb2(3, j));

@@ -75,9 +75,20 @@ private:
 		const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord);
 
 
-	void computInlStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
-		const int& integrationpt_sum, const double& thickness,
-		Eigen::MatrixXd StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi);
+	void computeStiffnessMatrix(const double& thickness);
+
+
+	void computeStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
+		const int& integrationpt_sum, const double& thickness, double& jacobian_determinant,
+		Eigen::MatrixXd& StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi);
+
+
+	void computeBMatrixExtraShapeFunction(const double& thickness, Eigen::MatrixXd& bic_matrix);
+
+
+	void computeExtraStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
+		const double& thickness, double& jacobian_determinant, const Eigen::Matrix3d& initial_transformation_matrix,
+		Eigen::MatrixXd& StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi);
 
 
 	void computeShapeFunctonNJacobianMatrix(const double& xp, const double& yp, const double& zp, const double& thickness,
