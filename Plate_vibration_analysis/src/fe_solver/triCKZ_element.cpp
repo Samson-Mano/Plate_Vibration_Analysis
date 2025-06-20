@@ -107,6 +107,8 @@ void triCKZ_element::set_triCKZ_element_stiffness_matrix(const double& x1_g_coor
 	// Compute the lumped mass matrix
 	computeLumpedMassMatrix(thickness, materialdensity);
 
+	// Compute the consistent mass matrix
+
 
 }
 
@@ -565,8 +567,11 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 
 void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
 {
-	// Step 1: Set the Jacobian Co-efficients
-	computeJacobianCoefficients();
+	// Step 1: Set the Jacobian Products
+	// 3 x 6 matrix store the jacobian products J^2 ((dL/dx)^2, (dL/dy)^2, (dL/dx dL/dy), etc )
+	Eigen::MatrixXd jacobianProducts = Eigen::MatrixXd::Zero(3, 6); 
+
+	computeJacobianCoefficients(jacobianProducts);
 
 	std::vector<int> iadb = { 2, 3, 4, 8, 9, 10, 14, 15, 16 };  // DOF mapping 
 
@@ -594,7 +599,7 @@ void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
 
 		//___________________________________________________________________________________________________________________
 		// Strain Displacement Matrix at Integration Points
-		Eigen::MatrixXd  strainDisplacement_Bmatrix = computeStrainDisplacementMatrix(L1, L2, L3);  // B is 3x9 matrix
+		Eigen::MatrixXd  strainDisplacement_Bmatrix = computeStrainDisplacementMatrix(L1, L2, L3, jacobianProducts);  // B is 3x9 matrix
 
 		// Compute E = B^T * D * B
 		Eigen::MatrixXd bending_stiffness_matrix_IP =
@@ -680,7 +685,95 @@ void triCKZ_element::computeLumpedMassMatrix(const double& thickness, const doub
 
 
 
-void triCKZ_element::computeJacobianCoefficients()
+
+
+void triCKZ_element::computeConsistentMassMatrix(const double& thickness, const double& materialdensity)
+{
+
+	// Volument of the element
+	double elem_volume = this->triangle_area * thickness;
+	double elem_mass = materialdensity * elem_volume;
+
+	this->element_ConsistentMassMatrix.setZero();
+
+	std::vector<int> iadb = { 2, 3, 4, 8, 9, 10, 14, 15, 16 };  // DOF mapping 
+
+	double L1 = 0.0;
+	double L2 = 0.0;
+	double L3 = 0.0;
+	double int_wt = 0.0;
+
+	for (int ip = 0; ip < 4; ip++)
+	{
+		L1 = integration_points.coeff(ip, 0);
+		L2 = integration_points.coeff(ip, 1);
+		L3 = integration_points.coeff(ip, 2);
+		int_wt = integration_points.coeff(ip, 3); // weight
+
+
+		Eigen::VectorXd shapeFunction = Eigen::VectorXd::Zero(9); // 9 x 1 stores the shape function N
+		Eigen::MatrixXd shapefunction_secondDerivativeMatrix = Eigen::MatrixXd::Zero(6, 9); // 6 x 9 stores the d^2N second derivatives of the shape function
+
+		// Compute the shape function
+		computeShapeFunctions(L1, L2, L3, shapeFunction, shapefunction_secondDerivativeMatrix);
+
+
+		// Calculate the consistent mass matrix
+		// Loop over shape function indices to accumulate mass contributions
+		for (int j = 0; j < 9; j++)
+		{
+			int jj = iadb[j];
+			for (int i = 0; i <= j; i++)
+			{
+				int ii = iadb[i];
+
+				double val = shapeFunction[i] * shapeFunction[j] * elem_mass * int_wt;
+				this->element_ConsistentMassMatrix(ii, jj) += val;
+
+				// Since it's symmetric, mirror the value if i != j
+				if (ii != jj)
+				{
+					this->element_ConsistentMassMatrix(jj, ii) += val;
+				}
+					
+			}
+		}
+
+
+	}
+
+	// Consistent mass due to membrane component
+	std::vector<int> iadm = { 0, 1, 5, 6, 7, 11, 12, 13, 17 };  // DOF mapping 
+
+	for (int i = 0; i < 6; i++)
+	{
+		int ii = iadm[i];
+		for (int j = i; j < 6; j++)
+		{
+			int jj = iadm[j];
+
+			int ij_sum = i + j;
+			if ((ij_sum % 2) == 0)  // I + J is even
+				this->element_ConsistentMassMatrix(ii, jj) = elem_mass;
+
+			if (i == j)  // diagonal
+				this->element_ConsistentMassMatrix(ii, jj) = 2.0 * elem_mass;
+
+			// Symmetrically assign (optional if your matrix is symmetric by design)
+			if (ii != jj)
+				this->element_ConsistentMassMatrix(jj, ii) = this->element_ConsistentMassMatrix(ii, jj);
+		}
+	}
+
+
+}
+
+
+
+
+
+
+void triCKZ_element::computeJacobianCoefficients(Eigen::MatrixXd& jacobianProducts)
 {
 	// Reciprocal of 2 × triangle area (used as a scaling factor)
 	double invTwoArea = 1.0 / (2.0 * this->triangle_area);
@@ -701,15 +794,17 @@ void triCKZ_element::computeJacobianCoefficients()
 	//  | dL1/dy  dL2/dy  dL3/dy |
 	//
 
-	this->jacobianMatrix.setZero(); // 2 x 3
+	Eigen::MatrixXd jacobianMatrix = Eigen::MatrixXd::Zero(2, 3); // 2 x 3 matrix stores the jacobian J (dL/dx, dL/dy, etc)
 
-	this->jacobianMatrix(0, 0) = b1 * invTwoArea;
-	this->jacobianMatrix(0, 1) = b2 * invTwoArea;
-	this->jacobianMatrix(0, 2) = b3 * invTwoArea;
+	jacobianMatrix.setZero(); // 2 x 3
 
-	this->jacobianMatrix(1, 0) = c1 * invTwoArea;
-	this->jacobianMatrix(1, 1) = c2 * invTwoArea;
-	this->jacobianMatrix(1, 2) = c3 * invTwoArea;
+	jacobianMatrix(0, 0) = b1 * invTwoArea;
+	jacobianMatrix(0, 1) = b2 * invTwoArea;
+	jacobianMatrix(0, 2) = b3 * invTwoArea;
+
+	jacobianMatrix(1, 0) = c1 * invTwoArea;
+	jacobianMatrix(1, 1) = c2 * invTwoArea;
+	jacobianMatrix(1, 2) = c3 * invTwoArea;
 
 	// Fill second matrix (3x6): products of derivatives of the area co-ordinates
 	//
@@ -719,16 +814,16 @@ void triCKZ_element::computeJacobianCoefficients()
 	//
 
 
-	this->jacobianProducts.setZero(); // 3 x 6
+	jacobianProducts.setZero(); // 3 x 6
 
 	for (int j = 0; j < 3; ++j)
 	{
-		double bj = this->jacobianMatrix(0, j);
-		double cj = this->jacobianMatrix(1, j);
+		double bj = jacobianMatrix(0, j);
+		double cj = jacobianMatrix(1, j);
 
-		this->jacobianProducts(0, j) = bj * bj; // (dL1/dx)^2
-		this->jacobianProducts(1, j) = cj * cj; // (dL1/dy)^2
-		this->jacobianProducts(2, j) = bj * cj; // (dL1/dx dL1/dy)
+		jacobianProducts(0, j) = bj * bj; // (dL1/dx)^2
+		jacobianProducts(1, j) = cj * cj; // (dL1/dy)^2
+		jacobianProducts(2, j) = bj * cj; // (dL1/dx dL1/dy)
 
 		int m = j + 3;
 		int next = (j + 1) % 3; // Wrap-around index for pairs
@@ -736,16 +831,17 @@ void triCKZ_element::computeJacobianCoefficients()
 		double bjNext = jacobianMatrix(0, next);
 		double cjNext = jacobianMatrix(1, next);
 
-		this->jacobianProducts(0, m) = 2.0 * bj * bjNext; // 2(dL1/dx dL2/dx) 
-		this->jacobianProducts(1, m) = 2.0 * cj * cjNext; // 2(dL1/dy dL2/dy) 
-		this->jacobianProducts(2, m) = bj * cjNext + bjNext * cj; // (dL1/dx dL2/dy)+(dL1/dy dL2/dx)
+		jacobianProducts(0, m) = 2.0 * bj * bjNext; // 2(dL1/dx dL2/dx) 
+		jacobianProducts(1, m) = 2.0 * cj * cjNext; // 2(dL1/dy dL2/dy) 
+		jacobianProducts(2, m) = bj * cjNext + bjNext * cj; // (dL1/dx dL2/dy)+(dL1/dy dL2/dx)
 	}
 
 }
 
 
 
-void triCKZ_element::computeShapeFunctions(const double& L1, const double& L2, const double& L3)
+void triCKZ_element::computeShapeFunctions(const double& L1, const double& L2, const double& L3,
+	Eigen::VectorXd& shapeFunction, Eigen::MatrixXd& shapefunction_secondDerivativeMatrix)
 {
 	// Differences in y-coordinates for B vector components
 	double b1 = this->y2 - this->y3;
@@ -758,23 +854,23 @@ void triCKZ_element::computeShapeFunctions(const double& L1, const double& L2, c
 	double c3 = this->x2 - this->x1;
 
 
-	this->shapeFunction.setZero(); // 9 x 1
+	shapeFunction.setZero(); // 9 x 1
 
 	Eigen::MatrixXd shapeGradient = Eigen::MatrixXd::Zero(3, 9); // 3 x 9
 
-	this->shapefunction_secondDerivativeMatrix.setZero(); // 6 x 9
+	shapefunction_secondDerivativeMatrix.setZero(); // 6 x 9
 
 	//__________________________________________________________________________________________________________________
 	// Shape functions AN0
-	this->shapeFunction(0) = L1 + (L1 * L1 * L2) + (L1 * L1 * L3) - (L1 * L2 * L2) - (L1 * L3 * L3);
-	this->shapeFunction(1) = -b3 * ((L1 * L1 * L2) + (0.5 * L1 * L2 * L3)) + b2 * ((L3 * L1 * L1) + (0.5 * L1 * L2 * L3));
-	this->shapeFunction(2) = -c3 * ((L1 * L1 * L2) + (0.5 * L1 * L2 * L3)) + c2 * ((L3 * L1 * L1) + (0.5 * L1 * L2 * L3));
-	this->shapeFunction(3) = L2 + (L2 * L2 * L3) + (L2 * L2 * L1) - (L2 * L3 * L3) - (L2 * L1 * L1);
-	this->shapeFunction(4) = -b1 * ((L2 * L2 * L3) + (0.5 * L1 * L2 * L3)) + b3 * ((L1 * L2 * L2) + (0.5 * L1 * L2 * L3));
-	this->shapeFunction(5) = -c1 * ((L2 * L2 * L3) + (0.5 * L1 * L2 * L3)) + c3 * ((L1 * L2 * L2) + (0.5 * L1 * L2 * L3));
-	this->shapeFunction(6) = L3 + (L3 * L3 * L1) + (L3 * L3 * L2) - (L3 * L1 * L1) - (L3 * L2 * L2);
-	this->shapeFunction(7) = -b2 * ((L3 * L3 * L1) + (0.5 * L1 * L2 * L3)) + b1 * ((L2 * L3 * L3) + (0.5 * L1 * L2 * L3));
-	this->shapeFunction(8) = -c2 * ((L3 * L3 * L1) + (0.5 * L1 * L2 * L3)) + c1 * ((L2 * L3 * L3) + (0.5 * L1 * L2 * L3));
+	shapeFunction(0) = L1 + (L1 * L1 * L2) + (L1 * L1 * L3) - (L1 * L2 * L2) - (L1 * L3 * L3);
+	shapeFunction(1) = -b3 * ((L1 * L1 * L2) + (0.5 * L1 * L2 * L3)) + b2 * ((L3 * L1 * L1) + (0.5 * L1 * L2 * L3));
+	shapeFunction(2) = -c3 * ((L1 * L1 * L2) + (0.5 * L1 * L2 * L3)) + c2 * ((L3 * L1 * L1) + (0.5 * L1 * L2 * L3));
+	shapeFunction(3) = L2 + (L2 * L2 * L3) + (L2 * L2 * L1) - (L2 * L3 * L3) - (L2 * L1 * L1);
+	shapeFunction(4) = -b1 * ((L2 * L2 * L3) + (0.5 * L1 * L2 * L3)) + b3 * ((L1 * L2 * L2) + (0.5 * L1 * L2 * L3));
+	shapeFunction(5) = -c1 * ((L2 * L2 * L3) + (0.5 * L1 * L2 * L3)) + c3 * ((L1 * L2 * L2) + (0.5 * L1 * L2 * L3));
+	shapeFunction(6) = L3 + (L3 * L3 * L1) + (L3 * L3 * L2) - (L3 * L1 * L1) - (L3 * L2 * L2);
+	shapeFunction(7) = -b2 * ((L3 * L3 * L1) + (0.5 * L1 * L2 * L3)) + b1 * ((L2 * L3 * L3) + (0.5 * L1 * L2 * L3));
+	shapeFunction(8) = -c2 * ((L3 * L3 * L1) + (0.5 * L1 * L2 * L3)) + c1 * ((L2 * L3 * L3) + (0.5 * L1 * L2 * L3));
 
 
 	//__________________________________________________________________________________________________________________
@@ -837,73 +933,78 @@ void triCKZ_element::computeShapeFunctions(const double& L1, const double& L2, c
 	// Second Derivatives with respect to L1, L2, L3
 
 
-	this->shapefunction_secondDerivativeMatrix(0, 0) = 2.0 * (L2 + L3); // d^2N1/dL1^2
-	this->shapefunction_secondDerivativeMatrix(1, 3) = 2.0 * (L3 + L1); // d^2N2/dL2^2
-	this->shapefunction_secondDerivativeMatrix(2, 6) = 2.0 * (L1 + L2); // d^2N3/dL3^2
-	this->shapefunction_secondDerivativeMatrix(1, 0) = -2.0 * L1; // d^2N1/dL2^2
-	this->shapefunction_secondDerivativeMatrix(2, 3) = -2.0 * L2; // d^2N2/dL3^2
-	this->shapefunction_secondDerivativeMatrix(0, 6) = -2.0 * L3; // d^2N3/dL1^2
-	this->shapefunction_secondDerivativeMatrix(2, 0) = -2.0 * L1; // d^2N1/dL3^2 
-	this->shapefunction_secondDerivativeMatrix(0, 3) = -2.0 * L2; // d^2N2/dL1^2 
-	this->shapefunction_secondDerivativeMatrix(1, 6) = -2.0 * L3; // d^2N3/dL2^2
+	shapefunction_secondDerivativeMatrix(0, 0) = 2.0 * (L2 + L3); // d^2N1/dL1^2
+	shapefunction_secondDerivativeMatrix(1, 3) = 2.0 * (L3 + L1); // d^2N2/dL2^2
+	shapefunction_secondDerivativeMatrix(2, 6) = 2.0 * (L1 + L2); // d^2N3/dL3^2
+	shapefunction_secondDerivativeMatrix(1, 0) = -2.0 * L1; // d^2N1/dL2^2
+	shapefunction_secondDerivativeMatrix(2, 3) = -2.0 * L2; // d^2N2/dL3^2
+	shapefunction_secondDerivativeMatrix(0, 6) = -2.0 * L3; // d^2N3/dL1^2
+	shapefunction_secondDerivativeMatrix(2, 0) = -2.0 * L1; // d^2N1/dL3^2 
+	shapefunction_secondDerivativeMatrix(0, 3) = -2.0 * L2; // d^2N2/dL1^2 
+	shapefunction_secondDerivativeMatrix(1, 6) = -2.0 * L3; // d^2N3/dL2^2
 
-	this->shapefunction_secondDerivativeMatrix(0, 1) = (-2.0 * b3 * L2) + (2.0 * b2 * L3); // d^2N'1/dL1^2
-	this->shapefunction_secondDerivativeMatrix(1, 4) = (-2.0 * b1 * L3) + (2.0 * b3 * L1); // d^2N'2/dL2^2
-	this->shapefunction_secondDerivativeMatrix(2, 7) = (-2.0 * b2 * L1) + (2.0 * b1 * L2); // d^2N'3/dL3^2
+	shapefunction_secondDerivativeMatrix(0, 1) = (-2.0 * b3 * L2) + (2.0 * b2 * L3); // d^2N'1/dL1^2
+	shapefunction_secondDerivativeMatrix(1, 4) = (-2.0 * b1 * L3) + (2.0 * b3 * L1); // d^2N'2/dL2^2
+	shapefunction_secondDerivativeMatrix(2, 7) = (-2.0 * b2 * L1) + (2.0 * b1 * L2); // d^2N'3/dL3^2
 
-	this->shapefunction_secondDerivativeMatrix(0, 2) = (-2.0 * c3 * L2) + (2.0 * c2 * L3); // d^2N''1/dL1^2
-	this->shapefunction_secondDerivativeMatrix(1, 5) = (-2.0 * c1 * L3) + (2.0 * c3 * L1); // d^2N''2/dL2^2
-	this->shapefunction_secondDerivativeMatrix(2, 8) = (-2.0 * c2 * L1) + (2.0 * c1 * L2); // d^2N''3/dL3^2
+	shapefunction_secondDerivativeMatrix(0, 2) = (-2.0 * c3 * L2) + (2.0 * c2 * L3); // d^2N''1/dL1^2
+	shapefunction_secondDerivativeMatrix(1, 5) = (-2.0 * c1 * L3) + (2.0 * c3 * L1); // d^2N''2/dL2^2
+	shapefunction_secondDerivativeMatrix(2, 8) = (-2.0 * c2 * L1) + (2.0 * c1 * L2); // d^2N''3/dL3^2
 
 	// Additional terms... after 3rd row
 	// N
-	this->shapefunction_secondDerivativeMatrix(3, 0) = +2.0 * L1 - 2.0 * L2; // d^2N1/dL1dL2
-	this->shapefunction_secondDerivativeMatrix(4, 3) = +2.0 * L2 - 2.0 * L3; // d^2N2/dL2dL3
-	this->shapefunction_secondDerivativeMatrix(5, 6) = +2.0 * L3 - 2.0 * L1; // d^2N3/dL3dL1
+	shapefunction_secondDerivativeMatrix(3, 0) = +2.0 * L1 - 2.0 * L2; // d^2N1/dL1dL2
+	shapefunction_secondDerivativeMatrix(4, 3) = +2.0 * L2 - 2.0 * L3; // d^2N2/dL2dL3
+	shapefunction_secondDerivativeMatrix(5, 6) = +2.0 * L3 - 2.0 * L1; // d^2N3/dL3dL1
 
-	this->shapefunction_secondDerivativeMatrix(5, 0) = +2.0 * L1 - 2.0 * L3; // d^2N1/dL3dL1
-	this->shapefunction_secondDerivativeMatrix(3, 3) = +2.0 * L2 - 2.0 * L1; // d^2N2/dL1dL2
-	this->shapefunction_secondDerivativeMatrix(4, 6) = +2.0 * L3 - 2.0 * L2; // d^2N3/dL2dL3
+	shapefunction_secondDerivativeMatrix(5, 0) = +2.0 * L1 - 2.0 * L3; // d^2N1/dL3dL1
+	shapefunction_secondDerivativeMatrix(3, 3) = +2.0 * L2 - 2.0 * L1; // d^2N2/dL1dL2
+	shapefunction_secondDerivativeMatrix(4, 6) = +2.0 * L3 - 2.0 * L2; // d^2N3/dL2dL3
 
 	// N'
-	this->shapefunction_secondDerivativeMatrix(3, 1) = -b3 * (2.0 * L1 + 0.5 * L3) + b2 * (0.5 * L3); // d^2N'1/dL1dL2
-	this->shapefunction_secondDerivativeMatrix(4, 4) = -b1 * (2.0 * L2 + 0.5 * L1) + b3 * (0.5 * L1); // d^2N'2/dL2dL3
-	this->shapefunction_secondDerivativeMatrix(5, 7) = -b2 * (2.0 * L3 + 0.5 * L2) + b1 * (0.5 * L2); // d^2N'3/dL3dL1
+	shapefunction_secondDerivativeMatrix(3, 1) = -b3 * (2.0 * L1 + 0.5 * L3) + b2 * (0.5 * L3); // d^2N'1/dL1dL2
+	shapefunction_secondDerivativeMatrix(4, 4) = -b1 * (2.0 * L2 + 0.5 * L1) + b3 * (0.5 * L1); // d^2N'2/dL2dL3
+	shapefunction_secondDerivativeMatrix(5, 7) = -b2 * (2.0 * L3 + 0.5 * L2) + b1 * (0.5 * L2); // d^2N'3/dL3dL1
 
-	this->shapefunction_secondDerivativeMatrix(4, 1) = -b3 * (L1 * 0.5) + b2 * (L1 * 0.5); // d^2N'1/dL2dL3
-	this->shapefunction_secondDerivativeMatrix(5, 4) = -b1 * (L2 * 0.5) + b3 * (L2 * 0.5); // d^2N'2/dL3dL1
-	this->shapefunction_secondDerivativeMatrix(3, 7) = -b2 * (L3 * 0.5) + b1 * (L3 * 0.5); // d^2N'3/dL1dL2
+	shapefunction_secondDerivativeMatrix(4, 1) = -b3 * (L1 * 0.5) + b2 * (L1 * 0.5); // d^2N'1/dL2dL3
+	shapefunction_secondDerivativeMatrix(5, 4) = -b1 * (L2 * 0.5) + b3 * (L2 * 0.5); // d^2N'2/dL3dL1
+	shapefunction_secondDerivativeMatrix(3, 7) = -b2 * (L3 * 0.5) + b1 * (L3 * 0.5); // d^2N'3/dL1dL2
 
-	this->shapefunction_secondDerivativeMatrix(5, 1) = -b3 * (L2 * 0.5) + b2 * (2.0 * L1 + L2 * 0.5); // d^2N'1/dL3dL1
-	this->shapefunction_secondDerivativeMatrix(3, 4) = -b1 * (L3 * 0.5) + b3 * (2.0 * L2 + L3 * 0.5); // d^2N'2/dL1dL2
-	this->shapefunction_secondDerivativeMatrix(4, 7) = -b2 * (L1 * 0.5) + b1 * (2.0 * L3 + L1 * 0.5); // d^2N'3/dL2dL3
+	shapefunction_secondDerivativeMatrix(5, 1) = -b3 * (L2 * 0.5) + b2 * (2.0 * L1 + L2 * 0.5); // d^2N'1/dL3dL1
+	shapefunction_secondDerivativeMatrix(3, 4) = -b1 * (L3 * 0.5) + b3 * (2.0 * L2 + L3 * 0.5); // d^2N'2/dL1dL2
+	shapefunction_secondDerivativeMatrix(4, 7) = -b2 * (L1 * 0.5) + b1 * (2.0 * L3 + L1 * 0.5); // d^2N'3/dL2dL3
 
 	// N''
-	this->shapefunction_secondDerivativeMatrix(3, 2) = -c3 * (2.0 * L1 + L3 * 0.5) + c2 * (L3 * 0.5); // d^2N''1/dL1dL2
-	this->shapefunction_secondDerivativeMatrix(4, 5) = -c1 * (2.0 * L2 + L1 * 0.5) + c3 * (L1 * 0.5); // d^2N''2/dL2dL3
-	this->shapefunction_secondDerivativeMatrix(5, 8) = -c2 * (2.0 * L3 + L2 * 0.5) + c1 * (L2 * 0.5); // d^2N''3/dL3dL1
+	shapefunction_secondDerivativeMatrix(3, 2) = -c3 * (2.0 * L1 + L3 * 0.5) + c2 * (L3 * 0.5); // d^2N''1/dL1dL2
+	shapefunction_secondDerivativeMatrix(4, 5) = -c1 * (2.0 * L2 + L1 * 0.5) + c3 * (L1 * 0.5); // d^2N''2/dL2dL3
+	shapefunction_secondDerivativeMatrix(5, 8) = -c2 * (2.0 * L3 + L2 * 0.5) + c1 * (L2 * 0.5); // d^2N''3/dL3dL1
 
-	this->shapefunction_secondDerivativeMatrix(4, 2) = -c3 * (L1 * 0.5) + c2 * (L1 * 0.5); // d^2N''1/dL2dL3
-	this->shapefunction_secondDerivativeMatrix(5, 5) = -c1 * (L2 * 0.5) + c3 * (L2 * 0.5); // d^2N''2/dL3dL1
-	this->shapefunction_secondDerivativeMatrix(3, 8) = -c2 * (L3 * 0.5) + c1 * (L3 * 0.5); // d^2N''3/dL1dL2
+	shapefunction_secondDerivativeMatrix(4, 2) = -c3 * (L1 * 0.5) + c2 * (L1 * 0.5); // d^2N''1/dL2dL3
+	shapefunction_secondDerivativeMatrix(5, 5) = -c1 * (L2 * 0.5) + c3 * (L2 * 0.5); // d^2N''2/dL3dL1
+	shapefunction_secondDerivativeMatrix(3, 8) = -c2 * (L3 * 0.5) + c1 * (L3 * 0.5); // d^2N''3/dL1dL2
 
-	this->shapefunction_secondDerivativeMatrix(5, 2) = -c3 * (L2 * 0.5) + c2 * (2.0 * L1 + L2 * 0.5); // d^2N''1/dL3dL1
-	this->shapefunction_secondDerivativeMatrix(3, 5) = -c1 * (L3 * 0.5) + c3 * (2.0 * L2 + L3 * 0.5); // d^2N''2/dL1dL2
-	this->shapefunction_secondDerivativeMatrix(4, 8) = -c2 * (L1 * 0.5) + c1 * (2.0 * L3 + L1 * 0.5); // d^2N''3/dL2dL3
+	shapefunction_secondDerivativeMatrix(5, 2) = -c3 * (L2 * 0.5) + c2 * (2.0 * L1 + L2 * 0.5); // d^2N''1/dL3dL1
+	shapefunction_secondDerivativeMatrix(3, 5) = -c1 * (L3 * 0.5) + c3 * (2.0 * L2 + L3 * 0.5); // d^2N''2/dL1dL2
+	shapefunction_secondDerivativeMatrix(4, 8) = -c2 * (L1 * 0.5) + c1 * (2.0 * L3 + L1 * 0.5); // d^2N''3/dL2dL3
 
 
 }
 
 
 
-Eigen::MatrixXd triCKZ_element::computeStrainDisplacementMatrix(const double& L1, const double& L2, const double& L3)
+Eigen::MatrixXd triCKZ_element::computeStrainDisplacementMatrix(const double& L1, const double& L2, const double& L3,
+	const Eigen::MatrixXd& jacobianProducts)
 {
 
+
+	Eigen::VectorXd shapeFunction = Eigen::VectorXd::Zero(9); // 9 x 1 stores the shape function N
+	Eigen::MatrixXd shapefunction_secondDerivativeMatrix = Eigen::MatrixXd::Zero(6, 9); // 6 x 9 stores the d^2N second derivatives of the shape function
+
 	// Compute the shape function
-	computeShapeFunctions(L1, L2, L3);
+	computeShapeFunctions(L1, L2, L3, shapeFunction, shapefunction_secondDerivativeMatrix);
 
 	// Jacobian Products is a 3x6 matrix, Second derivative shape function is a 6x9 matrix
-	Eigen::MatrixXd strainDisplacement_Bmatrix = this->jacobianProducts * this->shapefunction_secondDerivativeMatrix;  // Result is 3x9
+	Eigen::MatrixXd strainDisplacement_Bmatrix = jacobianProducts * shapefunction_secondDerivativeMatrix;  // Result is 3x9
 
 	// Adjust signs 
 	strainDisplacement_Bmatrix.row(0) = -1.0 * strainDisplacement_Bmatrix.row(0);

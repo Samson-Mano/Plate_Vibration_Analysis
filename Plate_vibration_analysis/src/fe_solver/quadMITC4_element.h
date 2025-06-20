@@ -78,8 +78,11 @@ private:
 	void computeStiffnessMatrix(const double& thickness);
 
 
+	Eigen::MatrixXd computeTransverseShearStrainMatrix(const double& thickness);
+
+
 	void computeStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
-		const int& integrationpt_sum, const double& thickness, double& jacobian_determinant,
+		const double& thickness, const Eigen::MatrixXd& TransverseShearStrainMatrix, const Eigen::Matrix3d& initial_transformation_matrix,
 		Eigen::MatrixXd& StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi);
 
 
@@ -87,7 +90,7 @@ private:
 
 
 	void computeExtraStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
-		const double& thickness, double& jacobian_determinant, const Eigen::Matrix3d& initial_transformation_matrix,
+		const double& thickness, const Eigen::Matrix3d& initial_transformation_matrix,
 		Eigen::MatrixXd& StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi);
 
 
