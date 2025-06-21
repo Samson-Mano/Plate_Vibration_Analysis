@@ -75,13 +75,13 @@ private:
 		const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord);
 
 
-	void computeStiffnessMatrix(const double& thickness);
+	void computeBMatrixMainShapeFunction(const double& thickness, Eigen::MatrixXd& StrainDisplacementMatrixMainShapeFunction);
 
 
 	Eigen::MatrixXd computeTransverseShearStrainMatrix(const double& thickness);
 
 
-	void computeStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
+	void computeMainStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
 		const double& thickness, const Eigen::MatrixXd& TransverseShearStrainMatrix, const Eigen::Matrix3d& initial_transformation_matrix,
 		Eigen::MatrixXd& StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi);
 
