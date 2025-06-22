@@ -27,10 +27,10 @@ public:
 private:
 	const double m_pi = 3.1415926535897932384626433;
 
-	std::array<Eigen::Matrix3d, 4> p_matrix_global;
+	// std::array<Eigen::Matrix3d, 4> p_matrix_global;
 	std::array<Eigen::Vector3d, 4> quad_local_coords;
-	Eigen::Vector3d ref_vector; // Reference vector in element local coordinate system
-	std::array<Eigen::Matrix3d, 4> p_matrix_local;
+	// Eigen::Vector3d ref_vector; // Reference vector in element local coordinate system
+	// std::array<Eigen::Matrix3d, 4> p_matrix_local;
 
 
 	// Eigen::MatrixXd transformation_matrix_phi = Eigen::MatrixXd::Zero(24, 24); // 24x24 transformation matrices
@@ -47,6 +47,8 @@ private:
 	Eigen::MatrixXd element_StiffnessMatrix = Eigen::MatrixXd::Zero(24, 24); // 24 x 24 matrix Element combined bending and membrane stiffness matrix
 
 	Eigen::MatrixXd element_LumpedMassMatrix = Eigen::MatrixXd::Zero(24, 24); // 24 x 24 matrix Element lumped mass matrix
+	Eigen::MatrixXd element_ConsistentMassMatrix = Eigen::MatrixXd::Zero(24, 24); // 24 x 24 matrix Element consitent mass matrix
+
 
 
 	void setIntegrationPoints();
@@ -55,11 +57,12 @@ private:
 		const double& poissonsratio); 
 
 
-
 	void computeTriadPMatrix(const double& x1_g_coord, const double& y1_g_coord, const double& z1_g_coord,
 		const double& x2_g_coord, const double& y2_g_coord, const double& z2_g_coord,
 		const double& x3_g_coord, const double& y3_g_coord, const double& z3_g_coord,
-		const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord);
+		const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord,
+		std::array<Eigen::Matrix3d, 4>& p_matrix_global);
+
 
 
 	void checkquadgeometry(const double& x1_g_coord, const double& y1_g_coord, const double& z1_g_coord,
@@ -72,10 +75,19 @@ private:
 	void computeLocalCoordinateSystem(const double& x1_g_coord, const double& y1_g_coord, const double& z1_g_coord,
 		const double& x2_g_coord, const double& y2_g_coord, const double& z2_g_coord,
 		const double& x3_g_coord, const double& y3_g_coord, const double& z3_g_coord,
-		const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord);
+		const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord,
+		const std::array<Eigen::Matrix3d, 4>& p_matrix_global,
+		std::array<Eigen::Matrix3d, 4>& p_matrix_local,
+		Eigen::Vector3d& ref_vector);
+
+
+
+	void computeStiffnessMatrix(const double& thickness);
+
 
 
 	void computeBMatrixMainShapeFunction(const double& thickness, Eigen::MatrixXd& StrainDisplacementMatrixMainShapeFunction);
+
 
 
 	Eigen::MatrixXd computeTransverseShearStrainMatrix(const double& thickness);
@@ -122,6 +134,12 @@ private:
 		Eigen::MatrixXd& B_matrix                                    // 6x28 (output)
 	);
 
+
+
+	void matrixToString(const Eigen::MatrixXd& mat);
+
+
+	void vectorToString(const Eigen::VectorXd& vec);
 
 
 };

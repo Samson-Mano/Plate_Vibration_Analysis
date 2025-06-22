@@ -39,6 +39,7 @@ void quadMITC4_element::setIntegrationPoints()
 }
 
 
+
 void quadMITC4_element::set_quadMITC4_element_stiffness_matrix(const double& x1_g_coord, const double& y1_g_coord, const double& z1_g_coord,
 	const double& x2_g_coord, const double& y2_g_coord, const double& z2_g_coord,
 	const double& x3_g_coord, const double& y3_g_coord, const double& z3_g_coord,
@@ -46,6 +47,39 @@ void quadMITC4_element::set_quadMITC4_element_stiffness_matrix(const double& x1_
 	const double& thickness, const double& materialdensity,
 	const double& youngsmodulus, const double& poissonsratio)
 {
+	// Step 0: Compute the elasticity matrix
+	computeElasticityMatrix(youngsmodulus, poissonsratio);
+
+
+	// Step 1: Compute the P matrix of nodal triads
+	std::array<Eigen::Matrix3d, 4> p_matrix_global;
+
+	computeTriadPMatrix(x1_g_coord, y1_g_coord, z1_g_coord,
+		x2_g_coord, y2_g_coord, z2_g_coord,
+		x3_g_coord, y3_g_coord, z3_g_coord,
+		x4_g_coord, y4_g_coord, z4_g_coord,
+		p_matrix_global);
+
+
+	// Step 2: Set the local co-ordinate system for the triangle
+    Eigen::Vector3d ref_vector; // Reference vector in element local coordinate system
+	std::array<Eigen::Matrix3d, 4> p_matrix_local;
+
+	computeLocalCoordinateSystem(x1_g_coord, y1_g_coord, z1_g_coord,
+		x2_g_coord, y2_g_coord, z2_g_coord, 
+		x3_g_coord, y3_g_coord, z3_g_coord,
+		x4_g_coord, y4_g_coord, z4_g_coord,
+		p_matrix_global,
+		p_matrix_local,
+		ref_vector);
+
+
+	// Step 3: Compute B matrix for extra shape function (5 x 4 matrix) column index 25, 26, 27, 28
+
+
+
+
+
 
 
 
@@ -124,7 +158,8 @@ void quadMITC4_element::computeElasticityMatrix(const double& youngsmodulus, con
 void quadMITC4_element::computeTriadPMatrix(const double& x1_g_coord, const double& y1_g_coord, const double& z1_g_coord,
 	const double& x2_g_coord, const double& y2_g_coord, const double& z2_g_coord,
 	const double& x3_g_coord, const double& y3_g_coord, const double& z3_g_coord,
-	const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord)
+	const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord,
+	std::array<Eigen::Matrix3d, 4>& p_matrix_global)
 {
 	// Differences between coordinates
 	Eigen::Vector3d v21 = { x2_g_coord - x1_g_coord, y2_g_coord - y1_g_coord, z2_g_coord - z1_g_coord };
@@ -138,21 +173,21 @@ void quadMITC4_element::computeTriadPMatrix(const double& x1_g_coord, const doub
 	double al34 = v34.norm();
 
 	// Initialize the P Matrix
-	this->p_matrix_global = { Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero(),
+	p_matrix_global = { Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero(),
 		Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero() }; // p_matrix global
 
 
 	// Compute the third column of P (unit direction vectors of cross products)
-	this->p_matrix_global[0].col(2) = v21.cross(v41) / (al21 * al41);
-	this->p_matrix_global[1].col(2) = v21.cross(v32) / (al21 * al32);
-	this->p_matrix_global[2].col(2) = v34.cross(v32) / (al34 * al32);
-	this->p_matrix_global[3].col(2) = v34.cross(v41) / (al34 * al41);
+	p_matrix_global[0].col(2) = v21.cross(v41) / (al21 * al41);
+	p_matrix_global[1].col(2) = v21.cross(v32) / (al21 * al32);
+	p_matrix_global[2].col(2) = v34.cross(v32) / (al34 * al32);
+	p_matrix_global[3].col(2) = v34.cross(v41) / (al34 * al41);
 
 	const double tolerance_1 = m_pi / 180.0;
 
 	for (int i = 0; i < 4; ++i)
 	{
-		Eigen::Vector3d z_axis = this->p_matrix_global[i].col(2);
+		Eigen::Vector3d z_axis = p_matrix_global[i].col(2);
 
 		double xuli = z_axis(0);
 		double yuli = z_axis(1);
@@ -165,8 +200,8 @@ void quadMITC4_element::computeTriadPMatrix(const double& x1_g_coord, const doub
 		if ((av1i / av3i) >= tolerance_1)
 		{
 			// Case 1
-			this->p_matrix_global[i].col(0) = Eigen::Vector3d(0.0, -zuli / av1i, yuli / av1i);
-			this->p_matrix_global[i].col(1) = Eigen::Vector3d(
+			p_matrix_global[i].col(0) = Eigen::Vector3d(0.0, -zuli / av1i, yuli / av1i);
+			p_matrix_global[i].col(1) = Eigen::Vector3d(
 				(av1i * av1i) / av2i,
 				-xuli * yuli / av2i,
 				-xuli * zuli / av2i
@@ -178,8 +213,8 @@ void quadMITC4_element::computeTriadPMatrix(const double& x1_g_coord, const doub
 			av1i = std::sqrt(xuli * xuli + zuli * zuli);
 			av2i = std::sqrt(std::pow(xuli * xuli + zuli * zuli, 2) + yuli * yuli * (xuli * xuli + zuli * zuli));
 
-			this->p_matrix_global[i].col(0) = Eigen::Vector3d(zuli / av1i, 0.0, -xuli / av1i);
-			this->p_matrix_global[i].col(1) = Eigen::Vector3d(
+			p_matrix_global[i].col(0) = Eigen::Vector3d(zuli / av1i, 0.0, -xuli / av1i);
+			p_matrix_global[i].col(1) = Eigen::Vector3d(
 				-yuli * xuli / av2i,
 				(av1i * av1i) / av2i,
 				-yuli * zuli / av2i
@@ -187,7 +222,7 @@ void quadMITC4_element::computeTriadPMatrix(const double& x1_g_coord, const doub
 		}
 
 		// Normalize Z-axis again for consistency
-		this->p_matrix_global[i].col(2) = z_axis.normalized();
+		p_matrix_global[i].col(2) = z_axis.normalized();
 	}
 
 }
@@ -217,7 +252,10 @@ void quadMITC4_element::checkquadgeometry(const double& x1_g_coord, const double
 void quadMITC4_element::computeLocalCoordinateSystem(const double& x1_g_coord, const double& y1_g_coord, const double& z1_g_coord,
 	const double& x2_g_coord, const double& y2_g_coord, const double& z2_g_coord,
 	const double& x3_g_coord, const double& y3_g_coord, const double& z3_g_coord,
-	const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord)
+	const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord,
+	const std::array<Eigen::Matrix3d, 4>& p_matrix_global,
+	std::array<Eigen::Matrix3d, 4>& p_matrix_local,
+	Eigen::Vector3d& ref_vector)
 {
 
 	Eigen::Vector3d p(x1_g_coord, y1_g_coord, z1_g_coord);  // Point P
@@ -292,30 +330,39 @@ void quadMITC4_element::computeLocalCoordinateSystem(const double& x1_g_coord, c
 
 
 	// Step 3: Transform P_matrix (global) to P_matrix (local)
-	this->p_matrix_local = { Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero(),
+	p_matrix_local = { Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero(),
 		Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero() }; // p_matrix local
 
 
 	for (int i = 0; i < 4; i++)
 	{
-		this->p_matrix_local[i] = local_coordinate_matrix.transpose() * this->p_matrix_global[i];
+		p_matrix_local[i] = local_coordinate_matrix.transpose() * p_matrix_global[i];
 
 	}
 
 
 	// Step 4: Form reference vector in element local coordinate system
-	this->ref_vector.setZero();
+	ref_vector.setZero();
 
 	// Compute vector from node 1 to node 2 in local coordinates
-	this->ref_vector = this->quad_local_coords[1] - this->quad_local_coords[0];
+	ref_vector = this->quad_local_coords[1] - this->quad_local_coords[0];
 
 
 	// Project VR onto local z-axis (p_matrix_local[0].col(2) * ref_vector)
-	double vrn = this->p_matrix_local[0].col(2).dot(ref_vector);
+	double vrn = p_matrix_local[0].col(2).dot(ref_vector);
 
-	this->ref_vector = ref_vector - (vrn * this->p_matrix_local[0].col(2));
+	ref_vector = ref_vector - (vrn * p_matrix_local[0].col(2));
 
-	this->ref_vector.normalize();// Normalize
+	ref_vector.normalize();// Normalize
+
+}
+
+
+
+
+void quadMITC4_element::computeStiffnessMatrix(const double& thickness)
+{
+
 
 
 }
@@ -585,8 +632,8 @@ void quadMITC4_element::computeMainStrainDisplacementMatrix(const double& integr
 	Eigen::Vector4d shapeFunction = Eigen::Vector4d::Zero(); // Shape function
 	Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // Shape function First derivative
 	Eigen::Matrix3d jacobianMatrix = Eigen::Matrix3d::Zero(); // Jacobian Matrix
-	double GV22 = 0.0;
-	double GV21 = 0.0;
+	double gv22 = 0.0;
+	double gv21 = 0.0;
 
 
 	// Compute the shape function, derivative shape function and jacobian matrix at integration points
@@ -617,10 +664,10 @@ void quadMITC4_element::computeMainStrainDisplacementMatrix(const double& integr
 		StrainDisplacementMatrixAtIntegrationPt(0, ii + 1) = shapefunction_firstDerivativeMatrix(0, i) * jacobianMatrix(0, 1);
 		StrainDisplacementMatrixAtIntegrationPt(0, ii + 2) = shapefunction_firstDerivativeMatrix(0, i) * jacobianMatrix(0, 2);
 
-		double gv22 = jacobianMatrix.row(0).dot(p_matrix_local[i].col(1));
+		gv22 = jacobianMatrix.row(0).dot(p_matrix_local[i].col(1));
 		StrainDisplacementMatrixAtIntegrationPt(0, ii + 3) = -integration_ptz * shapefunction_firstDerivativeMatrix(0, i) * gv22 * thickness / 2.0;
 
-		double gv21 = jacobianMatrix.row(0).dot(p_matrix_local[i].col(0));
+		gv21 = jacobianMatrix.row(0).dot(p_matrix_local[i].col(0));
 		StrainDisplacementMatrixAtIntegrationPt(0, ii + 4) = integration_ptz * shapefunction_firstDerivativeMatrix(0, i) * gv21 * thickness / 2.0;
 
 		// Row 2
@@ -1140,6 +1187,44 @@ void quadMITC4_element::compute_B_matrix(
 
 }
 
+
+
+
+
+
+
+void quadMITC4_element::matrixToString(const Eigen::MatrixXd& mat)
+{
+	std::ostringstream oss;
+	oss.precision(4);
+	oss << std::fixed;
+
+	for (int i = 0; i < mat.rows(); ++i) {
+		for (int j = 0; j < mat.cols(); ++j) {
+			oss << mat(i, j);
+			if (j < mat.cols() - 1) oss << ", ";
+		}
+		oss << "\n";
+	}
+	std::string result = oss.str();
+
+}
+
+
+void quadMITC4_element::vectorToString(const Eigen::VectorXd& vec)
+{
+	std::ostringstream oss;
+	oss.precision(4);
+	oss << std::fixed;
+
+	for (int i = 0; i < vec.size(); ++i)
+	{
+		oss << vec(i);
+		oss << "\n";
+	}
+	std::string result = oss.str();
+
+}
 
 
 

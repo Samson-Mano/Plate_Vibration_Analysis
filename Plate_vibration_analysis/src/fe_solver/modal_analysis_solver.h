@@ -15,6 +15,8 @@
 
 // Element stiffness support
 #include "triCKZ_element.h"
+#include "quadMITC4_element.h"
+
 
 // Stop watch
 #include "../events_handler/Stopwatch_events.h"

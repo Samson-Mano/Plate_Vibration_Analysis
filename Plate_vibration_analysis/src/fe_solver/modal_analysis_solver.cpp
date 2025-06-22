@@ -68,7 +68,7 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	this->matrix_size = 0;
 
 
-	// Create element stiffness matrix
+	// Create element stiffness matrix for tri shell elements
 	triCKZ_element triCKZ;
 	triCKZ.init();
 
@@ -76,7 +76,7 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	{
 		elementtri_store tri_elem = tri_elem_m.second;
 
-		// Find the 3 triangle ids
+		// Get the 3 triangle ids
 		int tri_id1 = tri_elem.nd1->node_id;
 		int tri_id2 = tri_elem.nd2->node_id;
 		int tri_id3 = tri_elem.nd3->node_id;
@@ -120,6 +120,75 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 
 				outFile.close();
 				std::cout << "Stiffness matrix written to tri_element_stiffness_matrix.txt\n";
+
+
+
+			}
+			else
+			{
+				std::cerr << "Unable to open output file for writing.\n";
+			}
+
+		}
+
+	}
+
+
+	// Create element stiffness matrix for quad shell elements
+	quadMITC4_element quadMIT4;
+	quadMIT4.init();
+
+	for (const auto& quad_elem_m : model_quadelements.elementquadMap)
+	{
+		elementquad_store quad_elem = quad_elem_m.second;
+
+		// Get the 4 quadrilateral ids
+		int quad_id1 = quad_elem.nd1->node_id;
+		int quad_id2 = quad_elem.nd2->node_id;
+		int quad_id3 = quad_elem.nd3->node_id;
+		int quad_id4 = quad_elem.nd4->node_id;
+
+		int material_id = quad_elem.material_id;
+
+		material_data mat_data = material_list[material_id];
+
+		quadMIT4.set_quadMITC4_element_stiffness_matrix(quad_elem.nd1->node_pt.x, quad_elem.nd1->node_pt.y, quad_elem.nd1->node_pt.z,
+			quad_elem.nd2->node_pt.x, quad_elem.nd2->node_pt.y, quad_elem.nd2->node_pt.z,
+			quad_elem.nd3->node_pt.x, quad_elem.nd3->node_pt.y, quad_elem.nd3->node_pt.z,
+			quad_elem.nd4->node_pt.x, quad_elem.nd4->node_pt.y, quad_elem.nd4->node_pt.z,
+			mat_data.shell_thickness, mat_data.material_density,
+			mat_data.material_youngsmodulus, mat_data.poissons_ratio);
+
+
+		Eigen::MatrixXd quadelement_stiffness_matrix = quadMIT4.get_element_stiffness_matrix();
+		Eigen::MatrixXd quadelement_mass_matrix = quadMIT4.get_element_mass_matrix();
+
+		if (quad_elem.quad_id == 1)
+		{
+			// Print the element stiffness matrix for testing
+
+			 // Open output file
+			std::ofstream outFile("quad_element_stiffness_matrix.txt");
+
+			if (outFile.is_open())
+			{
+				// Define formatting: high precision, fixed-point notation, aligned columns
+				Eigen::IOFormat FullPrecisionFmt(
+					Eigen::FullPrecision,      // use full precision
+					0,                         // don't align columns
+					"\t",                      // coefficient separator (tab)
+					"\n",                      // row separator
+					"", "", "", "");           // prefix/suffix
+
+				outFile << "Element Stiffness Matrix for Quadrilateral ID " << quad_elem.quad_id << ":\n";
+				outFile << quadelement_stiffness_matrix.format(FullPrecisionFmt);
+				outFile << "\n";
+
+				outFile << "Element Mass Matrix for Quadrilateral ID " << quad_elem.quad_id << ":\n";
+				outFile << quadelement_mass_matrix.format(FullPrecisionFmt);
+
+				outFile.close();
+				std::cout << "Stiffness matrix written to quad_element_stiffness_matrix.txt\n";
 
 
 
