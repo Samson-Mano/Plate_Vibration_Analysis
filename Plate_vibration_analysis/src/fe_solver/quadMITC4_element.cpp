@@ -61,6 +61,12 @@ void quadMITC4_element::set_quadMITC4_element_stiffness_matrix(const double& x1_
 		p_matrix_global);
 
 
+	//for (const auto& pl : p_matrix_global)
+	//{
+	//	matrixToString(pl);
+	//}
+
+
 	// Step 2: Set the local co-ordinate system for the triangle
     Eigen::Vector3d ref_vector; // Reference vector in element local coordinate system
 	std::array<Eigen::Matrix3d, 4> p_matrix_local;
@@ -74,13 +80,32 @@ void quadMITC4_element::set_quadMITC4_element_stiffness_matrix(const double& x1_
 		ref_vector);
 
 
+	//for (const auto& pl : p_matrix_global)
+	//{
+	//	matrixToString(pl);
+	//}
+
+	//vectorToString(ref_vector);
+
+
 	// Step 3: Compute B matrix for extra shape function (5 x 4 matrix) column index 25, 26, 27, 28
+	Eigen::MatrixXd StrainDisplacementMatrixExtraShapeFunction = Eigen::MatrixXd::Zero(5, 4);
+
+	computeBMatrixExtraShapeFunction(thickness, p_matrix_local,
+		ref_vector, StrainDisplacementMatrixExtraShapeFunction);
 
 
+	// matrixToString(StrainDisplacementMatrixExtraShapeFunction);
 
 
+	// Step 4: Compute B matrix for main shape function
+	Eigen::MatrixXd StrainDisplacementMatrixMainShapeFunction = Eigen::MatrixXd::Zero(5, 28);
+
+	computeBMatrixMainShapeFunction(thickness, p_matrix_local,
+		ref_vector, StrainDisplacementMatrixMainShapeFunction);
 
 
+	matrixToString(StrainDisplacementMatrixExtraShapeFunction);
 
 
 }
@@ -369,7 +394,9 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness)
 
 
 
-void quadMITC4_element::computeBMatrixMainShapeFunction(const double& thickness, Eigen::MatrixXd& StrainDisplacementMatrixMainShapeFunction)
+void quadMITC4_element::computeBMatrixMainShapeFunction(const double& thickness,
+	const  std::array<Eigen::Matrix3d, 4>& p_matrix_local, const Eigen::Vector3d& ref_vector,
+	Eigen::MatrixXd& StrainDisplacementMatrixMainShapeFunction)
 {
 	// track the number of integration point sum
 	
@@ -382,7 +409,8 @@ void quadMITC4_element::computeBMatrixMainShapeFunction(const double& thickness,
 	Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // Shape function First derivative
 	Eigen::Matrix3d jacobianMatrix = Eigen::Matrix3d::Zero(); // Jacobian Matrix
 
-	computeShapeFunctonNJacobianMatrix(0.0, 0.0, 0.0, thickness,
+	computeShapeFunctonNJacobianMatrix(0.0, 0.0, 0.0, 
+		thickness, p_matrix_local,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
 
@@ -390,7 +418,7 @@ void quadMITC4_element::computeBMatrixMainShapeFunction(const double& thickness,
 
 
 	// Compute the Transverse shear strain matrix
-	Eigen::MatrixXd TransverseShearStrainMatrix = computeTransverseShearStrainMatrix(thickness);
+	Eigen::MatrixXd TransverseShearStrainMatrix = computeTransverseShearStrainMatrix(thickness, p_matrix_local);
 
 	// Store the strain displacement matrix at main shape function    
 	StrainDisplacementMatrixMainShapeFunction = Eigen::MatrixXd::Zero(5, 28);
@@ -421,13 +449,13 @@ void quadMITC4_element::computeBMatrixMainShapeFunction(const double& thickness,
 
 
 				computeMainStrainDisplacementMatrix(integration_ptx, integration_pty, integration_ptz,
-					thickness, TransverseShearStrainMatrix, initial_transformation_matrix,
+					thickness,p_matrix_local, ref_vector, TransverseShearStrainMatrix, initial_transformation_matrix,
 					StrainDisplacementMatrixAtIntegrationPt, transformation_matrix_phi);
 
 
 
 				// Transform B to BL: BL = PHI * B_column
-				Eigen::MatrixXd bl_matrix = Eigen::MatrixXd::Zero(5, 4);
+				Eigen::MatrixXd bl_matrix = Eigen::MatrixXd::Zero(5, 28);
 
 				bl_matrix = transformation_matrix_phi * StrainDisplacementMatrixAtIntegrationPt; 
 
@@ -443,7 +471,8 @@ void quadMITC4_element::computeBMatrixMainShapeFunction(const double& thickness,
 
 
 
-Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const double& thickness)
+Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const double& thickness, 
+	const std::array<Eigen::Matrix3d, 4>& p_matrix_local)
 {
 
 	// Formulate the transverse shear strain matrix at edge centers
@@ -457,7 +486,8 @@ Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const doub
 
 	//________________________________________________________________________________________________
 		// For point A (-1.0, 0.0, 0.0)
-	computeShapeFunctonNJacobianMatrix(-1.0, 0.0, 0.0, thickness,
+	computeShapeFunctonNJacobianMatrix(-1.0, 0.0, 0.0, 
+		thickness, p_matrix_local,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
 	// First Row (Column 0 to 2)
@@ -497,7 +527,8 @@ Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const doub
 
 	//________________________________________________________________________________________________
 	// For point B (1.0, 0.0, 0.0)
-	computeShapeFunctonNJacobianMatrix(-1.0, 0.0, 0.0, thickness,
+	computeShapeFunctonNJacobianMatrix(-1.0, 0.0, 0.0, 
+		thickness, p_matrix_local,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
 	// Second Row (Column 6 to 8)
@@ -537,7 +568,8 @@ Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const doub
 
 	//________________________________________________________________________________________________
 	// For point C (0.0, -1.0, 0.0)
-	computeShapeFunctonNJacobianMatrix(0.0, -1.0, 0.0, thickness,
+	computeShapeFunctonNJacobianMatrix(0.0, -1.0, 0.0, 
+		thickness, p_matrix_local,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
 
@@ -578,7 +610,8 @@ Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const doub
 
 	//________________________________________________________________________________________________
 	// For point D (0.0, 1.0, 0.0)
-	computeShapeFunctonNJacobianMatrix(0.0, 1.0, 0.0, thickness,
+	computeShapeFunctonNJacobianMatrix(0.0, 1.0, 0.0, 
+		thickness, p_matrix_local,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
 	// Fourth Row (Column 12 to 14)
@@ -623,7 +656,8 @@ Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const doub
 
 
 void quadMITC4_element::computeMainStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
-	const double& thickness, const Eigen::MatrixXd& TransverseShearStrainMatrix, const Eigen::Matrix3d& initial_transformation_matrix,
+	const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, const Eigen::Vector3d& ref_vector,
+	const Eigen::MatrixXd& TransverseShearStrainMatrix, const Eigen::Matrix3d& initial_transformation_matrix,
 	Eigen::MatrixXd& StrainDisplacementMatrixAtIntegrationPt, Eigen::MatrixXd& transformation_matrix_phi)
 {
 	// Computes the strain displacement matrix (B) and
@@ -637,7 +671,8 @@ void quadMITC4_element::computeMainStrainDisplacementMatrix(const double& integr
 
 
 	// Compute the shape function, derivative shape function and jacobian matrix at integration points
-	computeShapeFunctonNJacobianMatrix(integration_ptx, integration_pty, integration_ptz, thickness,
+	computeShapeFunctonNJacobianMatrix(integration_ptx, integration_pty, integration_ptz, 
+		thickness, p_matrix_local,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
 
@@ -645,7 +680,7 @@ void quadMITC4_element::computeMainStrainDisplacementMatrix(const double& integr
 	Eigen::Matrix3d invjacobianMatrix = jacobianMatrix.inverse();
 
 	// Calculate the transformation matrix at the integration point
-	Eigen::Matrix3d transformation_matrix = computeTransformationMatrixFromReference(jacobianMatrix, this->ref_vector);
+	Eigen::Matrix3d transformation_matrix = computeTransformationMatrixFromReference(jacobianMatrix, ref_vector);
 
 
 	// Calculate the phi transformation matrix
@@ -738,28 +773,27 @@ void quadMITC4_element::computeMainStrainDisplacementMatrix(const double& integr
 
 
 
-void quadMITC4_element::computeBMatrixExtraShapeFunction(const double& thickness, Eigen::MatrixXd& StrainDisplacementMatrixExtraShapeFunction)
+void quadMITC4_element::computeBMatrixExtraShapeFunction(const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, 
+	const Eigen::Vector3d& ref_vector,
+	Eigen::MatrixXd& StrainDisplacementMatrixExtraShapeFunction)
 {
 	// Computes the B Matrix for extra shape function (Bulge shape function of quad element)
 
 	double integration_ptx = 0.0;
 	double integration_pty = 0.0;
 	double integration_ptz = 0.0;
-
 	
-
 
 	// At zeroth point
 	Eigen::Vector4d shapeFunction = Eigen::Vector4d::Zero(); // Shape function
 	Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // Shape function First derivative
 	Eigen::Matrix3d jacobianMatrix = Eigen::Matrix3d::Zero(); // Jacobian Matrix
 
-	computeShapeFunctonNJacobianMatrix(0.0, 0.0, 0.0, thickness,
+	computeShapeFunctonNJacobianMatrix(0.0, 0.0, 0.0, thickness, p_matrix_local,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
 
 	Eigen::Matrix3d initial_transformation_matrix = computeInitialTransformationMatrix(jacobianMatrix);
-
 
 	// Store the strain displacement matrix at extra shape function  bic_matrix = Eigen::MatrixXd::Zero(5, 4);
 	StrainDisplacementMatrixExtraShapeFunction = Eigen::MatrixXd::Zero(5, 4);
@@ -790,18 +824,20 @@ void quadMITC4_element::computeBMatrixExtraShapeFunction(const double& thickness
 
 
 				computeExtraStrainDisplacementMatrix(integration_ptx, integration_pty, integration_ptz,
-					thickness, initial_transformation_matrix,
+					thickness, p_matrix_local, ref_vector, initial_transformation_matrix,
 					StrainDisplacementMatrixAtIntegrationPt, transformation_matrix_phi);
 
 
 				// Transform B to BL: BL = PHI * B_column
 				Eigen::MatrixXd bl_matrix = Eigen::MatrixXd::Zero(5, 4);
 
-				bl_matrix = transformation_matrix_phi * StrainDisplacementMatrixAtIntegrationPt.block(0, 24, 6, 4); // Extract columns 24–27, then multiply
+				bl_matrix = transformation_matrix_phi * StrainDisplacementMatrixAtIntegrationPt.block<6, 4>(0, 24);
 
 
 				// Accumulate to the Strain Displacement Matrix of Extra Shape Function
-				StrainDisplacementMatrixExtraShapeFunction.noalias() = StrainDisplacementMatrixExtraShapeFunction - bl_matrix;
+				StrainDisplacementMatrixExtraShapeFunction.noalias() = 
+					StrainDisplacementMatrixExtraShapeFunction - bl_matrix;
+
 			}
 
 		}
@@ -814,7 +850,8 @@ void quadMITC4_element::computeBMatrixExtraShapeFunction(const double& thickness
 
 
 void quadMITC4_element::computeExtraStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
-	const double& thickness, const Eigen::Matrix3d& initial_transformation_matrix,
+	const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, const Eigen::Vector3d& ref_vector,
+	const Eigen::Matrix3d& initial_transformation_matrix,
 	Eigen::MatrixXd& StrainDisplacementMatrixAtIntegrationPt, Eigen::MatrixXd& transformation_matrix_phi)
 {
 	// Computes the strain displacement matrix (B) and
@@ -829,7 +866,8 @@ void quadMITC4_element::computeExtraStrainDisplacementMatrix(const double& integ
 
 
 	// Compute the shape function, derivative shape function and jacobian matrix at integration points
-	computeShapeFunctonNJacobianMatrix(integration_ptx, integration_pty, integration_ptz, thickness,
+	computeShapeFunctonNJacobianMatrix(integration_ptx, integration_pty, integration_ptz, 
+		thickness, p_matrix_local,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
 
@@ -837,33 +875,34 @@ void quadMITC4_element::computeExtraStrainDisplacementMatrix(const double& integ
 	Eigen::Matrix3d invjacobianMatrix = jacobianMatrix.inverse();
 
 	// Calculate the transformation matrix at the integration point
-	Eigen::Matrix3d transformation_matrix = computeTransformationMatrixFromReference(jacobianMatrix, this->ref_vector);
+	Eigen::Matrix3d transformation_matrix = computeTransformationMatrixFromReference(jacobianMatrix, ref_vector);
 
 
 	// Calculate the phi transformation matrix
 	transformation_matrix_phi = computePhiMatrix(invjacobianMatrix, transformation_matrix);
 
 	// Extra shape functions (always calculated)
-	double GT11 = jacobianMatrix.row(0).dot(initial_transformation_matrix.col(0));
-	double GT12 = jacobianMatrix.row(0).dot(initial_transformation_matrix.col(1));
-	double GT21 = jacobianMatrix.row(1).dot(initial_transformation_matrix.col(0));
-	double GT22 = jacobianMatrix.row(1).dot(initial_transformation_matrix.col(1));
+	double gt11 = jacobianMatrix.row(0).dot(initial_transformation_matrix.col(0));
+	double gt12 = jacobianMatrix.row(0).dot(initial_transformation_matrix.col(1));
+	double gt21 = jacobianMatrix.row(1).dot(initial_transformation_matrix.col(0));
+	double gt22 = jacobianMatrix.row(1).dot(initial_transformation_matrix.col(1));
 
-	StrainDisplacementMatrixAtIntegrationPt(0, 24) = -2.0 * integration_ptx * GT11;
-	StrainDisplacementMatrixAtIntegrationPt(0, 25) = -2.0 * integration_ptx * GT12;
-	StrainDisplacementMatrixAtIntegrationPt(1, 26) = -2.0 * integration_pty * GT21;
-	StrainDisplacementMatrixAtIntegrationPt(1, 27) = -2.0 * integration_pty * GT22;
-	StrainDisplacementMatrixAtIntegrationPt(3, 24) = -integration_ptx * GT21;
-	StrainDisplacementMatrixAtIntegrationPt(3, 25) = -integration_ptx * GT22;
-	StrainDisplacementMatrixAtIntegrationPt(3, 26) = -integration_pty * GT11;
-	StrainDisplacementMatrixAtIntegrationPt(3, 27) = -integration_pty * GT12;
+	StrainDisplacementMatrixAtIntegrationPt(0, 24) = -2.0 * integration_ptx * gt11;
+	StrainDisplacementMatrixAtIntegrationPt(0, 25) = -2.0 * integration_ptx * gt12;
+	StrainDisplacementMatrixAtIntegrationPt(1, 26) = -2.0 * integration_pty * gt21;
+	StrainDisplacementMatrixAtIntegrationPt(1, 27) = -2.0 * integration_pty * gt22;
+	StrainDisplacementMatrixAtIntegrationPt(3, 24) = -integration_ptx * gt21;
+	StrainDisplacementMatrixAtIntegrationPt(3, 25) = -integration_ptx * gt22;
+	StrainDisplacementMatrixAtIntegrationPt(3, 26) = -integration_pty * gt11;
+	StrainDisplacementMatrixAtIntegrationPt(3, 27) = -integration_pty * gt12;
 
 }
 
 
 
 
-void quadMITC4_element::computeShapeFunctonNJacobianMatrix(const double& xp, const double& yp, const double& zp, const double& thickness,
+void quadMITC4_element::computeShapeFunctonNJacobianMatrix(const double& xp, const double& yp, const double& zp, 
+	const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
 	Eigen::Vector4d& shapeFunction, Eigen::MatrixXd& shapefunction_firstDerivativeMatrix, Eigen::Matrix3d& jacobianMatrix)
 {
 	// Step 1: Shape functions and their derivatives

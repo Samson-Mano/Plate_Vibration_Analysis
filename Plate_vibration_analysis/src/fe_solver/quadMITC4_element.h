@@ -86,27 +86,34 @@ private:
 
 
 
-	void computeBMatrixMainShapeFunction(const double& thickness, Eigen::MatrixXd& StrainDisplacementMatrixMainShapeFunction);
+	void computeBMatrixMainShapeFunction(const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, 
+		const Eigen::Vector3d& ref_vector,
+		Eigen::MatrixXd& StrainDisplacementMatrixMainShapeFunction);
 
 
 
-	Eigen::MatrixXd computeTransverseShearStrainMatrix(const double& thickness);
+	Eigen::MatrixXd computeTransverseShearStrainMatrix(const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local);
 
 
 	void computeMainStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
-		const double& thickness, const Eigen::MatrixXd& TransverseShearStrainMatrix, const Eigen::Matrix3d& initial_transformation_matrix,
+		const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, const Eigen::Vector3d& ref_vector,
+		const Eigen::MatrixXd& TransverseShearStrainMatrix, const Eigen::Matrix3d& initial_transformation_matrix,
 		Eigen::MatrixXd& StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi);
 
 
-	void computeBMatrixExtraShapeFunction(const double& thickness, Eigen::MatrixXd& bic_matrix);
+	void computeBMatrixExtraShapeFunction(const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
+		const Eigen::Vector3d& ref_vector,
+		Eigen::MatrixXd& StrainDisplacementMatrixExtraShapeFunction);
 
 
 	void computeExtraStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
-		const double& thickness, const Eigen::Matrix3d& initial_transformation_matrix,
+		const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, const Eigen::Vector3d& ref_vector,
+		const Eigen::Matrix3d& initial_transformation_matrix,
 		Eigen::MatrixXd& StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi);
 
 
-	void computeShapeFunctonNJacobianMatrix(const double& xp, const double& yp, const double& zp, const double& thickness,
+	void computeShapeFunctonNJacobianMatrix(const double& xp, const double& yp, const double& zp, 
+		const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
 		Eigen::Vector4d& shapeFunction, Eigen::MatrixXd& shapefunction_firstDerivativeMatrix, Eigen::Matrix3d& jacobianMatrix);
 
 
