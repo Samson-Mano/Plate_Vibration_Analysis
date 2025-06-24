@@ -385,8 +385,143 @@ void quadMITC4_element::computeLocalCoordinateSystem(const double& x1_g_coord, c
 
 
 
-void quadMITC4_element::computeStiffnessMatrix(const double& thickness)
+void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const double& materialdensity,
+	const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
+	const Eigen::Vector3d& ref_vector,
+	const Eigen::MatrixXd& StrainDisplacementMatrixExtraShapeFunction)
 {
+
+	double integration_ptx = 0.0;
+	double integration_pty = 0.0;
+	double integration_ptz = 0.0;
+
+	// At zeroth point
+	Eigen::Vector4d shapeFunction = Eigen::Vector4d::Zero(); // Shape function
+	Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // Shape function First derivative
+	Eigen::Matrix3d jacobianMatrix = Eigen::Matrix3d::Zero(); // Jacobian Matrix
+
+	computeShapeFunctonNJacobianMatrix(0.0, 0.0, 0.0,
+		thickness, p_matrix_local,
+		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
+
+
+	Eigen::Matrix3d initial_transformation_matrix = computeInitialTransformationMatrix(jacobianMatrix);
+
+
+	// Compute the Transverse shear strain matrix
+	Eigen::MatrixXd TransverseShearStrainMatrix = computeTransverseShearStrainMatrix(thickness, p_matrix_local);
+
+	// Store the strain displacement matrix of the main shape function    
+	// Eigen::MatrixXd StrainDisplacementMatrixMainShapeFunction = Eigen::MatrixXd::Zero(5, 28);
+
+	// Store the main stiffness matrix
+	Eigen::MatrixXd StiffnessMatrix11 = Eigen::MatrixXd::Zero(24, 24);
+
+	// Store the extra shape function's stiffness matrix
+	Eigen::MatrixXd StiffnessMatrix12 = Eigen::MatrixXd::Zero(24, 4);
+	Eigen::MatrixXd StiffnessMatrix22 = Eigen::MatrixXd::Zero(4, 4);
+
+	// Store the consistent mass matrix
+	Eigen::MatrixXd consistentMassMatrix = Eigen::MatrixXd::Zero(24, 4);
+
+
+	for (int i = 0; i < 2; i++)
+	{
+		// integration point z
+		integration_ptz = -1.0 * this->integration_points(i, 0);
+
+		for (int j = 0; j < 2; j++)
+		{
+			// integration point y
+			integration_pty = this->integration_points(j, 0);
+
+			for (int k = 0; k < 2; k++)
+			{
+				// integration point x
+				integration_ptx = (integration_pty < 0.0) ? +this->integration_points(k, 0)
+					: -1.0 * this->integration_points(k, 0);
+
+
+				//_____________________________________________________________________________________________________________
+				// Step 1: Compute Strain Displacement Matrix(B) for numerical integration pont
+				// having local coordinates integration_ptx, integration_pty and integration_ptz
+
+				Eigen::MatrixXd StrainDisplacementMatrixAtIntegrationPt = Eigen::MatrixXd::Zero(6, 28);
+				Eigen::MatrixXd transformation_matrix_phi = Eigen::MatrixXd::Zero(5, 6);
+				Eigen::Vector4d shapeFunction = Eigen::Vector4d::Zero(); // Shape function
+				double jacobian_determinant = 0.0;
+
+				computeMainStrainDisplacementMatrix(integration_ptx, integration_pty, integration_ptz,
+					thickness, p_matrix_local, ref_vector, TransverseShearStrainMatrix, initial_transformation_matrix,
+					jacobian_determinant, shapeFunction,
+					StrainDisplacementMatrixAtIntegrationPt, transformation_matrix_phi);
+
+
+				// Transform B to BL: BL = PHI * B
+				Eigen::MatrixXd StrainDisplacementMatrixTransformed = Eigen::MatrixXd::Zero(5, 28);
+
+				StrainDisplacementMatrixTransformed = transformation_matrix_phi * StrainDisplacementMatrixAtIntegrationPt;
+
+				// // Accumulate to the Strain Displacement Matrix of Main Shape Function
+				// StrainDisplacementMatrixMainShapeFunction.noalias() = StrainDisplacementMatrixMainShapeFunction + bl_matrix;
+
+				//_____________________________________________________________________________________________________________
+				// Step 2: Modify the strain displacement matrix to add the extra shape function stiffness
+				// Add extra shape function B matrix (5x4) to the last 4 columns (cols 24 to 27) of B matrix transformed (5x28)
+				StrainDisplacementMatrixTransformed.block<5, 4>(0, 24) += StrainDisplacementMatrixExtraShapeFunction;
+
+
+				//_____________________________________________________________________________________________________________
+				// Step 3: Compute the Stress matrix (S) for integration point
+				Eigen::MatrixXd StressMatrixAtIntegrationPt = Eigen::MatrixXd::Zero(5, 28);
+
+				StressMatrixAtIntegrationPt = this->elasticity_matrix * StrainDisplacementMatrixTransformed;
+
+
+				//_____________________________________________________________________________________________________________
+				// Step 4: Compute the Main and Extra Stiffness matrices
+				// Compute the main stiffness matrix
+				StiffnessMatrix11 += (StrainDisplacementMatrixTransformed.block<5, 24>(0, 0).transpose() *
+					StressMatrixAtIntegrationPt.block<5, 24>(0, 0)) * jacobian_determinant;
+
+
+				// Compute the stiffnesss matrix for the extra shape function
+				StiffnessMatrix12 += (StrainDisplacementMatrixTransformed.block<5, 24>(0, 0).transpose() *
+					StressMatrixAtIntegrationPt.block<5, 4>(0, 24)) * jacobian_determinant;
+
+				StiffnessMatrix22 += (StrainDisplacementMatrixTransformed.block<5, 4>(0, 24).transpose() *
+					StressMatrixAtIntegrationPt.block<5, 4>(0, 24)) * jacobian_determinant;
+
+
+
+				//_____________________________________________________________________________________________________________
+				// Step 5: Compute the Consistent mass matrix
+				// Compute the incremental mass
+				double element_mass = jacobian_determinant * materialdensity;
+				
+				consistentMassMatrix = consistentMassMatrix +
+					computeConsistentMassMatrixAtIntegrationPoint(shapeFunction, p_matrix_local,
+						thickness, integration_ptz, element_mass);
+
+
+			}
+		}
+	}
+
+
+	// Static condensation of stiffness matrices to form the final element stiffness matrix
+
+	// Invert the 4×4 submatrix corresponding to the extra shape functions
+	Eigen::MatrixXd StiffnessMatrix22Inv = StiffnessMatrix22.inverse();
+
+	// Multiply the inverse with the transpose of the coupling matrix (result: 4×24)
+	Eigen::MatrixXd StiffnessMatrix22Inv12 = StiffnessMatrix22Inv * StiffnessMatrix12.transpose();  // (4×24)
+
+	// Initialize the final 24×24 condensed stiffness matrix
+	this->element_StiffnessMatrix = Eigen::MatrixXd::Zero(24, 24);
+	
+	// Perform the condensation: K11 - K12 * inv(K22) * K12^T
+	this->element_StiffnessMatrix = StiffnessMatrix11 - (StiffnessMatrix12 * StiffnessMatrix22Inv12);
 
 
 
@@ -398,8 +533,7 @@ void quadMITC4_element::computeBMatrixMainShapeFunction(const double& thickness,
 	const  std::array<Eigen::Matrix3d, 4>& p_matrix_local, const Eigen::Vector3d& ref_vector,
 	Eigen::MatrixXd& StrainDisplacementMatrixMainShapeFunction)
 {
-	// track the number of integration point sum
-	
+		
 	double integration_ptx = 0.0;
 	double integration_pty = 0.0;
 	double integration_ptz = 0.0;
@@ -446,10 +580,12 @@ void quadMITC4_element::computeBMatrixMainShapeFunction(const double& thickness,
 
 				Eigen::MatrixXd StrainDisplacementMatrixAtIntegrationPt = Eigen::MatrixXd::Zero(6, 28);
 				Eigen::MatrixXd transformation_matrix_phi = Eigen::MatrixXd::Zero(5, 6);
-
+				Eigen::Vector4d shapeFunction = Eigen::Vector4d::Zero(); // Shape function
+				double jacobian_determinant = 0.0;
 
 				computeMainStrainDisplacementMatrix(integration_ptx, integration_pty, integration_ptz,
 					thickness,p_matrix_local, ref_vector, TransverseShearStrainMatrix, initial_transformation_matrix,
+					jacobian_determinant, shapeFunction,
 					StrainDisplacementMatrixAtIntegrationPt, transformation_matrix_phi);
 
 
@@ -658,12 +794,12 @@ Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const doub
 void quadMITC4_element::computeMainStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
 	const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, const Eigen::Vector3d& ref_vector,
 	const Eigen::MatrixXd& TransverseShearStrainMatrix, const Eigen::Matrix3d& initial_transformation_matrix,
+	double& jacobian_determinant, Eigen::Vector4d& shapeFunction,
 	Eigen::MatrixXd& StrainDisplacementMatrixAtIntegrationPt, Eigen::MatrixXd& transformation_matrix_phi)
 {
 	// Computes the strain displacement matrix (B) and
 	// Transformation matric phi
 
-	Eigen::Vector4d shapeFunction = Eigen::Vector4d::Zero(); // Shape function
 	Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // Shape function First derivative
 	Eigen::Matrix3d jacobianMatrix = Eigen::Matrix3d::Zero(); // Jacobian Matrix
 	double gv22 = 0.0;
@@ -677,6 +813,7 @@ void quadMITC4_element::computeMainStrainDisplacementMatrix(const double& integr
 
 
 	// Calculate the jacobian determinant and  inverse of jacobian
+	jacobian_determinant = jacobianMatrix.determinant();
 	Eigen::Matrix3d invjacobianMatrix = jacobianMatrix.inverse();
 
 	// Calculate the transformation matrix at the integration point
@@ -1116,6 +1253,55 @@ Eigen::MatrixXd quadMITC4_element::computePhiMatrix(const Eigen::Matrix3d& inver
 
 	return phi_matrix;
 
+
+}
+
+
+Eigen::MatrixXd quadMITC4_element::computeConsistentMassMatrixAtIntegrationPoint(const Eigen::Vector4d& shapeFunction,
+	const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
+	const double& thickness,
+	const double& integration_ptz,
+	const double& element_mass)
+{
+
+	// Mass B Matrix
+	Eigen::MatrixXd massBMatrix = Eigen::MatrixXd::Zero(3, 24);
+
+	int index = 0;
+	for (int j = 0; j < 4; j++) 
+	{
+		double f1 = shapeFunction(j);
+		double f2 = f1 * integration_ptz * thickness * 0.5;
+
+		// Identity diagonal
+		massBMatrix.coeffRef(0, index + 0) = f1;
+		massBMatrix.coeffRef(1, index + 1) = f1;
+		massBMatrix.coeffRef(2, index + 2) = f1;
+
+		// Rotational terms using corrected form (negative P(:,2) and positive P(:,1))
+		massBMatrix.coeffRef(0, index + 3) = -f2 * p_matrix_local[j](0, 1);
+		massBMatrix.coeffRef(1, index + 3) = -f2 * p_matrix_local[j](1, 1);
+		massBMatrix.coeffRef(2, index + 3) = -f2 * p_matrix_local[j](2, 1);
+
+		massBMatrix.coeffRef(0, index + 4) = f2 * p_matrix_local[j](0, 0);
+		massBMatrix.coeffRef(1, index + 4) = f2 * p_matrix_local[j](1, 0);
+		massBMatrix.coeffRef(2, index + 4) = f2 * p_matrix_local[j](2, 0);
+
+		// Zero column (I+6)
+		massBMatrix.coeffRef(0, index + 5) = 0.0;
+		massBMatrix.coeffRef(1, index + 5) = 0.0;
+		massBMatrix.coeffRef(2, index + 5) = 0.0;
+
+		index += 6;
+	}
+
+
+	// Assemble consistent mass matrix: EM = mB^T * mB * element_mass
+	Eigen::MatrixXd consistentMassMatrix = Eigen::MatrixXd::Zero(24, 24);
+	consistentMassMatrix = (massBMatrix.transpose() * massBMatrix) * element_mass;
+
+
+	return consistentMassMatrix;
 
 }
 

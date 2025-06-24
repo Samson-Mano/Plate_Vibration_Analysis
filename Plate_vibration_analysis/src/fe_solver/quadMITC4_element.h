@@ -82,7 +82,10 @@ private:
 
 
 
-	void computeStiffnessMatrix(const double& thickness);
+	void computeStiffnessMatrix(const double& thickness, const double& materialdensity,
+		const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
+		const Eigen::Vector3d& ref_vector, 
+		const Eigen::MatrixXd& StrainDisplacementMatrixExtraShapeFunction);
 
 
 
@@ -98,6 +101,7 @@ private:
 	void computeMainStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
 		const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, const Eigen::Vector3d& ref_vector,
 		const Eigen::MatrixXd& TransverseShearStrainMatrix, const Eigen::Matrix3d& initial_transformation_matrix,
+		double& jacobian_determinant, Eigen::Vector4d& shapeFunction,
 		Eigen::MatrixXd& StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi);
 
 
@@ -126,6 +130,16 @@ private:
 
 	Eigen::MatrixXd computePhiMatrix(const Eigen::Matrix3d& inverse_jacobian,
 		const Eigen::Matrix3d& transformation_matrix);
+
+
+
+	Eigen::MatrixXd computeConsistentMassMatrixAtIntegrationPoint(
+		const Eigen::Vector4d& shapeFunction,
+		const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
+		const double& thickness,
+		const double& integration_ptz,
+		const double& element_mass);
+
 
 
 	void compute_B_matrix(
