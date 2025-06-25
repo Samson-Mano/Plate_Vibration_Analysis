@@ -99,13 +99,16 @@ void quadMITC4_element::set_quadMITC4_element_stiffness_matrix(const double& x1_
 
 
 	// Step 4: Compute B matrix for main shape function
-	Eigen::MatrixXd StrainDisplacementMatrixMainShapeFunction = Eigen::MatrixXd::Zero(5, 28);
+	computeStiffnessMatrix(thickness, materialdensity,
+		p_matrix_local, ref_vector, StrainDisplacementMatrixExtraShapeFunction);
 
-	computeBMatrixMainShapeFunction(thickness, p_matrix_local,
-		ref_vector, StrainDisplacementMatrixMainShapeFunction);
+	//Eigen::MatrixXd StrainDisplacementMatrixMainShapeFunction = Eigen::MatrixXd::Zero(5, 28);
+
+	//computeBMatrixMainShapeFunction(thickness, p_matrix_local,
+	//	ref_vector, StrainDisplacementMatrixMainShapeFunction);
 
 
-	matrixToString(StrainDisplacementMatrixExtraShapeFunction);
+	matrixToString(this->element_StiffnessMatrix);
 
 
 }
@@ -422,7 +425,7 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 	Eigen::MatrixXd StiffnessMatrix22 = Eigen::MatrixXd::Zero(4, 4);
 
 	// Store the consistent mass matrix
-	Eigen::MatrixXd consistentMassMatrix = Eigen::MatrixXd::Zero(24, 4);
+	Eigen::MatrixXd consistentMassMatrix = Eigen::MatrixXd::Zero(24, 24);
 
 
 	for (int i = 0; i < 2; i++)
@@ -522,6 +525,8 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 	
 	// Perform the condensation: K11 - K12 * inv(K22) * K12^T
 	this->element_StiffnessMatrix = StiffnessMatrix11 - (StiffnessMatrix12 * StiffnessMatrix22Inv12);
+
+	int stop_1 = 0;
 
 
 
