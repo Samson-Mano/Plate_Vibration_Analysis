@@ -89,13 +89,15 @@ private:
 
 
 
-	void computeBMatrixMainShapeFunction(const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, 
-		const Eigen::Vector3d& ref_vector,
-		Eigen::MatrixXd& StrainDisplacementMatrixMainShapeFunction);
-
-
 
 	Eigen::MatrixXd computeTransverseShearStrainMatrix(const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local);
+
+
+	void computeStrainDisplacementMatrixDrillingDOF(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
+		const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, const Eigen::Vector3d& ref_vector,
+		const Eigen::Matrix3d& jacobianMatrix, const Eigen::Matrix3d& invjacobianMatrix, const Eigen::Vector4d& shapeFunction,
+		const Eigen::MatrixXd& shapefunction_firstDerivativeMatrix,
+		Eigen::VectorXd& StrainDisplacementDrillingDOFMatrix);
 
 
 	void computeMainStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
@@ -105,9 +107,11 @@ private:
 		Eigen::MatrixXd& StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi);
 
 
+
 	void computeBMatrixExtraShapeFunction(const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
 		const Eigen::Vector3d& ref_vector,
 		Eigen::MatrixXd& StrainDisplacementMatrixExtraShapeFunction);
+
 
 
 	void computeExtraStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
@@ -140,20 +144,6 @@ private:
 		const double& integration_ptz,
 		const double& element_mass);
 
-
-
-	void compute_B_matrix(
-		int ID,
-		const Eigen::Vector4d& shape_function_values,                // N(1..4)
-		const Eigen::MatrixXd& shapefunction_firstDerivativeMatrix,  // 2x4
-		const Eigen::Matrix3d& jacobianMatrix,                       // 3x3
-		const std::array<Eigen::Matrix3d, 4>& p_matrix_local,        // P(:,:,i) 4 (3x3)
-		const Eigen::MatrixXd& jacobianMatrixbb2,                    // 4x24 (bb2)
-		const Eigen::Matrix3d& transformation_matrix,                // TIC
-		const double& xp, const double& yp, const double& zp, const double& zp0,
-		const double& thickness,
-		Eigen::MatrixXd& B_matrix                                    // 6x28 (output)
-	);
 
 
 
