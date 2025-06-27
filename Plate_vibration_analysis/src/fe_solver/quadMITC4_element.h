@@ -93,17 +93,21 @@ private:
 	Eigen::MatrixXd computeTransverseShearStrainMatrix(const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local);
 
 
+
 	void computeStrainDisplacementMatrixDrillingDOF(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
-		const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, const Eigen::Vector3d& ref_vector,
-		const Eigen::Matrix3d& jacobianMatrix, const Eigen::Matrix3d& invjacobianMatrix, const Eigen::Vector4d& shapeFunction,
-		const Eigen::MatrixXd& shapefunction_firstDerivativeMatrix,
+		const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, 
+		const Eigen::Vector4d& shapeFunction, const Eigen::MatrixXd& shapefunction_firstDerivativeMatrix,
+		const Eigen::Matrix3d& invjacobianMatrix, const Eigen::Matrix3d& transformation_matrix,
 		Eigen::VectorXd& StrainDisplacementDrillingDOFMatrix);
 
 
+
 	void computeMainStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
-		const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, const Eigen::Vector3d& ref_vector,
+		const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
 		const Eigen::MatrixXd& TransverseShearStrainMatrix, const Eigen::Matrix3d& initial_transformation_matrix,
-		double& jacobian_determinant, Eigen::Vector4d& shapeFunction,
+		const Eigen::Vector4d& shapeFunction, const Eigen::MatrixXd& shapefunction_firstDerivativeMatrix,
+		const Eigen::Matrix3d& jacobianMatrix, const Eigen::Matrix3d& invjacobianMatrix,
+		const Eigen::Matrix3d& transformation_matrix,
 		Eigen::MatrixXd& StrainDisplacementMatrix, Eigen::MatrixXd& transformation_matrix_phi);
 
 
@@ -146,6 +150,11 @@ private:
 
 
 
+	void transform_matrix_to_global(Eigen::MatrixXd& stiffness_matrix,
+		const std::array<Eigen::Matrix3d, 4>& p_matrix_local);
+
+	void transform_localrotation_to_globalrotation(Eigen::MatrixXd& K_matrix,
+		const std::array<Eigen::Matrix3d, 4>& p_matrix);
 
 	void matrixToString(const Eigen::MatrixXd& mat);
 
