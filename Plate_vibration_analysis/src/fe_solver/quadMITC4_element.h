@@ -78,12 +78,15 @@ private:
 		const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord,
 		const std::array<Eigen::Matrix3d, 4>& p_matrix_global,
 		std::array<Eigen::Matrix3d, 4>& p_matrix_local,
+		Eigen::Matrix3d& local_coordinate_matrix,
 		Eigen::Vector3d& ref_vector);
+
 
 
 
 	void computeStiffnessMatrix(const double& thickness, const double& materialdensity,
 		const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
+		const Eigen::Matrix3d& local_coordinate_matrix,
 		const Eigen::Vector3d& ref_vector, 
 		const Eigen::MatrixXd& StrainDisplacementMatrixExtraShapeFunction);
 
@@ -149,12 +152,13 @@ private:
 		const double& element_mass);
 
 
-
-	void transform_matrix_to_global(Eigen::MatrixXd& stiffness_matrix,
-		const std::array<Eigen::Matrix3d, 4>& p_matrix_local);
-
 	void transform_localrotation_to_globalrotation(Eigen::MatrixXd& K_matrix,
 		const std::array<Eigen::Matrix3d, 4>& p_matrix);
+
+
+	void transform_stiffness_to_globalcoordinates(Eigen::MatrixXd& K_matrix,
+		const Eigen::Matrix3d& local_coordinate_matrix);
+
 
 	void matrixToString(const Eigen::MatrixXd& mat);
 

@@ -61,10 +61,10 @@ void quadMITC4_element::set_quadMITC4_element_stiffness_matrix(const double& x1_
 		p_matrix_global);
 
 
-
 	// Step 2: Set the local co-ordinate system for the triangle
-    Eigen::Vector3d ref_vector; // Reference vector in element local coordinate system
 	std::array<Eigen::Matrix3d, 4> p_matrix_local;
+	Eigen::Matrix3d local_coordinate_matrix = Eigen::Matrix3d::Zero(); // 3 x 3 local co-ordinate matrix
+	Eigen::Vector3d ref_vector; // Reference vector in element local coordinate system
 
 	computeLocalCoordinateSystem(x1_g_coord, y1_g_coord, z1_g_coord,
 		x2_g_coord, y2_g_coord, z2_g_coord, 
@@ -72,6 +72,7 @@ void quadMITC4_element::set_quadMITC4_element_stiffness_matrix(const double& x1_
 		x4_g_coord, y4_g_coord, z4_g_coord,
 		p_matrix_global,
 		p_matrix_local,
+		local_coordinate_matrix,
 		ref_vector);
 
 
@@ -86,7 +87,7 @@ void quadMITC4_element::set_quadMITC4_element_stiffness_matrix(const double& x1_
 
 	// Step 4: Compute the stiffness and consistent mass matrix
 	computeStiffnessMatrix(thickness, materialdensity,
-		p_matrix_local, ref_vector, StrainDisplacementMatrixExtraShapeFunction);
+		p_matrix_local, local_coordinate_matrix, ref_vector, StrainDisplacementMatrixExtraShapeFunction);
 
 
 
@@ -262,6 +263,7 @@ void quadMITC4_element::computeLocalCoordinateSystem(const double& x1_g_coord, c
 	const double& x4_g_coord, const double& y4_g_coord, const double& z4_g_coord,
 	const std::array<Eigen::Matrix3d, 4>& p_matrix_global,
 	std::array<Eigen::Matrix3d, 4>& p_matrix_local,
+	Eigen::Matrix3d& local_coordinate_matrix,
 	Eigen::Vector3d& ref_vector)
 {
 
@@ -299,8 +301,6 @@ void quadMITC4_element::computeLocalCoordinateSystem(const double& x1_g_coord, c
 	Eigen::Vector3d ey = B / D;
 
 	// Step 6: Assemble transformation matrix E = [ex ey ez]
-	Eigen::Matrix3d local_coordinate_matrix = Eigen::Matrix3d::Zero(); // 3 x 3 local co-ordinate matrix
-
 	local_coordinate_matrix.col(0) = ex;
 	local_coordinate_matrix.col(1) = ey;
 	local_coordinate_matrix.col(2) = ez;
@@ -369,6 +369,7 @@ void quadMITC4_element::computeLocalCoordinateSystem(const double& x1_g_coord, c
 
 void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const double& materialdensity,
 	const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
+	const Eigen::Matrix3d& local_coordinate_matrix,
 	const Eigen::Vector3d& ref_vector,
 	const Eigen::MatrixXd& StrainDisplacementMatrixExtraShapeFunction)
 {
@@ -542,6 +543,11 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 		}
 	}
 
+	// Add the element consistent matrix
+	this->element_ConsistentMassMatrix = Eigen::MatrixXd::Zero(24, 24);
+	this->element_ConsistentMassMatrix = consistentMassMatrix;
+
+
 	// Static condensation of stiffness matrices to form the final element stiffness matrix
 	//________________________________________________________________________________________________________________
 	// Invert the 4×4 submatrix corresponding to the extra shape functions
@@ -558,15 +564,23 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 	// Perform the condensation: K11 - K12 * inv(K22) * K12^T
 	this->element_StiffnessMatrix = StiffnessMatrix11 - (StiffnessMatrix12 * StiffnessMatrix22Inv12);
 
+	// matrixToString(element_StiffnessMatrix);
 
-
-	// Transform the element matrices to global coordinates
-	// transform_matrix_to_global(this->element_StiffnessMatrix, p_matrix_local);
+	// Transform rotation to element co-ordinate system
 	transform_localrotation_to_globalrotation(this->element_StiffnessMatrix, p_matrix_local);
+	transform_localrotation_to_globalrotation(this->element_ConsistentMassMatrix, p_matrix_local);
+
+	// matrixToString(element_StiffnessMatrix);
+
+	// Transform stiffness to global system
+	transform_stiffness_to_globalcoordinates(this->element_StiffnessMatrix, local_coordinate_matrix);
+	transform_stiffness_to_globalcoordinates(this->element_ConsistentMassMatrix, local_coordinate_matrix);
 
 	matrixToString(element_StiffnessMatrix);
+	matrixToString(element_ConsistentMassMatrix);
 
 	int stop_1 = 0;
+
 
 
 
@@ -1384,97 +1398,12 @@ Eigen::MatrixXd quadMITC4_element::computeConsistentMassMatrixAtIntegrationPoint
 
 
 
-
-void quadMITC4_element::transform_matrix_to_global(Eigen::MatrixXd& stiffness_matrix,
-	const std::array<Eigen::Matrix3d, 4>& p_matrix_local)
-{
-	// Transform to global co-ordinates
-	// E_global = P^T x E_local x P
-
-	// K is 24×24, P has 4 rotation matrices (one per node)
-	// Loop over each node block
-	for (int i = 0; i < 4; i++) 
-	{
-		const int base = i * 6;
-		const Eigen::Matrix3d& p_matrix_i = p_matrix_local[i];
-		const Eigen::Matrix3d& p_matrix_i_Transpose = p_matrix_i.transpose();
-
-
-		// 1) Off-diagonal blocks: translation×rotation (3×3 rows × 3×3 cols)
-		for (int j = 0; j < 3; j++) 
-		{
-			int row = base + j;  // EK row index
-
-			for (int k = i; k < 4; k++) 
-			{
-				int colBase = (k * 6) + 3; // translation rows coupling with rotation columns
-
-				// Extract U/V/W-to-rot block into terc-vector
-				Eigen::Vector3d vec1 = stiffness_matrix.block<1, 3>(row, colBase).transpose();
-
-				// Transform via T matrix
-				Eigen::Vector3d transformed = p_matrix_i * vec1;
-
-				// Place back transformed values
-				stiffness_matrix.block<1, 3>(row, colBase) = transformed.transpose();
-
-				if (i != j)
-				{
-					stiffness_matrix.block<1, 3>((k * 6) + j, (i * 6) + 3) = transformed.transpose();
-				}
-
-			}
-		}
-
-		// 2) Diagonal 6×6 block: full rotation
-		auto diag = stiffness_matrix.block<6, 6>(base, base);
-		Eigen::Matrix<double, 6, 6> R = Eigen::Matrix<double, 6, 6>::Zero();
-
-
-		R.topLeftCorner<3, 3>() = p_matrix_i_Transpose * diag.topLeftCorner<3, 3>() * p_matrix_i;
-		R.bottomRightCorner<3, 3>() = p_matrix_i_Transpose * diag.bottomRightCorner<3, 3>() * p_matrix_i;
-		// Cross terms: translation × rotation
-		R.topRightCorner<3, 3>() = p_matrix_i_Transpose * diag.topRightCorner<3, 3>() * p_matrix_i;
-		R.bottomLeftCorner<3, 3>() = p_matrix_i_Transpose * diag.bottomLeftCorner<3, 3>() * p_matrix_i;
-
-		stiffness_matrix.block<6, 6>(base, base) = R;
-
-
-		// 3) Off-diagonal blocks below diagonal
-		for (int j = i + 1; j < 4; j++) 
-		{
-			int colBlock = j * 6;
-			auto C = stiffness_matrix.block<6, 6>(base, colBlock);
-			const auto& p_matrix_j = p_matrix_local[j];
-
-			// Extract sub-blocks
-			Eigen::Matrix3d C00 = C.topLeftCorner<3, 3>();
-			Eigen::Matrix3d C01 = C.topRightCorner<3, 3>();
-			Eigen::Matrix3d C10 = C.bottomLeftCorner<3, 3>();
-			Eigen::Matrix3d C11 = C.bottomRightCorner<3, 3>();
-
-			// Apply transformations
-			C.topLeftCorner<3, 3>() = p_matrix_i_Transpose * C00 * p_matrix_j;
-			C.topRightCorner<3, 3>() = p_matrix_i_Transpose * C01 * p_matrix_j;
-			C.bottomLeftCorner<3, 3>() = p_matrix_i_Transpose * C10 * p_matrix_j;
-			C.bottomRightCorner<3, 3>() = p_matrix_i_Transpose * C11 * p_matrix_j;
-
-
-			stiffness_matrix.block<6, 6>(base, colBlock) = C;
-			stiffness_matrix.block<6, 6>(colBlock, base) = C.transpose();  // Ensure symmetry
-		}
-	}
-
-
-}
-
-
-
 void quadMITC4_element::transform_localrotation_to_globalrotation(Eigen::MatrixXd& K_matrix,
 	const std::array<Eigen::Matrix3d, 4>& p_matrix)
 {
 	const int nodes = 4;
 	const int dof_per_node = 6;
+	const int total_dof = nodes * dof_per_node;
 
 	// Create 6x6 block-diagonal rotation matrices for each node
 	std::array<Eigen::Matrix<double, 6, 6>, nodes> P_blocks;
@@ -1482,13 +1411,13 @@ void quadMITC4_element::transform_localrotation_to_globalrotation(Eigen::MatrixX
 	{
 		Eigen::Matrix<double, 6, 6> B = Eigen::Matrix<double, 6, 6>::Zero();
 		B.topLeftCorner<3, 3>().setIdentity();
-		B.bottomRightCorner<3, 3>() = p_matrix[i];
+		B.bottomRightCorner<3, 3>() = p_matrix[i].transpose(); // Transpose of p_matrix !!!!
 		P_blocks[i] = B;
 	}
 
 	// Create a deep copy for local, zero global result
 	Eigen::MatrixXd K_local = K_matrix;
-	Eigen::MatrixXd K_global = Eigen::MatrixXd::Zero(K_matrix.rows(), K_matrix.cols());
+	Eigen::MatrixXd K_global = Eigen::MatrixXd::Zero(total_dof, total_dof);
 
 	// Perform block-wise transformation
 	for (int i = 0; i < nodes; i++) 
@@ -1517,6 +1446,54 @@ void quadMITC4_element::transform_localrotation_to_globalrotation(Eigen::MatrixX
 
 }
 
+
+
+void quadMITC4_element::transform_stiffness_to_globalcoordinates(Eigen::MatrixXd& K_matrix,
+	const Eigen::Matrix3d& local_coordinate_matrix)
+{
+
+	const int nodes = 4;
+	const int dof_per_node = 6;
+	const int total_dof = nodes * dof_per_node;
+
+	//  Build the 6×6 block rotation (identity for translations, R for rotations)
+	Eigen::Matrix<double, 6, 6> P_blocks = Eigen::Matrix<double, 6, 6>::Zero();
+
+	P_blocks.topLeftCorner<3, 3>().setIdentity();
+	P_blocks.bottomRightCorner<3, 3>() = local_coordinate_matrix.transpose(); // 
+
+	// Create a deep copy for local, zero global result
+	Eigen::MatrixXd K_local = K_matrix;
+	Eigen::MatrixXd K_global = Eigen::MatrixXd::Zero(total_dof, total_dof);
+
+	// Perform block-wise transformation
+	for (int i = 0; i < nodes; i++)
+	{
+		for (int j = i; j < nodes; j++)
+		{
+			int row = i * dof_per_node;
+			int col = j * dof_per_node;
+
+			// Extract block
+			Eigen::Matrix<double, 6, 6> block = K_local.block<6, 6>(row, col);
+
+			// Apply transformation: P^T · blk · P
+			Eigen::Matrix<double, 6, 6> transformed_block =
+				P_blocks.transpose() * block * P_blocks;
+
+			// Insert to global matrix
+			K_global.block<6, 6>(row, col) = transformed_block;
+			if (i != j)
+			{
+				K_global.block<6, 6>(col, row) = transformed_block.transpose();  // symmetric
+			}
+		}
+	}
+
+	// Write result back
+	K_matrix = std::move(K_global);
+
+}
 
 
 
