@@ -67,7 +67,7 @@ void quadMITC4_element::set_quadMITC4_element_stiffness_matrix(const double& x1_
 	Eigen::Vector3d ref_vector; // Reference vector in element local coordinate system
 
 	computeLocalCoordinateSystem(x1_g_coord, y1_g_coord, z1_g_coord,
-		x2_g_coord, y2_g_coord, z2_g_coord, 
+		x2_g_coord, y2_g_coord, z2_g_coord,
 		x3_g_coord, y3_g_coord, z3_g_coord,
 		x4_g_coord, y4_g_coord, z4_g_coord,
 		p_matrix_global,
@@ -392,7 +392,9 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 
 
 	// Compute the Transverse shear strain matrix
-	Eigen::MatrixXd TransverseShearStrainMatrix = computeTransverseShearStrainMatrix(thickness, p_matrix_local);
+	Eigen::MatrixXd TransverseShearStrainMatrix = Eigen::MatrixXd::Zero(24, 24);
+		
+	computeTransverseShearStrainMatrix(thickness, p_matrix_local, TransverseShearStrainMatrix);
 
 
 	// Penalty parameter for drilling DOF
@@ -406,9 +408,9 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 	Eigen::MatrixXd StiffnessMatrix12 = Eigen::MatrixXd::Zero(24, 4);
 	Eigen::MatrixXd StiffnessMatrix22 = Eigen::MatrixXd::Zero(4, 4);
 
-	// Store the consistent mass matrix
-	Eigen::MatrixXd consistentMassMatrix = Eigen::MatrixXd::Zero(24, 24);
-
+	// Store the element mass matrix
+	Eigen::MatrixXd elemMassMatrix = Eigen::MatrixXd::Zero(24, 24);
+	double total_element_mass = 0.0;
 
 	for (int i = 0; i < 2; i++)
 	{
@@ -428,6 +430,7 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 
 				//_____________________________________________________________________________________________________________
 				// Step 1: Compute the shape function, derivative shape function and jacobian matrix at integration points
+				// shapefunction_firstDerivativeMatrix: 2 x 4 (dN/de, dN/dn) for 4 shape functions
 				Eigen::Vector4d shapeFunction = Eigen::Vector4d::Zero(); // Shape function
 				Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // Shape function First derivative
 				Eigen::Matrix3d jacobianMatrix = Eigen::Matrix3d::Zero(); // Jacobian Matrix
@@ -440,6 +443,7 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 					shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
 				// Calculate the jacobian determinant and  inverse of jacobian
+				// invjacobianMatrix: 3 x 2 (dX/de, and dX/dn)
 				invjacobianMatrix = jacobianMatrix.inverse();
 				jacobian_determinant = jacobianMatrix.determinant();
 
@@ -453,7 +457,7 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 
 				Eigen::MatrixXd StrainDisplacementMatrixAtIntegrationPt = Eigen::MatrixXd::Zero(6, 28);
 				Eigen::MatrixXd transformation_matrix_phi = Eigen::MatrixXd::Zero(5, 6);
-		
+
 
 				computeMainStrainDisplacementMatrix(integration_ptx, integration_pty, integration_ptz,
 					thickness, p_matrix_local, TransverseShearStrainMatrix, initial_transformation_matrix,
@@ -482,7 +486,6 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 				StressMatrixAtIntegrationPt = this->elasticity_matrix * StrainDisplacementMatrixTransformed;
 
 
-	
 				//_____________________________________________________________________________________________________________
 				// Step 5: Compute the Stiffness for drilling degrees of freedom
 				// Membrane stiffness formulation to include rotation about the normal to the plane of the element
@@ -511,16 +514,15 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 					StressMatrixAtIntegrationPt.block<5, 4>(0, 24)) * jacobian_determinant;
 
 
-
 				// Step 6A: Compute and add drilling DOF stiffness contribution to the stiffness matrix
-				for (int p = 0; p < 24; p++) 
+				for (int p = 0; p < 24; p++)
 				{
-					for (int q = p; q < 24; q++) 
+					for (int q = p; q < 24; q++)
 					{
 						double val = StrainDisplacementDrillingDOFMatrix(p) * StrainDisplacementDrillingDOFMatrix(q) * beta_p * jacobian_determinant;
 						StiffnessMatrix11(p, q) += val;
 
-						if (p != q) 
+						if (p != q)
 						{
 							StiffnessMatrix11(q, p) += val;  // Ensure symmetry
 						}
@@ -528,24 +530,20 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 				}
 
 
-
 				//_____________________________________________________________________________________________________________
 				// Step 7: Compute the Consistent mass matrix
 				// Compute the incremental mass
 				double element_mass = jacobian_determinant * materialdensity;
-				
-				consistentMassMatrix = consistentMassMatrix +
-					computeConsistentMassMatrixAtIntegrationPoint(shapeFunction, p_matrix_local,
+				total_element_mass = total_element_mass + element_mass;
+
+				elemMassMatrix = elemMassMatrix +
+					computeElemMassMatrixAtIntegrationPoint(shapeFunction, p_matrix_local,
 						thickness, integration_ptz, element_mass);
 
 
 			}
 		}
 	}
-
-	// Add the element consistent matrix
-	this->element_ConsistentMassMatrix = Eigen::MatrixXd::Zero(24, 24);
-	this->element_ConsistentMassMatrix = consistentMassMatrix;
 
 
 	// Static condensation of stiffness matrices to form the final element stiffness matrix
@@ -559,29 +557,34 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 
 
 	// Initialize the final 24×24 condensed stiffness matrix
-	this->element_StiffnessMatrix = Eigen::MatrixXd::Zero(24, 24);
-	
-	// Perform the condensation: K11 - K12 * inv(K22) * K12^T
-	this->element_StiffnessMatrix = StiffnessMatrix11 - (StiffnessMatrix12 * StiffnessMatrix22Inv12);
+	Eigen::MatrixXd elemStiffnessMatrix = Eigen::MatrixXd::Zero(24, 24);
 
-	// matrixToString(element_StiffnessMatrix);
+	// Perform the condensation: K11 - K12 * inv(K22) * K12^T
+	elemStiffnessMatrix = StiffnessMatrix11 - (StiffnessMatrix12 * StiffnessMatrix22Inv12);
+
+
 
 	// Transform rotation to element co-ordinate system
-	transform_localrotation_to_globalrotation(this->element_StiffnessMatrix, p_matrix_local);
-	transform_localrotation_to_globalrotation(this->element_ConsistentMassMatrix, p_matrix_local);
+	transform_localrotation_to_globalrotation(elemStiffnessMatrix, p_matrix_local);
+	transform_localrotation_to_globalrotation(elemMassMatrix, p_matrix_local);
 
-	// matrixToString(element_StiffnessMatrix);
+	// Find the transpose of local coordinate matrix
+	Eigen::Matrix3d local_coordinate_matrix_transpose = local_coordinate_matrix.transpose();
 
 	// Transform stiffness to global system
-	transform_stiffness_to_globalcoordinates(this->element_StiffnessMatrix, local_coordinate_matrix);
-	transform_stiffness_to_globalcoordinates(this->element_ConsistentMassMatrix, local_coordinate_matrix);
+	transform_stiffness_to_globalcoordinates(elemStiffnessMatrix, local_coordinate_matrix_transpose);
+	transform_stiffness_to_globalcoordinates(elemMassMatrix, local_coordinate_matrix_transpose);
 
-	matrixToString(element_StiffnessMatrix);
-	matrixToString(element_ConsistentMassMatrix);
-
-	int stop_1 = 0;
+	// Diagonalize the mass matrix
+	diagonalize_mass_matrix(elemMassMatrix, total_element_mass);
 
 
+	// Add to the globalvariable
+	this->element_StiffnessMatrix = elemStiffnessMatrix;
+	this->element_LumpedMassMatrix = elemMassMatrix;
+
+	// matrixToString(element_StiffnessMatrix);
+	// matrixToString(element_LumpedMassMatrix);
 
 
 }
@@ -589,12 +592,12 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 
 
 
-Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const double& thickness, 
-	const std::array<Eigen::Matrix3d, 4>& p_matrix_local)
+void quadMITC4_element::computeTransverseShearStrainMatrix(const double& thickness,
+	const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
+	Eigen::MatrixXd& TransverseShearStrainMatrix)
 {
 
 	// Formulate the transverse shear strain matrix at edge centers
-	Eigen::MatrixXd TransverseShearStrainMatrix = Eigen::MatrixXd::Zero(6, 24);
 
 	Eigen::Vector4d shapeFunction = Eigen::Vector4d::Zero(); // Shape function
 	Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // Shape function First derivative
@@ -604,7 +607,7 @@ Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const doub
 
 	//________________________________________________________________________________________________
 		// For point A (-1.0, 0.0, 0.0)
-	computeShapeFunctonNJacobianMatrix(-1.0, 0.0, 0.0, 
+	computeShapeFunctonNJacobianMatrix(-1.0, 0.0, 0.0,
 		thickness, p_matrix_local,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
@@ -645,7 +648,7 @@ Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const doub
 
 	//________________________________________________________________________________________________
 	// For point B (1.0, 0.0, 0.0)
-	computeShapeFunctonNJacobianMatrix(-1.0, 0.0, 0.0, 
+	computeShapeFunctonNJacobianMatrix(-1.0, 0.0, 0.0,
 		thickness, p_matrix_local,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
@@ -686,7 +689,7 @@ Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const doub
 
 	//________________________________________________________________________________________________
 	// For point C (0.0, -1.0, 0.0)
-	computeShapeFunctonNJacobianMatrix(0.0, -1.0, 0.0, 
+	computeShapeFunctonNJacobianMatrix(0.0, -1.0, 0.0,
 		thickness, p_matrix_local,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
@@ -728,7 +731,7 @@ Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const doub
 
 	//________________________________________________________________________________________________
 	// For point D (0.0, 1.0, 0.0)
-	computeShapeFunctonNJacobianMatrix(0.0, 1.0, 0.0, 
+	computeShapeFunctonNJacobianMatrix(0.0, 1.0, 0.0,
 		thickness, p_matrix_local,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
@@ -766,31 +769,18 @@ Eigen::MatrixXd quadMITC4_element::computeTransverseShearStrainMatrix(const doub
 		jacobianMatrix(0, 2) * p_matrix_local[3](2, 0);
 	TransverseShearStrainMatrix(3, 22) = gv21 * thickness / 8.0;
 
-
-	return TransverseShearStrainMatrix;
-
 }
 
 
 
 void quadMITC4_element::computeStrainDisplacementMatrixDrillingDOF(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
 	const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
-	const Eigen::Vector4d& shapeFunction, const Eigen::MatrixXd& shapefunction_firstDerivativeMatrix,	
+	const Eigen::Vector4d& shapeFunction, const Eigen::MatrixXd& shapefunction_firstDerivativeMatrix,
 	const Eigen::Matrix3d& invjacobianMatrix, const Eigen::Matrix3d& transformation_matrix,
 	Eigen::VectorXd& StrainDisplacementDrillingDOFMatrix)
 {
 	// Computes the strain displacement matrix (B) of drilling degree of freedom 
 	// Membrane stiffness formulation to include rotation about the normal to the plane of the element
-
-	// Calculate the transformation matrix at the integration point
-	// Eigen::Matrix3d transformation_matrix = computeTransformationMatrixFromReference(jacobianMatrix, ref_vector);
-
-
-	// Calculate the derivative of shape function with respect to T1 and T2 
-
-	// shapefunction_firstDerivativeMatrix: 2 x 4 (dN/de, dN/dn) for 4 shape functions
-	// invjacobianMatrix: 3 x 2 (dX/de, and dX/dn)
-	// shapefunction_GlobalfirstDerivativeMatrix: 3 x 4 (global derivatives of shape functions)
 
 	Eigen::MatrixXd shapefunction_GlobalfirstDerivativeMatrix = Eigen::MatrixXd::Zero(3, 4);
 
@@ -803,27 +793,27 @@ void quadMITC4_element::computeStrainDisplacementMatrixDrillingDOF(const double&
 		}
 	}
 
-	
-	Eigen::MatrixXd shapefunction_LocalfirstDerivativeMatrix = Eigen::MatrixXd::Zero(2,5);
+
+	Eigen::MatrixXd shapefunction_LocalfirstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 5);
 
 	for (int j = 0; j < 2; j++)  // local directions e and n
 	{
 		for (int i = 0; i < 4; i++)  // shape function index
 		{
-			shapefunction_LocalfirstDerivativeMatrix.coeffRef(j, i) = 
+			shapefunction_LocalfirstDerivativeMatrix.coeffRef(j, i) =
 				transformation_matrix(0, j) * shapefunction_GlobalfirstDerivativeMatrix(0, i) +
 				transformation_matrix(1, j) * shapefunction_GlobalfirstDerivativeMatrix(1, i) +
 				transformation_matrix(2, j) * shapefunction_GlobalfirstDerivativeMatrix(2, i);
 		}
 
 		// Compute DNL(j, 4) — the 5th column
-		shapefunction_LocalfirstDerivativeMatrix.coeffRef(j, 4) = 
+		shapefunction_LocalfirstDerivativeMatrix.coeffRef(j, 4) =
 			transformation_matrix(0, j) * invjacobianMatrix(0, 2) +
 			transformation_matrix(1, j) * invjacobianMatrix(1, 2) +
 			transformation_matrix(2, j) * invjacobianMatrix(2, 2);
 	}
 
-	
+
 	// Strain Displacement Matrix of Drilling DOF
 	StrainDisplacementDrillingDOFMatrix = Eigen::VectorXd::Zero(24);  // 4 nodes × 6 DOF each = 24 
 
@@ -832,16 +822,16 @@ void quadMITC4_element::computeStrainDisplacementMatrixDrillingDOF(const double&
 		int ii = 6 * i;
 
 		// BA(II+1 to II+3)
-		StrainDisplacementDrillingDOFMatrix(ii + 0) = 
-			(shapefunction_LocalfirstDerivativeMatrix(0, i) * transformation_matrix(0, 1) - 
+		StrainDisplacementDrillingDOFMatrix(ii + 0) =
+			(shapefunction_LocalfirstDerivativeMatrix(0, i) * transformation_matrix(0, 1) -
 				shapefunction_LocalfirstDerivativeMatrix(1, i) * transformation_matrix(0, 0)) / 2.0;
 
-		StrainDisplacementDrillingDOFMatrix(ii + 1) = 
-			(shapefunction_LocalfirstDerivativeMatrix(0, i) * transformation_matrix(1, 1) - 
+		StrainDisplacementDrillingDOFMatrix(ii + 1) =
+			(shapefunction_LocalfirstDerivativeMatrix(0, i) * transformation_matrix(1, 1) -
 				shapefunction_LocalfirstDerivativeMatrix(1, i) * transformation_matrix(1, 0)) / 2.0;
 
-		StrainDisplacementDrillingDOFMatrix(ii + 2) = 
-			(shapefunction_LocalfirstDerivativeMatrix(0, i) * transformation_matrix(2, 1) - 
+		StrainDisplacementDrillingDOFMatrix(ii + 2) =
+			(shapefunction_LocalfirstDerivativeMatrix(0, i) * transformation_matrix(2, 1) -
 				shapefunction_LocalfirstDerivativeMatrix(1, i) * transformation_matrix(2, 0)) / 2.0;
 
 
@@ -877,30 +867,13 @@ void quadMITC4_element::computeStrainDisplacementMatrixDrillingDOF(const double&
 void quadMITC4_element::computeMainStrainDisplacementMatrix(const double& integration_ptx, const double& integration_pty, const double& integration_ptz,
 	const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
 	const Eigen::MatrixXd& TransverseShearStrainMatrix, const Eigen::Matrix3d& initial_transformation_matrix,
-	const Eigen::Vector4d& shapeFunction,const Eigen::MatrixXd& shapefunction_firstDerivativeMatrix, 
-	const Eigen::Matrix3d& jacobianMatrix,	const Eigen::Matrix3d& invjacobianMatrix, 
+	const Eigen::Vector4d& shapeFunction, const Eigen::MatrixXd& shapefunction_firstDerivativeMatrix,
+	const Eigen::Matrix3d& jacobianMatrix, const Eigen::Matrix3d& invjacobianMatrix,
 	const Eigen::Matrix3d& transformation_matrix,
 	Eigen::MatrixXd& StrainDisplacementMatrixAtIntegrationPt, Eigen::MatrixXd& transformation_matrix_phi)
 {
 	// Computes the strain displacement matrix (B) and
 	// Transformation matric phi
-
-	//Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // Shape function First derivative
-	//Eigen::Matrix3d jacobianMatrix = Eigen::Matrix3d::Zero(); // Jacobian Matrix
-
-
-	//// Compute the shape function, derivative shape function and jacobian matrix at integration points
-	//computeShapeFunctonNJacobianMatrix(integration_ptx, integration_pty, integration_ptz, 
-	//	thickness, p_matrix_local,
-	//	shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
-
-
-	//// Calculate the jacobian determinant and  inverse of jacobian
-	//jacobian_determinant = jacobianMatrix.determinant();
-	//Eigen::Matrix3d invjacobianMatrix = jacobianMatrix.inverse();
-
-	//// Calculate the transformation matrix at the integration point
-	//Eigen::Matrix3d transformation_matrix = computeTransformationMatrixFromReference(jacobianMatrix, ref_vector);
 
 	double gv22 = 0.0;
 	double gv21 = 0.0;
@@ -994,14 +967,14 @@ void quadMITC4_element::computeMainStrainDisplacementMatrix(const double& integr
 	StrainDisplacementMatrixAtIntegrationPt(3, 25) = -integration_ptx * gt22;
 	StrainDisplacementMatrixAtIntegrationPt(3, 26) = -integration_pty * gt11;
 	StrainDisplacementMatrixAtIntegrationPt(3, 27) = -integration_pty * gt12;
-	
+
 
 }
 
 
 
 
-void quadMITC4_element::computeBMatrixExtraShapeFunction(const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local, 
+void quadMITC4_element::computeBMatrixExtraShapeFunction(const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
 	const Eigen::Vector3d& ref_vector,
 	Eigen::MatrixXd& StrainDisplacementMatrixExtraShapeFunction)
 {
@@ -1010,7 +983,7 @@ void quadMITC4_element::computeBMatrixExtraShapeFunction(const double& thickness
 	double integration_ptx = 0.0;
 	double integration_pty = 0.0;
 	double integration_ptz = 0.0;
-	
+
 
 	// At zeroth point
 	Eigen::Vector4d shapeFunction = Eigen::Vector4d::Zero(); // Shape function
@@ -1063,7 +1036,7 @@ void quadMITC4_element::computeBMatrixExtraShapeFunction(const double& thickness
 
 
 				// Accumulate to the Strain Displacement Matrix of Extra Shape Function
-				StrainDisplacementMatrixExtraShapeFunction.noalias() = 
+				StrainDisplacementMatrixExtraShapeFunction.noalias() =
 					StrainDisplacementMatrixExtraShapeFunction - bl_matrix;
 
 			}
@@ -1094,7 +1067,7 @@ void quadMITC4_element::computeExtraStrainDisplacementMatrix(const double& integ
 
 
 	// Compute the shape function, derivative shape function and jacobian matrix at integration points
-	computeShapeFunctonNJacobianMatrix(integration_ptx, integration_pty, integration_ptz, 
+	computeShapeFunctonNJacobianMatrix(integration_ptx, integration_pty, integration_ptz,
 		thickness, p_matrix_local,
 		shapeFunction, shapefunction_firstDerivativeMatrix, jacobianMatrix);
 
@@ -1129,7 +1102,7 @@ void quadMITC4_element::computeExtraStrainDisplacementMatrix(const double& integ
 
 
 
-void quadMITC4_element::computeShapeFunctonNJacobianMatrix(const double& xp, const double& yp, const double& zp, 
+void quadMITC4_element::computeShapeFunctonNJacobianMatrix(const double& xp, const double& yp, const double& zp,
 	const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
 	Eigen::Vector4d& shapeFunction, Eigen::MatrixXd& shapefunction_firstDerivativeMatrix, Eigen::Matrix3d& jacobianMatrix)
 {
@@ -1348,7 +1321,7 @@ Eigen::MatrixXd quadMITC4_element::computePhiMatrix(const Eigen::Matrix3d& inver
 }
 
 
-Eigen::MatrixXd quadMITC4_element::computeConsistentMassMatrixAtIntegrationPoint(const Eigen::Vector4d& shapeFunction,
+Eigen::MatrixXd quadMITC4_element::computeElemMassMatrixAtIntegrationPoint(const Eigen::Vector4d& shapeFunction,
 	const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
 	const double& thickness,
 	const double& integration_ptz,
@@ -1359,7 +1332,7 @@ Eigen::MatrixXd quadMITC4_element::computeConsistentMassMatrixAtIntegrationPoint
 	Eigen::MatrixXd massBMatrix = Eigen::MatrixXd::Zero(3, 24);
 
 	int index = 0;
-	for (int j = 0; j < 4; j++) 
+	for (int j = 0; j < 4; j++)
 	{
 		double f1 = shapeFunction(j);
 		double f2 = f1 * integration_ptz * thickness * 0.5;
@@ -1387,12 +1360,12 @@ Eigen::MatrixXd quadMITC4_element::computeConsistentMassMatrixAtIntegrationPoint
 	}
 
 
-	// Assemble consistent mass matrix: EM = mB^T * mB * element_mass
-	Eigen::MatrixXd consistentMassMatrix = Eigen::MatrixXd::Zero(24, 24);
-	consistentMassMatrix = (massBMatrix.transpose() * massBMatrix) * element_mass;
+	// Assemble element mass matrix: EM = mB^T * mB * element_mass
+	Eigen::MatrixXd elemMassMatrix = Eigen::MatrixXd::Zero(24, 24);
+	elemMassMatrix = (massBMatrix.transpose() * massBMatrix) * element_mass;
 
 
-	return consistentMassMatrix;
+	return elemMassMatrix;
 
 }
 
@@ -1407,7 +1380,7 @@ void quadMITC4_element::transform_localrotation_to_globalrotation(Eigen::MatrixX
 
 	// Create 6x6 block-diagonal rotation matrices for each node
 	std::array<Eigen::Matrix<double, 6, 6>, nodes> P_blocks;
-	for (int i = 0; i < nodes; i++) 
+	for (int i = 0; i < nodes; i++)
 	{
 		Eigen::Matrix<double, 6, 6> B = Eigen::Matrix<double, 6, 6>::Zero();
 		B.topLeftCorner<3, 3>().setIdentity();
@@ -1420,9 +1393,9 @@ void quadMITC4_element::transform_localrotation_to_globalrotation(Eigen::MatrixX
 	Eigen::MatrixXd K_global = Eigen::MatrixXd::Zero(total_dof, total_dof);
 
 	// Perform block-wise transformation
-	for (int i = 0; i < nodes; i++) 
+	for (int i = 0; i < nodes; i++)
 	{
-		for (int j = i; j < nodes; j++) 
+		for (int j = i; j < nodes; j++)
 		{
 			int row = i * dof_per_node;
 			int col = j * dof_per_node;
@@ -1433,7 +1406,7 @@ void quadMITC4_element::transform_localrotation_to_globalrotation(Eigen::MatrixX
 
 			// Assign to global matrix
 			K_global.block<6, 6>(row, col) = transformed_block;
-			if (i != j) 
+			if (i != j)
 			{
 				K_global.block<6, 6>(col, row) = transformed_block.transpose();  // symmetric
 			}
@@ -1456,42 +1429,77 @@ void quadMITC4_element::transform_stiffness_to_globalcoordinates(Eigen::MatrixXd
 	const int dof_per_node = 6;
 	const int total_dof = nodes * dof_per_node;
 
-	//  Build the 6×6 block rotation (identity for translations, R for rotations)
-	Eigen::Matrix<double, 6, 6> P_blocks = Eigen::Matrix<double, 6, 6>::Zero();
 
-	P_blocks.topLeftCorner<3, 3>().setIdentity();
-	P_blocks.bottomRightCorner<3, 3>() = local_coordinate_matrix.transpose(); // 
+	Eigen::Matrix<double, 6, 6> P_node = Eigen::Matrix<double, 6, 6>::Zero();
+	P_node.topLeftCorner<3, 3>() = local_coordinate_matrix; // Translations transformed
+	P_node.bottomRightCorner<3, 3>() = local_coordinate_matrix; // Rotations transformed
 
-	// Create a deep copy for local, zero global result
-	Eigen::MatrixXd K_local = K_matrix;
+
+	// Build full 24×24 transformation matrix (block diagonal),
+	// each block transforms 6 DOFs: [I3 for translations, E0 for rotations]
+
+	Eigen::MatrixXd trans_Pmatrix = Eigen::MatrixXd::Zero(total_dof, total_dof);
+
+	for (int i = 0; i < nodes; i++) 
+	{
+		int idx = i * dof_per_node;
+		trans_Pmatrix.block<6, 6>(idx, idx) = P_node;
+	}
+
+
+	// Apply the transformation
 	Eigen::MatrixXd K_global = Eigen::MatrixXd::Zero(total_dof, total_dof);
 
-	// Perform block-wise transformation
-	for (int i = 0; i < nodes; i++)
+	K_global = trans_Pmatrix.transpose() * K_matrix * trans_Pmatrix;
+
+	// Write result back
+	K_matrix = std::move(K_global);
+
+
+}
+
+
+void quadMITC4_element::diagonalize_mass_matrix(Eigen::MatrixXd& massMatrix, const double& element_mass)
+{
+	const int nodes = 4;      // Number of nodes
+	const int dof_per_node = 6;     // DOFs per node
+	const int total_dof = nodes * dof_per_node;  // Total DOFs
+
+	// 1. Compute total translational diagonal mass
+	double emss1 = 0.0, emss2 = 0.0, emss3 = 0.0;
+
+	for (int i = 0; i < nodes; i++) 
 	{
-		for (int j = i; j < nodes; j++)
+		int row_base = i * dof_per_node;
+
+		emss1 += massMatrix(row_base + 0, row_base + 0);  // x
+		emss2 += massMatrix(row_base + 1, row_base + 1);  // y
+		emss3 += massMatrix(row_base + 2, row_base + 2);  // z
+	}
+
+	double emss = (emss1 > 1e-20) ? emss1 :
+		(emss2 > 1e-20) ? emss2 :
+		(emss3 > 1e-20) ? emss3 : 0.0;
+
+	// 2. Compute scaling factor
+	double fact = (emss != 0.0) ? element_mass / emss : 0.0;
+
+	// 3. Apply scaling and zero off-diagonal terms
+	for (int i = 0; i < total_dof; i++)
+	{
+		for (int j = 0; j < total_dof; j++)
 		{
-			int row = i * dof_per_node;
-			int col = j * dof_per_node;
-
-			// Extract block
-			Eigen::Matrix<double, 6, 6> block = K_local.block<6, 6>(row, col);
-
-			// Apply transformation: P^T · blk · P
-			Eigen::Matrix<double, 6, 6> transformed_block =
-				P_blocks.transpose() * block * P_blocks;
-
-			// Insert to global matrix
-			K_global.block<6, 6>(row, col) = transformed_block;
-			if (i != j)
+			if (i == j) 
 			{
-				K_global.block<6, 6>(col, row) = transformed_block.transpose();  // symmetric
+				massMatrix(i, j) *= fact;
+			}
+			else 
+			{
+				massMatrix(i, j) = 0.0;
 			}
 		}
 	}
 
-	// Write result back
-	K_matrix = std::move(K_global);
 
 }
 
@@ -1500,7 +1508,7 @@ void quadMITC4_element::transform_stiffness_to_globalcoordinates(Eigen::MatrixXd
 void quadMITC4_element::matrixToString(const Eigen::MatrixXd& mat)
 {
 	std::ostringstream oss;
-	oss.precision(4);
+	oss.precision(8);
 	oss << std::fixed;
 
 	for (int i = 0; i < mat.rows(); ++i) {

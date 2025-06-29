@@ -27,27 +27,19 @@ public:
 private:
 	const double m_pi = 3.1415926535897932384626433;
 
-	// std::array<Eigen::Matrix3d, 4> p_matrix_global;
 	std::array<Eigen::Vector3d, 4> quad_local_coords;
-	// Eigen::Vector3d ref_vector; // Reference vector in element local coordinate system
-	// std::array<Eigen::Matrix3d, 4> p_matrix_local;
-
-
-	// Eigen::MatrixXd transformation_matrix_phi = Eigen::MatrixXd::Zero(24, 24); // 24x24 transformation matrices
 
 	Eigen::MatrixXd elasticity_matrix = Eigen::MatrixXd::Zero(5, 5); // 5 x 5 matrix saves the elasticity matrix based on youngsmodulus and poissons ratio
 	Eigen::MatrixXd integration_points = Eigen::MatrixXd::Zero(2, 2); // 2 x 2 integration points
 	Eigen::Vector4d nat_xi = Eigen::Vector4d(-1.0, +1.0, +1.0, -1.0); // Natural xi co-ordinate
 	Eigen::Vector4d nat_yi = Eigen::Vector4d(-1.0, -1.0, +1.0, +1.0); // Natural yi co-ordinate
 	Eigen::Vector4d nat_zi = Eigen::Vector4d(+1.0, +1.0, +1.0, +1.0); // Natural zi co-ordinate
-	// Eigen::VectorXd shapeFunction = Eigen::VectorXd::Zero(4); // 4 x 1 stores the shape function N
-	// Eigen::MatrixXd shapefunction_firstDerivativeMatrix = Eigen::MatrixXd::Zero(2, 4); // 2 x 4 stores the dN first derivatives of the shape function
-	// Eigen::MatrixXd jacobianMatrix = Eigen::MatrixXd(3, 3); // 3 x 3 store the Jacobian Coefficients
+
 
 	Eigen::MatrixXd element_StiffnessMatrix = Eigen::MatrixXd::Zero(24, 24); // 24 x 24 matrix Element combined bending and membrane stiffness matrix
 
 	Eigen::MatrixXd element_LumpedMassMatrix = Eigen::MatrixXd::Zero(24, 24); // 24 x 24 matrix Element lumped mass matrix
-	Eigen::MatrixXd element_ConsistentMassMatrix = Eigen::MatrixXd::Zero(24, 24); // 24 x 24 matrix Element consitent mass matrix
+	// Eigen::MatrixXd element_ConsistentMassMatrix = Eigen::MatrixXd::Zero(24, 24); // 24 x 24 matrix Element consitent mass matrix
 
 
 
@@ -82,8 +74,6 @@ private:
 		Eigen::Vector3d& ref_vector);
 
 
-
-
 	void computeStiffnessMatrix(const double& thickness, const double& materialdensity,
 		const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
 		const Eigen::Matrix3d& local_coordinate_matrix,
@@ -93,7 +83,9 @@ private:
 
 
 
-	Eigen::MatrixXd computeTransverseShearStrainMatrix(const double& thickness, const std::array<Eigen::Matrix3d, 4>& p_matrix_local);
+	void computeTransverseShearStrainMatrix(const double& thickness, 
+		const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
+		Eigen::MatrixXd& TransverseShearStrainMatrix);
 
 
 
@@ -144,8 +136,7 @@ private:
 
 
 
-	Eigen::MatrixXd computeConsistentMassMatrixAtIntegrationPoint(
-		const Eigen::Vector4d& shapeFunction,
+	Eigen::MatrixXd computeElemMassMatrixAtIntegrationPoint(const Eigen::Vector4d& shapeFunction,
 		const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
 		const double& thickness,
 		const double& integration_ptz,
@@ -158,6 +149,10 @@ private:
 
 	void transform_stiffness_to_globalcoordinates(Eigen::MatrixXd& K_matrix,
 		const Eigen::Matrix3d& local_coordinate_matrix);
+
+
+	void diagonalize_mass_matrix(Eigen::MatrixXd& massMatrix, const double& element_mass);
+
 
 
 	void matrixToString(const Eigen::MatrixXd& mat);
