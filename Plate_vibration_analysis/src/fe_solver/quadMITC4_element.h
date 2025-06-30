@@ -78,7 +78,10 @@ private:
 		const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
 		const Eigen::Matrix3d& local_coordinate_matrix,
 		const Eigen::Vector3d& ref_vector, 
-		const Eigen::MatrixXd& StrainDisplacementMatrixExtraShapeFunction);
+		const Eigen::MatrixXd& StrainDisplacementMatrixExtraShapeFunction,
+		double& total_element_mass,
+		Eigen::MatrixXd& elemStiffnessMatrix,
+		Eigen::MatrixXd& elemMassMatrix);
 
 
 

@@ -84,28 +84,42 @@ void triCKZ_element::set_triCKZ_element_stiffness_matrix(const double& x1_g_coor
 	computeElasticityMatrix(youngsmodulus, poissonsratio);
 
 	// Step 1: Set the local co-ordinate system for the triangle
+	Eigen::MatrixXd transformation_matrix_phi = Eigen::MatrixXd::Zero(18, 18); // 18x18 transformation matrices
+
 	computeLocalCoordinateSystem(x1_g_coord, y1_g_coord, z1_g_coord,
-		x2_g_coord, y2_g_coord, z2_g_coord, x3_g_coord, y3_g_coord, z3_g_coord);
+		x2_g_coord, y2_g_coord, z2_g_coord, x3_g_coord, y3_g_coord, z3_g_coord,
+		transformation_matrix_phi);
 
 
 	// Membrane stiffness and stress matrix
-	computeMembraneStiffnessMatrix(thickness);
+	Eigen::MatrixXd element_MembraneStiffnessMatrix = Eigen::MatrixXd::Zero(18, 18); // 18 x 18 matrix Element membrane stiffness matrix
+
+	computeMembraneStiffnessMatrix(thickness, element_MembraneStiffnessMatrix);
 
 
 	// Bending stiffness and stress matrix
-	computeBendingStiffnessMatrix(thickness);
+	Eigen::MatrixXd element_BendingStiffnessMatrix = Eigen::MatrixXd::Zero(18, 18); // 18 x 18 matrix Element bending stiffness matrix
+
+	computeBendingStiffnessMatrix(thickness, element_BendingStiffnessMatrix);
 
 
 	// Create the total stiffness (Membrane and Bending stiffness)
-	this->element_StiffnessMatrix = this->element_MembraneStiffnessMatrix + this->element_BendingStiffnessMatrix;
+	Eigen::MatrixXd elem_StiffnessMatrix = Eigen::MatrixXd::Zero(18, 18);
+
+	elem_StiffnessMatrix = element_MembraneStiffnessMatrix + element_BendingStiffnessMatrix;
+
 
 	// Transform the element matrices to global coordinates
 	this->element_StiffnessMatrix =
-		this->transformation_matrix_phi.transpose() * this->element_StiffnessMatrix * this->transformation_matrix_phi;
-
+		transformation_matrix_phi.transpose() * elem_StiffnessMatrix * transformation_matrix_phi;
 
 	// Compute the lumped mass matrix
-	computeLumpedMassMatrix(thickness, materialdensity);
+	Eigen::MatrixXd elem_LumpedMassMatrix = Eigen::MatrixXd::Zero(18, 18);
+
+	computeLumpedMassMatrix(thickness, materialdensity, elem_LumpedMassMatrix);
+
+	this->element_LumpedMassMatrix = elem_LumpedMassMatrix;
+
 
 	// Compute the consistent mass matrix
 
@@ -133,27 +147,27 @@ void triCKZ_element::computeElasticityMatrix(const double& youngsmodulus, const 
 {
 
 	// compute the elasticity matrix
-	elasticity_matrix.setZero();
+	this->elasticity_matrix.setZero();
 
 	double k_const = youngsmodulus / (1.0 - (poissonsratio * poissonsratio));
 
 	// Row 1
-	elasticity_matrix.coeffRef(0, 0) = 1.0;
-	elasticity_matrix.coeffRef(0, 1) = poissonsratio;
-	elasticity_matrix.coeffRef(0, 2) = 0.0;
+	this->elasticity_matrix.coeffRef(0, 0) = 1.0;
+	this->elasticity_matrix.coeffRef(0, 1) = poissonsratio;
+	this->elasticity_matrix.coeffRef(0, 2) = 0.0;
 
 	// Row 2
-	elasticity_matrix.coeffRef(1, 0) = poissonsratio;
-	elasticity_matrix.coeffRef(1, 1) = 1.0;
-	elasticity_matrix.coeffRef(1, 2) = 0.0;
+	this->elasticity_matrix.coeffRef(1, 0) = poissonsratio;
+	this->elasticity_matrix.coeffRef(1, 1) = 1.0;
+	this->elasticity_matrix.coeffRef(1, 2) = 0.0;
 
 	// Row 3
-	elasticity_matrix.coeffRef(2, 0) = 0.0;
-	elasticity_matrix.coeffRef(2, 1) = 0.0;
-	elasticity_matrix.coeffRef(2, 2) = (1.0 - poissonsratio) * 0.5;
+	this->elasticity_matrix.coeffRef(2, 0) = 0.0;
+	this->elasticity_matrix.coeffRef(2, 1) = 0.0;
+	this->elasticity_matrix.coeffRef(2, 2) = (1.0 - poissonsratio) * 0.5;
 
 
-	elasticity_matrix = k_const * elasticity_matrix;
+	this->elasticity_matrix = k_const * elasticity_matrix;
 
 }
 
@@ -161,7 +175,8 @@ void triCKZ_element::computeElasticityMatrix(const double& youngsmodulus, const 
 
 void triCKZ_element::computeLocalCoordinateSystem(const double& x1_g_coord, const double& y1_g_coord, const double& z1_g_coord,
 	const double& x2_g_coord, const double& y2_g_coord, const double& z2_g_coord,
-	const double& x3_g_coord, const double& y3_g_coord, const double& z3_g_coord)
+	const double& x3_g_coord, const double& y3_g_coord, const double& z3_g_coord,
+	Eigen::MatrixXd& transformation_matrix_phi)
 {
 
 	Eigen::Vector3d p(x1_g_coord, y1_g_coord, z1_g_coord);  // Point P
@@ -211,12 +226,11 @@ void triCKZ_element::computeLocalCoordinateSystem(const double& x1_g_coord, cons
 	// 18x18 transformation matrices
 	// It fills the 18 × 18 matrices PHI in 3×3 diagonal blocks with the local transformation matrix E0 (3×3)
 	// So for blocks at positions [0:3, 0:3], [3:6, 3:6], ..., [15:18, 15:18], inserting E0
-	this->transformation_matrix_phi.setZero();
 
 	// Fill 3x3 diagonal blocks with coordinateSystemE
 	for (int i = 0; i < 18; i += 3)
 	{
-		this->transformation_matrix_phi.block<3, 3>(i, i) = coordinateSystemE;
+		transformation_matrix_phi.block<3, 3>(i, i) = coordinateSystemE.transpose();
 
 	}
 
@@ -224,7 +238,7 @@ void triCKZ_element::computeLocalCoordinateSystem(const double& x1_g_coord, cons
 }
 
 
-void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
+void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness, Eigen::MatrixXd& element_MembraneStiffnessMatrix)
 {
 	// Calculate element stiffness matrix and stress matrices for  
 	// membrane deformations based on the free formulation.  
@@ -492,10 +506,8 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 	}
 
 	
-	// Set the total membrane stiffness matrix
-	this->element_MembraneStiffnessMatrix.setZero();
-
-	this->element_MembraneStiffnessMatrix = basic_membrane_stiffness_matrix + higher_order_stiffness_matrix;
+	// Assign the total membrane stiffness matrix
+	element_MembraneStiffnessMatrix = basic_membrane_stiffness_matrix + higher_order_stiffness_matrix;
 
 
 /*
@@ -565,7 +577,7 @@ void triCKZ_element::computeMembraneStiffnessMatrix(const double& thickness)
 
 
 
-void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
+void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness, Eigen::MatrixXd& element_BendingStiffnessMatrix)
 {
 	// Step 1: Set the Jacobian Products
 	// 3 x 6 matrix store the jacobian products J^2 ((dL/dx)^2, (dL/dy)^2, (dL/dx dL/dy), etc )
@@ -579,7 +591,7 @@ void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
 	double elem_volume = this->triangle_area * thickness;
 
 	// Initialize the element stiffness matrix
-	this->element_BendingStiffnessMatrix.setZero();
+	Eigen::MatrixXd elemBendingStiffnessMatrix = Eigen::MatrixXd::Zero(18,18);
 
 	double t_eff = (std::pow(thickness, 3)) / 12.0;
 
@@ -617,12 +629,16 @@ void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
 			{
 				int jj = iadb[j];
 
-				this->element_BendingStiffnessMatrix.coeffRef(ii, jj) =
-					this->element_BendingStiffnessMatrix.coeff(ii, jj) + bending_stiffness_matrix_IP(i, j);
+				elemBendingStiffnessMatrix.coeffRef(ii, jj) =
+					elemBendingStiffnessMatrix.coeff(ii, jj) + bending_stiffness_matrix_IP(i, j);
 			}
 		}
 
 	}
+
+	// Assign the result
+	element_BendingStiffnessMatrix = elemBendingStiffnessMatrix;
+
 
 
 	// matrixToString(this->element_BendingStiffnessMatrix);
@@ -656,29 +672,29 @@ void triCKZ_element::computeBendingStiffnessMatrix(const double& thickness)
 
 
 
-void triCKZ_element::computeLumpedMassMatrix(const double& thickness, const double& materialdensity)
+void triCKZ_element::computeLumpedMassMatrix(const double& thickness, const double& materialdensity,
+	Eigen::MatrixXd& elem_LumpedMassMatrix)
 {
 
 	// Volument of the element
 	double elem_volume = this->triangle_area * thickness;
 	double elem_mass = materialdensity * elem_volume *  (1.0/ 3.0);
 
-	this->element_LumpedMassMatrix.setZero();
 
 	// Node 1
-	this->element_LumpedMassMatrix.coeffRef(0, 0) = elem_mass;
-	this->element_LumpedMassMatrix.coeffRef(1, 1) = elem_mass;
-	this->element_LumpedMassMatrix.coeffRef(2, 2) = elem_mass;
+	elem_LumpedMassMatrix.coeffRef(0, 0) = elem_mass;
+	elem_LumpedMassMatrix.coeffRef(1, 1) = elem_mass;
+	elem_LumpedMassMatrix.coeffRef(2, 2) = elem_mass;
 
 	// Node 2
-	this->element_LumpedMassMatrix.coeffRef(6, 6) = elem_mass;
-	this->element_LumpedMassMatrix.coeffRef(7, 7) = elem_mass;
-	this->element_LumpedMassMatrix.coeffRef(8, 8) = elem_mass;
+	elem_LumpedMassMatrix.coeffRef(6, 6) = elem_mass;
+	elem_LumpedMassMatrix.coeffRef(7, 7) = elem_mass;
+	elem_LumpedMassMatrix.coeffRef(8, 8) = elem_mass;
 
 	// Node 3
-	this->element_LumpedMassMatrix.coeffRef(12, 12) = elem_mass;
-	this->element_LumpedMassMatrix.coeffRef(13, 13) = elem_mass;
-	this->element_LumpedMassMatrix.coeffRef(14, 14) = elem_mass;
+	elem_LumpedMassMatrix.coeffRef(12, 12) = elem_mass;
+	elem_LumpedMassMatrix.coeffRef(13, 13) = elem_mass;
+	elem_LumpedMassMatrix.coeffRef(14, 14) = elem_mass;
 
 
 }
@@ -687,14 +703,14 @@ void triCKZ_element::computeLumpedMassMatrix(const double& thickness, const doub
 
 
 
-void triCKZ_element::computeConsistentMassMatrix(const double& thickness, const double& materialdensity)
+void triCKZ_element::computeConsistentMassMatrix(const double& thickness, const double& materialdensity,
+	Eigen::MatrixXd& elem_ConsistentMassMatrix)
 {
 
 	// Volument of the element
 	double elem_volume = this->triangle_area * thickness;
 	double elem_mass = materialdensity * elem_volume;
 
-	this->element_ConsistentMassMatrix.setZero();
 
 	std::vector<int> iadb = { 2, 3, 4, 8, 9, 10, 14, 15, 16 };  // DOF mapping 
 
@@ -728,12 +744,12 @@ void triCKZ_element::computeConsistentMassMatrix(const double& thickness, const 
 				int ii = iadb[i];
 
 				double val = shapeFunction[i] * shapeFunction[j] * elem_mass * int_wt;
-				this->element_ConsistentMassMatrix(ii, jj) += val;
+				elem_ConsistentMassMatrix.coeffRef(ii, jj) += val;
 
 				// Since it's symmetric, mirror the value if i != j
 				if (ii != jj)
 				{
-					this->element_ConsistentMassMatrix(jj, ii) += val;
+					elem_ConsistentMassMatrix.coeffRef(jj, ii) += val;
 				}
 					
 			}
@@ -754,14 +770,14 @@ void triCKZ_element::computeConsistentMassMatrix(const double& thickness, const 
 
 			int ij_sum = i + j;
 			if ((ij_sum % 2) == 0)  // I + J is even
-				this->element_ConsistentMassMatrix(ii, jj) = elem_mass;
+				elem_ConsistentMassMatrix.coeffRef(ii, jj) = elem_mass;
 
 			if (i == j)  // diagonal
-				this->element_ConsistentMassMatrix(ii, jj) = 2.0 * elem_mass;
+				elem_ConsistentMassMatrix.coeffRef(ii, jj) = 2.0 * elem_mass;
 
 			// Symmetrically assign (optional if your matrix is symmetric by design)
 			if (ii != jj)
-				this->element_ConsistentMassMatrix(jj, ii) = this->element_ConsistentMassMatrix(ii, jj);
+				elem_ConsistentMassMatrix.coeffRef(jj, ii) = elem_ConsistentMassMatrix(ii, jj);
 		}
 	}
 

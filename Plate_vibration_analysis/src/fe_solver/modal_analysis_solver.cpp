@@ -63,9 +63,22 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 
 
 	this->node_count = model_nodes.node_count;
-
-
 	this->matrix_size = 0;
+
+	// Create a node ID map (to create a nodes as ordered and numbered from 0,1,2...n)
+	int i = 0;
+	for (auto& nd : model_nodes.nodeMap)
+	{
+		nodeid_map[nd.first] = i;
+		i++;
+	}
+
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Node maping completed at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+
+	//____________________________________________________________________________________________________________________
+
+
 
 
 	// Create element stiffness matrix for tri shell elements
@@ -94,42 +107,8 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 		Eigen::MatrixXd trielement_stiffness_matrix = triCKZ.get_element_stiffness_matrix();
 		Eigen::MatrixXd trielement_mass_matrix = triCKZ.get_element_mass_matrix();
 
-		if (tri_elem.tri_id == 1)
-		{
-			// Print the element stiffness matrix for testing
+		
 
-			 // Open output file
-			std::ofstream outFile("tri_element_stiffness_matrix.txt");
-
-			if (outFile.is_open())
-			{
-				// Define formatting: high precision, fixed-point notation, aligned columns
-				Eigen::IOFormat FullPrecisionFmt(
-					Eigen::FullPrecision,      // use full precision
-					0,                         // don't align columns
-					"\t",                      // coefficient separator (tab)
-					"\n",                      // row separator
-					"", "", "", "");           // prefix/suffix
-
-				outFile << "Element Stiffness Matrix for Triangle ID " << tri_elem.tri_id << ":\n";
-				outFile << trielement_stiffness_matrix.format(FullPrecisionFmt);
-				outFile << "\n";
-
-				outFile << "Element Mass Matrix for Triangle ID " << tri_elem.tri_id << ":\n";
-				outFile << trielement_mass_matrix.format(FullPrecisionFmt);
-
-				outFile.close();
-				std::cout << "Stiffness matrix written to tri_element_stiffness_matrix.txt\n";
-
-
-
-			}
-			else
-			{
-				std::cerr << "Unable to open output file for writing.\n";
-			}
-
-		}
 
 	}
 
@@ -163,44 +142,18 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 		Eigen::MatrixXd quadelement_stiffness_matrix = quadMIT4.get_element_stiffness_matrix();
 		Eigen::MatrixXd quadelement_mass_matrix = quadMIT4.get_element_mass_matrix();
 
-		if (quad_elem.quad_id == 1)
-		{
-			// Print the element stiffness matrix for testing
-
-			 // Open output file
-			std::ofstream outFile("quad_element_stiffness_matrix.txt");
-
-			if (outFile.is_open())
-			{
-				// Define formatting: high precision, fixed-point notation, aligned columns
-				Eigen::IOFormat FullPrecisionFmt(
-					Eigen::FullPrecision,      // use full precision
-					0,                         // don't align columns
-					"\t",                      // coefficient separator (tab)
-					"\n",                      // row separator
-					"", "", "", "");           // prefix/suffix
-
-				outFile << "Element Stiffness Matrix for Quadrilateral ID " << quad_elem.quad_id << ":\n";
-				outFile << quadelement_stiffness_matrix.format(FullPrecisionFmt);
-				outFile << "\n";
-
-				outFile << "Element Mass Matrix for Quadrilateral ID " << quad_elem.quad_id << ":\n";
-				outFile << quadelement_mass_matrix.format(FullPrecisionFmt);
-
-				outFile.close();
-				std::cout << "Stiffness matrix written to quad_element_stiffness_matrix.txt\n";
+		
 
 
 
-			}
-			else
-			{
-				std::cerr << "Unable to open output file for writing.\n";
-			}
-
-		}
 
 	}
+
+
+
+
+
+
 
 
 

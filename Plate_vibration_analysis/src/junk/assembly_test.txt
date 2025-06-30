@@ -1,0 +1,76 @@
+if (tri_elem.tri_id == 1)
+		{
+			// Print the element stiffness matrix for testing
+
+			 // Open output file
+			std::ofstream outFile("tri_element_stiffness_matrix.txt");
+
+			if (outFile.is_open())
+			{
+				// Define formatting: high precision, fixed-point notation, aligned columns
+				Eigen::IOFormat FullPrecisionFmt(
+					Eigen::FullPrecision,      // use full precision
+					0,                         // don't align columns
+					"\t",                      // coefficient separator (tab)
+					"\n",                      // row separator
+					"", "", "", "");           // prefix/suffix
+
+				outFile << "Element Stiffness Matrix for Triangle ID " << tri_elem.tri_id << ":\n";
+				outFile << trielement_stiffness_matrix.format(FullPrecisionFmt);
+				outFile << "\n";
+
+				outFile << "Element Mass Matrix for Triangle ID " << tri_elem.tri_id << ":\n";
+				outFile << trielement_mass_matrix.format(FullPrecisionFmt);
+
+				outFile.close();
+				std::cout << "Stiffness matrix written to tri_element_stiffness_matrix.txt\n";
+
+
+
+			}
+			else
+			{
+				std::cerr << "Unable to open output file for writing.\n";
+			}
+
+		}
+
+
+
+
+		if (quad_elem.quad_id == 1)
+		{
+			// Print the element stiffness matrix for testing
+
+			 // Open output file
+			std::ofstream outFile("quad_element_stiffness_matrix.txt");
+
+			if (outFile.is_open())
+			{
+				// Define formatting: high precision, fixed-point notation, aligned columns
+				Eigen::IOFormat FullPrecisionFmt(
+					Eigen::FullPrecision,      // use full precision
+					0,                         // don't align columns
+					"\t",                      // coefficient separator (tab)
+					"\n",                      // row separator
+					"", "", "", "");           // prefix/suffix
+
+				outFile << "Element Stiffness Matrix for Quadrilateral ID " << quad_elem.quad_id << ":\n";
+				outFile << quadelement_stiffness_matrix.format(FullPrecisionFmt);
+				outFile << "\n";
+
+				outFile << "Element Mass Matrix for Quadrilateral ID " << quad_elem.quad_id << ":\n";
+				outFile << quadelement_mass_matrix.format(FullPrecisionFmt);
+
+				outFile.close();
+				std::cout << "Stiffness matrix written to quad_element_stiffness_matrix.txt\n";
+
+
+
+			}
+			else
+			{
+				std::cerr << "Unable to open output file for writing.\n";
+			}
+
+		}

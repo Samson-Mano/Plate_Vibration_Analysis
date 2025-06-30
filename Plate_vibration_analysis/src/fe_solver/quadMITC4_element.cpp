@@ -47,6 +47,7 @@ void quadMITC4_element::set_quadMITC4_element_stiffness_matrix(const double& x1_
 	const double& thickness, const double& materialdensity,
 	const double& youngsmodulus, const double& poissonsratio)
 {
+
 	// Step 0: Compute the elasticity matrix
 	computeElasticityMatrix(youngsmodulus, poissonsratio);
 
@@ -59,6 +60,7 @@ void quadMITC4_element::set_quadMITC4_element_stiffness_matrix(const double& x1_
 		x3_g_coord, y3_g_coord, z3_g_coord,
 		x4_g_coord, y4_g_coord, z4_g_coord,
 		p_matrix_global);
+
 
 
 	// Step 2: Set the local co-ordinate system for the triangle
@@ -85,10 +87,40 @@ void quadMITC4_element::set_quadMITC4_element_stiffness_matrix(const double& x1_
 
 
 
-	// Step 4: Compute the stiffness and consistent mass matrix
-	computeStiffnessMatrix(thickness, materialdensity,
-		p_matrix_local, local_coordinate_matrix, ref_vector, StrainDisplacementMatrixExtraShapeFunction);
+	// Step 4: Compute the stiffness and element mass matrix
+	Eigen::MatrixXd elemStiffnessMatrix = Eigen::MatrixXd::Zero(24, 24);
+	Eigen::MatrixXd elemMassMatrix = Eigen::MatrixXd::Zero(24, 24);
+	double total_element_mass = 0.0;
 
+	computeStiffnessMatrix(thickness, materialdensity,
+		p_matrix_local, local_coordinate_matrix, ref_vector, StrainDisplacementMatrixExtraShapeFunction,
+		total_element_mass,	elemStiffnessMatrix, elemMassMatrix);
+
+
+
+	// Step 5: Perform transformation to global co-ordinates
+	// Transform rotation to element co-ordinate system
+
+	transform_localrotation_to_globalrotation(elemStiffnessMatrix, p_matrix_local);
+	transform_localrotation_to_globalrotation(elemMassMatrix, p_matrix_local);
+
+	// Find the transpose of local coordinate matrix
+	Eigen::Matrix3d local_coordinate_matrix_transpose = local_coordinate_matrix.transpose();
+
+	// Transform stiffness to global system
+	transform_stiffness_to_globalcoordinates(elemStiffnessMatrix, local_coordinate_matrix_transpose);
+	transform_stiffness_to_globalcoordinates(elemMassMatrix, local_coordinate_matrix_transpose);
+
+	// Diagonalize the mass matrix
+	diagonalize_mass_matrix(elemMassMatrix, total_element_mass);
+
+
+	// Add to the globalvariable
+	this->element_StiffnessMatrix = elemStiffnessMatrix;
+	this->element_LumpedMassMatrix = elemMassMatrix;
+
+	// matrixToString(element_StiffnessMatrix);
+	// matrixToString(element_LumpedMassMatrix);
 
 
 }
@@ -371,7 +403,10 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 	const std::array<Eigen::Matrix3d, 4>& p_matrix_local,
 	const Eigen::Matrix3d& local_coordinate_matrix,
 	const Eigen::Vector3d& ref_vector,
-	const Eigen::MatrixXd& StrainDisplacementMatrixExtraShapeFunction)
+	const Eigen::MatrixXd& StrainDisplacementMatrixExtraShapeFunction,
+	double& total_element_mass,
+	Eigen::MatrixXd& elemStiffnessMatrix,
+	Eigen::MatrixXd& elemMassMatrix)
 {
 
 	double integration_ptx = 0.0;
@@ -408,9 +443,8 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 	Eigen::MatrixXd StiffnessMatrix12 = Eigen::MatrixXd::Zero(24, 4);
 	Eigen::MatrixXd StiffnessMatrix22 = Eigen::MatrixXd::Zero(4, 4);
 
-	// Store the element mass matrix
-	Eigen::MatrixXd elemMassMatrix = Eigen::MatrixXd::Zero(24, 24);
-	double total_element_mass = 0.0;
+		
+	total_element_mass = 0.0;
 
 	for (int i = 0; i < 2; i++)
 	{
@@ -556,35 +590,9 @@ void quadMITC4_element::computeStiffnessMatrix(const double& thickness, const do
 	Eigen::MatrixXd StiffnessMatrix22Inv12 = StiffnessMatrix22Inv * StiffnessMatrix12.transpose();  // (4×24)
 
 
-	// Initialize the final 24×24 condensed stiffness matrix
-	Eigen::MatrixXd elemStiffnessMatrix = Eigen::MatrixXd::Zero(24, 24);
-
 	// Perform the condensation: K11 - K12 * inv(K22) * K12^T
 	elemStiffnessMatrix = StiffnessMatrix11 - (StiffnessMatrix12 * StiffnessMatrix22Inv12);
 
-
-
-	// Transform rotation to element co-ordinate system
-	transform_localrotation_to_globalrotation(elemStiffnessMatrix, p_matrix_local);
-	transform_localrotation_to_globalrotation(elemMassMatrix, p_matrix_local);
-
-	// Find the transpose of local coordinate matrix
-	Eigen::Matrix3d local_coordinate_matrix_transpose = local_coordinate_matrix.transpose();
-
-	// Transform stiffness to global system
-	transform_stiffness_to_globalcoordinates(elemStiffnessMatrix, local_coordinate_matrix_transpose);
-	transform_stiffness_to_globalcoordinates(elemMassMatrix, local_coordinate_matrix_transpose);
-
-	// Diagonalize the mass matrix
-	diagonalize_mass_matrix(elemMassMatrix, total_element_mass);
-
-
-	// Add to the globalvariable
-	this->element_StiffnessMatrix = elemStiffnessMatrix;
-	this->element_LumpedMassMatrix = elemMassMatrix;
-
-	// matrixToString(element_StiffnessMatrix);
-	// matrixToString(element_LumpedMassMatrix);
 
 
 }
