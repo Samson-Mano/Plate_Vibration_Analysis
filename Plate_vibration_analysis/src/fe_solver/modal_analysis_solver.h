@@ -60,13 +60,30 @@ class modal_analysis_solver
 {
 public:
 	// Result store
-	std::unordered_map<int, bool> constrained_node_map; // Node ID and Bool True = Constrained, False = Un Constrained
-	std::unordered_map<int, int> nodeid_map; // Node ID map for eigen vectors
-	int paint_mode_count = 100; // Draw only first 100 modes (To save memory)
 	int number_of_modes = 0;
-	int node_count = 0;
-	int matrix_size = 0;
-	int model_type = 0;
+	std::unordered_map<int, int> nodeid_map; // Node ID map
+	std::unordered_map<int, double> m_eigenvalues;
+	std::unordered_map<int, std::vector<double>> m_eigenvectors;
+	std::vector<std::string> mode_result_str;
+
+	int numDOF = 0;
+	int reducedDOF = 0;
+
+
+	std::unordered_map<int, bool> constrained_node_map; // Node ID and Bool True = Constrained, False = Un Constrained
+	int paint_mode_count = 100; // Draw only first 100 modes (To save memory)
+	// int node_count = 0;
+	// int matrix_size = 0;
+
+	// Matrix stored
+	Eigen::VectorXd reduced_modalMass;
+	Eigen::VectorXd reduced_modalStiff;
+	Eigen::VectorXi globalDOFMatrix;
+	Eigen::MatrixXd globalSupportInclinationMatrix;
+	Eigen::MatrixXd reduced_eigenvectors;
+	Eigen::MatrixXd global_eigenvectors;
+	Eigen::MatrixXd global_eigenvectors_transformed;
+
 
 	// Eigen values matrices
 	Eigen::VectorXd angular_freq_vector;
@@ -101,6 +118,21 @@ private:
 	std::stringstream stopwatch_elapsed_str;
 
 	
+	void get_global_stiffness_and_mass_matrix(Eigen::MatrixXd& globalStiffnessMatrix,
+		Eigen::MatrixXd& globalMassMatrix,
+		const elementtri_list_store& model_trielements,
+		const elementquad_list_store& model_quadelements,
+		std::unordered_map<int, material_data>& material_list);
+
+
+	void get_global_dof_matrix(Eigen::VectorXi& globalDOFMatrix,
+		const nodes_list_store& model_nodes,
+		const nodecnst_list_store& node_cnst,
+		const int& numDOF,
+		int& reducedDOF);
+
+
+
 };
 
 
