@@ -110,18 +110,188 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	std::cout << "Global DOF completed at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 
 
+	//____________________________________________________________________________________________________________________
+	// Create Reduced Global Mass and stiffness matrix
+	// Reduced Global stiffness matrix
+	Eigen::MatrixXd reduced_globalStiffnessMatrix(this->reducedDOF, this->reducedDOF);
+	reduced_globalStiffnessMatrix.setZero();
+
+	// Reduced Global Mass matrix
+	Eigen::MatrixXd reduced_globalMassMatrix(this->reducedDOF, this->reducedDOF);
+	reduced_globalMassMatrix.setZero();
 
 
-
-
-
-
+	get_reduced_global_matrices(reduced_globalStiffnessMatrix,
+		reduced_globalMassMatrix,
+		globalStiffnessMatrix,
+		globalMassMatrix,
+		globalDOFMatrix,
+		numDOF,
+		reducedDOF);
 
 
 	stopwatch_elapsed_str.str("");
 	stopwatch_elapsed_str << stopwatch.elapsed();
-	std::cout << "Modal analysis complete at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+	std::cout << "Global stiffness, Global Point mass matrices are reduced at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 
+
+	//___________________________________________________________________________________________________________________
+	// Solve the generalized eigenvalue problem: [K] * [phi] = lambda * [M] * [phi]
+	Eigen::GeneralizedEigenSolver<Eigen::MatrixXd> eigenSolver;
+	eigenSolver.compute(reduced_globalStiffnessMatrix, reduced_globalMassMatrix);
+
+
+	if (eigenSolver.info() != Eigen::Success)
+	{
+		// Eigenvalue problem failed to converge
+		std::cout << "Eigenvalue problem failed to converge !!!!! " << std::endl;
+		return;
+	}
+
+	stopwatch_elapsed_str.str("");
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Eigen value problem solved at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+
+	// Get the eigenvalues and eigenvectors_reduced
+	Eigen::VectorXd eigenvalues = eigenSolver.eigenvalues().real(); // Eigenvalues
+	Eigen::MatrixXd eigenvectors_reduced = eigenSolver.eigenvectors().real(); // Eigenvectors
+
+	// sort the eigen value and eigen vector (ascending)
+	sort_eigen_values_vectors(eigenvalues, eigenvectors_reduced, reducedDOF);
+
+	stopwatch_elapsed_str.str("");
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Eigen values and Eigen vectors are sorted at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+
+	// Normailize eigen vectors
+	normalize_eigen_vectors(eigenvectors_reduced, reducedDOF);
+
+	stopwatch_elapsed_str.str("");
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Eigen vectors are normalized at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+
+
+	//____________________________________________________________________________________________________________________
+	// Convert the reduced transformed eigenvectors to eigen vectors for the whole model (including the nodes with supports)
+	global_eigenvectors.resize(numDOF, reducedDOF);
+	global_eigenvectors.setZero();
+
+	get_globalized_eigen_vector_matrix(global_eigenvectors, eigenvectors_reduced, globalDOFMatrix, numDOF, reducedDOF);
+
+	stopwatch_elapsed_str.str("");
+	stopwatch_elapsed_str.clear();
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Eigen vectors globalized at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+
+
+
+	//_____________________________________________________________________________________________
+	// Calculate the effective mass participation factor & Cummulative effective mass participation factor
+	// effective mass participation factor = percentage of the system mass that participates in a particular mode
+
+	Eigen::VectorXd participation_factor(reducedDOF);
+	participation_factor.setZero();
+
+	get_modal_participation_factor(participation_factor,
+		globalMassMatrix,
+		global_eigenvectors_transformed,
+		numDOF,
+		reducedDOF);
+
+	stopwatch_elapsed_str.str("");
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Modal Mass of Participation Factor completed at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+
+
+
+	//____________________________________________________________________________________________________________________
+	// Store the results
+
+	// Clear the modal results
+	number_of_modes = 0; // Number of modes
+	mode_result_str.clear(); // Result string list
+	m_eigenvalues.clear(); // Eigen values
+	m_eigenvectors.clear(); // Eigen vectors
+
+	// Add the eigen values and eigen vectors
+	for (int i = 0; i < reducedDOF; i++)
+	{
+		std::vector<double> eigen_vec; // Eigen vectors of all nodes (including constrainded)
+
+		for (int j = 0; j < numDOF; j++)
+		{
+			eigen_vec.push_back(global_eigenvectors_transformed.coeff(j, i));
+		}
+
+		// Add to the Eigen values storage
+		m_eigenvalues.insert({ i, eigenvalues.coeff(i) });
+
+		// Add to the Eigen vectors storage 
+		m_eigenvectors.insert({ i, eigen_vec });
+
+		// Frequency
+		double nat_freq = std::sqrt(eigenvalues.coeff(i)) / (2.0 * m_pi);
+
+		// Modal results
+		std::stringstream ss, mf;
+		ss << std::fixed << std::setprecision(3) << nat_freq;
+		mf << std::fixed << std::setprecision(3) << participation_factor.coeff(i);
+
+		// Add to the string list
+		mode_result_str.push_back("Mode " + std::to_string(i + 1) + " = " + ss.str() + " Hz , Modal mass = " + mf.str());
+	}
+
+	number_of_modes = reducedDOF; // total number of modes
+
+
+	stopwatch_elapsed_str.str("");
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Eigen values/ vectors stored at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+
+	is_modal_analysis_complete = true;
+
+
+	//_____________________________________________________________________________________________
+
+	// Add the modal analysis results to node & element
+	// Clear the modal node and modal element results
+	modal_result_nodes.clear_results();
+	modal_result_trielements.clear_results();
+	modal_result_quadelements.clear_results();
+
+	map_modal_analysis_results(model_nodes,
+		model_trielements,
+		model_quadelements,
+		modal_result_nodes,
+		modal_result_trielements,
+		modal_result_quadelements);
+
+
+	stopwatch_elapsed_str.str("");
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Modal analysis results maped to nodes and elements at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+
+
+	//____________________________________________________________________________________________________________________
+	// Modal Decomposition
+	// Create modal matrices
+	reduced_modalMass.resize(reducedDOF);
+	reduced_modalStiff.resize(reducedDOF);
+
+	get_modal_matrices(reduced_modalMass,
+		reduced_modalStiff,
+		eigenvectors_reduced,
+		reduced_globalMassMatrix,
+		reduced_globalStiffnessMatrix,
+		reducedDOF);
+
+
+	stopwatch_elapsed_str.str("");
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Modal mass and stiffness storage completed at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+	std::cout << "Modal analysis complete" << std::endl;
+
+	// end
 
 }
 
@@ -278,7 +448,7 @@ void modal_analysis_solver::get_global_stiffness_and_mass_matrix(Eigen::MatrixXd
 		globalMassMatrix.block<6, 6>(n_index4 * 6, n_index4 * 6) += quadelement_mass_matrix.block<6, 6>(18, 18);
 
 	}
-
+	// globalStiffnessMatrix & globalMassMatrix
 
 }
 
@@ -346,6 +516,243 @@ void modal_analysis_solver::get_global_dof_matrix(Eigen::VectorXi& globalDOFMatr
 			reducedDOF = reducedDOF + 6;
 		}
 	}
+	// globalDOFMatrix complete
 
+}
+
+
+
+void modal_analysis_solver::get_reduced_global_matrices(Eigen::MatrixXd& reduced_globalStiffnessMatrix,
+	Eigen::MatrixXd& reduced_globalMassMatrix,
+	const Eigen::MatrixXd& globalStiffnessMatrix,
+	const Eigen::MatrixXd& globalMassMatrix,
+	const Eigen::VectorXi& globalDOFMatrix,
+	const int& numDOF,
+	const int& reducedDOF)
+{
+
+	// Curtailment of Global stiffness and Global Point mass matrix based on DOF
+	// Get the reduced global stiffness matrix
+	int r = 0;
+	int s = 0;
+
+	// Loop throug the Degree of freedom of indices
+	for (int i = 0; i < numDOF; i++)
+	{
+		if (globalDOFMatrix.coeff(i) == 0)
+		{
+			// constrained row index, so skip
+			continue;
+		}
+		else
+		{
+			s = 0;
+			for (int j = 0; j < numDOF; j++)
+			{
+				if (globalDOFMatrix.coeff(j) == 0)
+				{
+					// constrained column index, so skip
+					continue;
+				}
+				else
+				{
+					// Get the reduced matrices
+					reduced_globalStiffnessMatrix.coeffRef(r, s) = globalStiffnessMatrix.coeff(i, j);
+					reduced_globalMassMatrix.coeffRef(r, s) = globalMassMatrix.coeff(i, j);
+					s++;
+				}
+			}
+			r++;
+		}
+	}
+	// reduction complete
+
+}
+
+
+
+void modal_analysis_solver::sort_eigen_values_vectors(Eigen::VectorXd& eigenvalues,
+	Eigen::MatrixXd& eigenvectors,
+	const int& m_size)
+{
+	int p = 0;
+	int q = 0;
+	int i = 0;
+
+	double swap_temp = 0.0;
+
+	// sort the eigen value and eigen vector (ascending)
+	for (p = 0; p < m_size; p++)
+	{
+		for (q = p + 1; q < m_size; q++)
+		{
+			if (eigenvalues(p) > eigenvalues(q))
+			{
+				swap_temp = eigenvalues(p);
+				eigenvalues(p) = eigenvalues(q);
+				eigenvalues(q) = swap_temp;
+
+				for (i = 0; i < m_size; i++)
+				{
+					swap_temp = eigenvectors(i, p);
+					eigenvectors(i, p) = eigenvectors(i, q);
+					eigenvectors(i, q) = swap_temp;
+				}
+			}
+		}
+	}
+
+}
+
+
+void modal_analysis_solver::normalize_eigen_vectors(Eigen::MatrixXd& eigenvectors,
+	const int& m_size)
+{
+	// Normalize eigen vectors
+	int p = 0;
+	int q = 0;
+
+	// loop throught each column
+	for (p = 0; p < m_size; p++)
+	{
+		double max_modal_vector = 0.0;
+
+		// Loop through each row
+		for (q = 0; q < m_size; q++)
+		{
+			if (std::abs(eigenvectors(q, p)) > max_modal_vector)
+			{
+				// Max modal vector in the column (for particular mode)
+				max_modal_vector = std::abs(eigenvectors(q, p));
+			}
+		}
+
+		// Normalize the column using maximum modal vector
+		for (q = 0; q < m_size; q++)
+		{
+			eigenvectors(q, p) = eigenvectors(q, p) / max_modal_vector;
+
+			// Round the eigen vectors to 6 digit precision after normalizing
+			eigenvectors(q, p) = std::round(eigenvectors(q, p) * 1000000) / 1000000;
+		}
+	}
+
+}
+
+
+void modal_analysis_solver::get_globalized_eigen_vector_matrix(Eigen::MatrixXd& global_eigenvectors,
+	const Eigen::MatrixXd& reduced_eigenvectors,
+	const Eigen::VectorXi& globalDOFMatrix,
+	const int& numDOF,
+	const int& reducedDOF)
+{
+	// Global eigen vector Matrix
+	// Loop throug the Degree of freedom of indices
+
+	// J loops through number of modes (along the column)
+	for (int j = 0; j < reducedDOF; j++)
+	{
+		int s = 0;
+		// i loops through the number of nodes (along the row)
+		for (int i = 0; i < numDOF; i++)
+		{
+			if (globalDOFMatrix.coeff(i) == 0)
+			{
+				// constrained row index, so Displacement is Zero
+				global_eigenvectors.coeffRef(i, j) = 0;
+			}
+			else
+			{
+				// Un constrained row index, so Displacement is Zero
+				global_eigenvectors.coeffRef(i, j) = reduced_eigenvectors.coeff(s, j);
+				s++;
+			}
+		}
+	}
+
+}
+
+
+
+
+void modal_analysis_solver::get_modal_participation_factor(Eigen::VectorXd& participation_factor,
+	const Eigen::MatrixXd& globalPointMassMatrix,
+	const Eigen::MatrixXd& global_eigenvectors_transformed,
+	const int& numDOF,
+	const int& reducedDOF)
+{
+
+	// Global Participation Factor
+
+	// Influence vector
+	Eigen::VectorXd influence_vector(numDOF);
+	influence_vector.setOnes();
+
+
+	double temp_modal_mass = 0.0;
+	double temp_distribution_factor = 0.0;
+	double temp_participation_factor = 0.0;
+	double total_participation_factor = 0.0;
+
+	double total_mass = influence_vector.transpose() * globalPointMassMatrix * influence_vector;
+
+	for (int i = 0; i < reducedDOF; i++)
+	{
+		// Get the nth Mode (Column)
+		Eigen::VectorXd eigen_vector_i = global_eigenvectors_transformed.col(i);
+
+		// Modal Mass
+		temp_modal_mass = eigen_vector_i.transpose() * globalPointMassMatrix * eigen_vector_i;
+
+		// Force distribution factor
+		temp_distribution_factor = eigen_vector_i.transpose() * globalPointMassMatrix * influence_vector;
+
+		// Add to the Participation factor
+		temp_participation_factor = std::pow(temp_distribution_factor, 2) / temp_modal_mass;
+
+		participation_factor.coeffRef(i) = temp_participation_factor;
+
+		// Cummulative participation factor
+		total_participation_factor += temp_participation_factor;
+
+	}
+
+
+}
+
+
+
+void modal_analysis_solver::map_modal_analysis_results(const nodes_list_store& model_nodes,
+	const elementtri_list_store& model_trielements,
+	const elementquad_list_store& model_quadelements,
+	rslt_nodes_list_store& modal_result_nodes,
+	rslt_elementtri_list_store& modal_result_trielements,
+	rslt_elementquad_list_store& modal_result_quadelements)
+{
+
+
+
+}
+
+
+
+void modal_analysis_solver::get_modal_matrices(Eigen::VectorXd& reduced_modalMass,
+	Eigen::VectorXd& reduced_modalStiff,
+	const Eigen::MatrixXd& reduced_eigenvectors,
+	const Eigen::MatrixXd& reduced_globalMassMatrix,
+	const Eigen::MatrixXd& reduced_globalStiffnessMatrix,
+	const int& reducedDOF)
+{
+	// Get the modal matrices
+	Eigen::MatrixXd modalMassMatrix(reducedDOF, reducedDOF);
+	modalMassMatrix = reduced_eigenvectors.transpose() * reduced_globalMassMatrix * reduced_eigenvectors;
+
+	// Create modal stiffness matrix
+	Eigen::MatrixXd modalStiffMatrix(reducedDOF, reducedDOF);
+	modalStiffMatrix = reduced_eigenvectors.transpose() * reduced_globalStiffnessMatrix * reduced_eigenvectors;
+
+	// Create the modal vectors
+	reduced_modalMass = modalMassMatrix.diagonal();
+	reduced_modalStiff = modalStiffMatrix.diagonal();
 
 }

@@ -79,7 +79,6 @@ public:
 	Eigen::VectorXd reduced_modalMass;
 	Eigen::VectorXd reduced_modalStiff;
 	Eigen::VectorXi globalDOFMatrix;
-	Eigen::MatrixXd globalSupportInclinationMatrix;
 	Eigen::MatrixXd reduced_eigenvectors;
 	Eigen::MatrixXd global_eigenvectors;
 	Eigen::MatrixXd global_eigenvectors_transformed;
@@ -93,7 +92,6 @@ public:
 	// Eigen::MatrixXd displ_vectors_matrix;
 	Eigen::MatrixXd eigen_vectors_matrix;
 
-	std::vector<std::string> mode_result_str;
 	bool is_modal_analysis_complete = false;
 
 	modal_analysis_solver();
@@ -132,6 +130,53 @@ private:
 		int& reducedDOF);
 
 
+	void get_reduced_global_matrices(Eigen::MatrixXd& reduced_globalStiffnessMatrix,
+		Eigen::MatrixXd& reduced_globalMassMatrix,
+		const Eigen::MatrixXd& globalStiffnessMatrix,
+		const Eigen::MatrixXd& globalMassMatrix,
+		const Eigen::VectorXi& globalDOFMatrix,
+		const int& numDOF,
+		const int& reducedDOF);
+
+
+
+	void sort_eigen_values_vectors(Eigen::VectorXd& eigenvalues,
+		Eigen::MatrixXd& eigenvectors,
+		const int& m_size);
+
+
+	void normalize_eigen_vectors(Eigen::MatrixXd& eigenvectors,
+		const int& m_size);
+
+
+	void get_globalized_eigen_vector_matrix(Eigen::MatrixXd& global_eigenvectors,
+		const Eigen::MatrixXd& reduced_eigenvectors,
+		const Eigen::VectorXi& globalDOFMatrix,
+		const int& numDOF,
+		const int& reducedDOF);
+
+
+	void get_modal_participation_factor(Eigen::VectorXd& participation_factor,
+		const Eigen::MatrixXd& globalPointMassMatrix,
+		const Eigen::MatrixXd& global_eigenvectors_transformed,
+		const int& numDOF,
+		const int& reducedDOF);
+
+
+	void map_modal_analysis_results(const nodes_list_store& model_nodes,
+		const elementtri_list_store& model_trielements,
+		const elementquad_list_store& model_quadelements,
+		rslt_nodes_list_store& modal_result_nodes,
+		rslt_elementtri_list_store& modal_result_trielements,
+		rslt_elementquad_list_store& modal_result_quadelements);
+
+
+	void get_modal_matrices(Eigen::VectorXd& reduced_modalMass,
+		Eigen::VectorXd& reduced_modalStiff,
+		const Eigen::MatrixXd& reduced_eigenvectors,
+		const Eigen::MatrixXd& reduced_globalMassMatrix,
+		const Eigen::MatrixXd& reduced_globalStiffnessMatrix,
+		const int& reducedDOF);
 
 };
 
