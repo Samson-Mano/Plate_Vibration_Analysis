@@ -312,7 +312,7 @@ void modal_analysis_solver::get_global_stiffness_and_mass_matrix(Eigen::MatrixXd
 	{
 		elementtri_store tri_elem = tri_elem_m.second;
 
-		// Get the 3 triangle ids
+		// Get the 3 node ids of the triangle element
 		int tri_id1 = tri_elem.nd1->node_id;
 		int tri_id2 = tri_elem.nd2->node_id;
 		int tri_id3 = tri_elem.nd3->node_id;
@@ -374,7 +374,7 @@ void modal_analysis_solver::get_global_stiffness_and_mass_matrix(Eigen::MatrixXd
 	{
 		elementquad_store quad_elem = quad_elem_m.second;
 
-		// Get the 4 quadrilateral ids
+		// Get the 4 node ids of the quadrilateral element 
 		int quad_id1 = quad_elem.nd1->node_id;
 		int quad_id2 = quad_elem.nd2->node_id;
 		int quad_id3 = quad_elem.nd3->node_id;
@@ -730,7 +730,89 @@ void modal_analysis_solver::map_modal_analysis_results(const nodes_list_store& m
 	rslt_elementquad_list_store& modal_result_quadelements)
 {
 
+	// Map the results to modal_result_nodes
 
+	for (auto& nd_m : model_nodes.nodeMap)
+	{
+		int node_id = nd_m.first;
+		glm::vec3 node_pt = nd_m.second.node_pt;
+		int matrix_index = nodeid_map[node_id];
+
+		// Modal analysis results
+		std::vector<glm::vec3> node_modal_displ;
+		std::vector<double> node_modal_displ_magnitude;
+
+
+		for (int i = 0; i < number_of_modes; i++)
+		{
+			// Get the mode result list
+			std::vector<double> globalEigenVector = m_eigenvectors[i];
+
+			// get the appropriate modal displacement of this particular node
+			glm::vec3 modal_displ = glm::vec3(globalEigenVector[(matrix_index * 6) + 0],
+				globalEigenVector[(matrix_index * 6) + 1],
+				globalEigenVector[(matrix_index * 6) + 2]);
+
+			double displ_magnitude = glm::length(modal_displ);
+
+
+			// add to modal result of this node
+			node_modal_displ.push_back(modal_displ);
+			node_modal_displ_magnitude.push_back(std::abs(displ_magnitude));
+		}
+
+		// Create the modal analysis result node
+		modal_result_nodes.add_result_node(node_id, node_pt, node_modal_displ, node_modal_displ_magnitude);
+	}
+
+	stopwatch_elapsed_str.str("");
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Results mapped to model nodes at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+	//____________________________________________________________________________________________________________________
+	// Map the results to modal_result_trielements and modal_result_quadelements
+
+	// Add the modal tri element results
+	for (const auto& tri_elem_m : model_trielements.elementtriMap)
+	{
+		elementtri_store tri_elem = tri_elem_m.second;
+
+		// Get the 3 node ids of the triangle element
+		int tri_id1 = tri_elem.nd1->node_id;
+		int tri_id2 = tri_elem.nd2->node_id;
+		int tri_id3 = tri_elem.nd3->node_id;
+
+		modal_result_trielements.add_rslt_elementtriangle(tri_elem.tri_id,
+			&modal_result_nodes.rslt_nodeMap[tri_id1],
+			&modal_result_nodes.rslt_nodeMap[tri_id2],
+			&modal_result_nodes.rslt_nodeMap[tri_id3]);
+
+	}
+
+
+	// Add the modal quad element results
+	for (const auto& quad_elem_m : model_quadelements.elementquadMap)
+	{
+		elementquad_store quad_elem = quad_elem_m.second;
+
+		// Get the 4 node ids of the quadrilateral element 
+		int quad_id1 = quad_elem.nd1->node_id;
+		int quad_id2 = quad_elem.nd2->node_id;
+		int quad_id3 = quad_elem.nd3->node_id;
+		int quad_id4 = quad_elem.nd4->node_id;
+
+		modal_result_quadelements.add_rslt_elementquadrilateral(quad_elem.quad_id,
+			&modal_result_nodes.rslt_nodeMap[quad_id1],
+			&modal_result_nodes.rslt_nodeMap[quad_id2],
+			&modal_result_nodes.rslt_nodeMap[quad_id3],
+			&modal_result_nodes.rslt_nodeMap[quad_id4]);
+
+	}
+	
+	stopwatch_elapsed_str.str("");
+	stopwatch_elapsed_str << stopwatch.elapsed();
+	std::cout << "Results mapped to model elements at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+	//____________________________________________________________________________________________________________________
+	// Mapping ends
 
 }
 
