@@ -1223,85 +1223,85 @@ void geom_store::paint_model_results()
 
 void geom_store::paint_modal_analysis_results()
 {
-	//// Paint the modal analysis results
-	//// Closing sequence for the modal analysis window
-	//if (modal_solver_window->execute_modal_close == true)
-	//{
-	//	// Execute the close sequence
-	//	if (modal_solver.is_modal_analysis_complete == true)
-	//	{
-	//		// Pulse response analysis is complete
-	//		update_model_transperency(false);
-	//	}
+	// Paint the modal analysis results
+	// Closing sequence for the modal analysis window
+	if (modal_solver_window->execute_modal_close == true)
+	{
+		// Execute the close sequence
+		if (modal_solver.is_modal_analysis_complete == true)
+		{
+			// Pulse response analysis is complete
+			update_model_transperency(false);
+		}
 
-	//	modal_solver_window->execute_modal_close = false;
-	//}
+		modal_solver_window->execute_modal_close = false;
+	}
 
-	//// Check whether the modal analysis solver window is open or not
-	//if (modal_solver_window->is_show_window == false)
-	//{
-	//	return;
-	//}
+	// Check whether the modal analysis solver window is open or not
+	if (modal_solver_window->is_show_window == false)
+	{
+		return;
+	}
 
-	//// Paint the modal analysis results
-	//if (modal_solver.is_modal_analysis_complete == true)
-	//{
-	//	// Change the buffer depending on the selected mode
-	//	if (modal_solver_window->is_mode_selection_changed == true)
-	//	{
-	//		// Update the Drawing objects buffers (Depends on the selected)
-	//		mesh_modal_rslt_data.update_buffer(modal_solver_window->selected_modal_option);
+	// Paint the modal analysis results
+	if (modal_solver.is_modal_analysis_complete == true)
+	{
+		// Change the buffer depending on the selected mode
+		if (modal_solver_window->is_mode_selection_changed == true)
+		{
+			// Update the Drawing objects buffers (Depends on the selected)
+			mesh_modal_rslt_data.update_buffer(modal_solver_window->selected_modal_option);
 
-	//		modal_solver_window->is_mode_selection_changed = false;
-	//	}
+			modal_solver_window->is_mode_selection_changed = false;
+		}
 
-	//	// Update the deflection scale
-	//	geom_param.normalized_defl_scale = std::abs(modal_solver_window->normailzed_defomation_scale);
-	//	geom_param.defl_scale = modal_solver_window->deformation_scale;
+		// Update the deflection scale
+		geom_param.normalized_defl_scale = std::abs(modal_solver_window->normailzed_defomation_scale);
+		geom_param.defl_scale = modal_solver_window->deformation_scale;
 
-	//	// Update the deflection scale
-	//	mesh_modal_rslt_data.update_opengl_uniforms(false, false, false, false, false, true);
+		// Update the deflection scale
+		// mesh_modal_rslt_data.update_opengl_uniforms(false, false, false, false, false, true);
 
-	//	// ______________________________________________________________________________________
+		// ______________________________________________________________________________________
 
-	//	if (modal_solver_window->show_result_quads == true)
-	//	{
-	//		// Paint the modal tris/ quads 
-	//		mesh_modal_rslt_data.paint_triangles();
-	//		mesh_modal_rslt_data.paint_quadrilaterals();
-	//	}
+		if (modal_solver_window->show_result_quads == true)
+		{
+			// Paint the modal tris/ quads 
+			mesh_modal_rslt_data.paint_dynamic_mesh();
 
-	//	if (modal_solver_window->show_result_lines == true)
-	//	{
-	//		// Paint the modal lines (mesh boundaries)
-	//		mesh_modal_rslt_data.paint_mesh_edges();
+		}
 
-	//	}
+		if (modal_solver_window->show_result_lines == true)
+		{
+			// Paint the modal lines (mesh boundaries)
+			mesh_modal_rslt_data.paint_dynamic_mesh_boundaries();
 
-	//	if (modal_solver_window->show_result_nodes == true)
-	//	{
-	//		// Paint the modal nodes
-	//		// mesh_modal_rslt_data.paint_points();
-	//	}
-	//}
+		}
 
-	//// Open sequence for the modal analysis window
-	//if (modal_solver_window->execute_modal_open == true)
-	//{
-	//	// Execute the open sequence
-	//	if (modal_solver.is_modal_analysis_complete == true)
-	//	{
-	//		// update the modal window list box
-	//		modal_solver_window->mode_result_str = modal_solver.mode_result_str;
+		if (modal_solver_window->show_result_nodes == true)
+		{
+			// Paint the modal nodes
+			// mesh_modal_rslt_data.paint_points();
+		}
+	}
 
-	//		// Set the buffer
-	//		modal_solver_window->is_mode_selection_changed = true;
+	// Open sequence for the modal analysis window
+	if (modal_solver_window->execute_modal_open == true)
+	{
+		// Execute the open sequence
+		if (modal_solver.is_modal_analysis_complete == true)
+		{
+			// update the modal window list box
+			modal_solver_window->mode_result_str = modal_solver.mode_result_str;
 
-	//		// Modal analysis is already complete so set the transparency for the model
-	//		update_model_transperency(true);
-	//	}
-	//	modal_solver_window->execute_modal_open = false;
-	//}
+			// Set the buffer
+			modal_solver_window->is_mode_selection_changed = true;
+
+			// Modal analysis is already complete so set the transparency for the model
+			update_model_transperency(true);
+		}
+		modal_solver_window->execute_modal_open = false;
+	}
 
 	// Modal Analysis 
 	if (modal_solver_window->execute_modal_analysis == true)
