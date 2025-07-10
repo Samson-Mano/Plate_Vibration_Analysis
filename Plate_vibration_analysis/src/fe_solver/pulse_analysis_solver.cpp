@@ -60,9 +60,8 @@ void pulse_analysis_solver::pulse_analysis_start(const nodes_list_store& model_n
 
 	// Retrive the Eigen values and Eigen vectors data from Modan Analysis solver
 	this->nodeid_map = modal_solver.nodeid_map;
-	this->model_type = modal_solver.model_type;
-	this->numDOF = modal_solver.node_count;
-	this->reducedDOF = modal_solver.matrix_size;
+	this->numDOF = modal_solver.numDOF;
+	this->reducedDOF = modal_solver.reducedDOF;
 	this->eigen_values_vector = modal_solver.eigen_values_vector;
 	this->eigen_vectors_matrix = modal_solver.eigen_vectors_matrix;
 

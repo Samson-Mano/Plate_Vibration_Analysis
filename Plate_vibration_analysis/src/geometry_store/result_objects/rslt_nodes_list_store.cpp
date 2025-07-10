@@ -59,7 +59,7 @@ void rslt_nodes_list_store::update_modal_response(const int& mode_number, const 
 	// Update the node point for modal response 
 	for (const auto& nd : rslt_nodeMap)
 	{
-		glm::vec3 node_displacement =  nd.second.node_displ[mode_number];
+		glm::vec3 node_displacement =  nd.second.node_displ[mode_number] * static_cast<float>( ampl);
 		double node_displacement_mag = nd.second.node_displ_magnitude[mode_number];
 
 		// Displacement offset

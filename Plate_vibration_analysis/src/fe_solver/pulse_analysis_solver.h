@@ -33,7 +33,7 @@ public:
 	const double epsilon = 0.000001;
 	bool print_matrix = false;
 	std::unordered_map<int, int> nodeid_map; // Node ID map
-	int model_type = 0;
+
 	int numDOF = 0;
 	int reducedDOF = 0; // reduced dof is the dof after support condition is applied.
 

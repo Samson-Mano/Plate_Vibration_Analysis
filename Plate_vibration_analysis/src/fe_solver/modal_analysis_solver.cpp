@@ -194,7 +194,7 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 
 	get_modal_participation_factor(participation_factor,
 		globalMassMatrix,
-		global_eigenvectors_transformed,
+		global_eigenvectors,
 		numDOF,
 		reducedDOF);
 
@@ -220,7 +220,7 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 
 		for (int j = 0; j < numDOF; j++)
 		{
-			eigen_vec.push_back(global_eigenvectors_transformed.coeff(j, i));
+			eigen_vec.push_back(global_eigenvectors.coeff(j, i));
 		}
 
 		// Add to the Eigen values storage
@@ -677,7 +677,7 @@ void modal_analysis_solver::get_globalized_eigen_vector_matrix(Eigen::MatrixXd& 
 
 void modal_analysis_solver::get_modal_participation_factor(Eigen::VectorXd& participation_factor,
 	const Eigen::MatrixXd& globalPointMassMatrix,
-	const Eigen::MatrixXd& global_eigenvectors_transformed,
+	const Eigen::MatrixXd& global_eigenvectors,
 	const int& numDOF,
 	const int& reducedDOF)
 {
@@ -699,7 +699,7 @@ void modal_analysis_solver::get_modal_participation_factor(Eigen::VectorXd& part
 	for (int i = 0; i < reducedDOF; i++)
 	{
 		// Get the nth Mode (Column)
-		Eigen::VectorXd eigen_vector_i = global_eigenvectors_transformed.col(i);
+		Eigen::VectorXd eigen_vector_i = global_eigenvectors.col(i);
 
 		// Modal Mass
 		temp_modal_mass = eigen_vector_i.transpose() * globalPointMassMatrix * eigen_vector_i;

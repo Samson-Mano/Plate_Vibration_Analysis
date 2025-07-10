@@ -81,7 +81,7 @@ public:
 	Eigen::VectorXi globalDOFMatrix;
 	Eigen::MatrixXd reduced_eigenvectors;
 	Eigen::MatrixXd global_eigenvectors;
-	Eigen::MatrixXd global_eigenvectors_transformed;
+	// Eigen::MatrixXd global_eigenvectors_transformed;
 
 
 	// Eigen values matrices
@@ -158,7 +158,7 @@ private:
 
 	void get_modal_participation_factor(Eigen::VectorXd& participation_factor,
 		const Eigen::MatrixXd& globalPointMassMatrix,
-		const Eigen::MatrixXd& global_eigenvectors_transformed,
+		const Eigen::MatrixXd& global_eigenvectors,
 		const int& numDOF,
 		const int& reducedDOF);
 
