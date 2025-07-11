@@ -156,15 +156,20 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	Eigen::VectorXd eigenvalues = eigenSolver.eigenvalues().real(); // Eigenvalues
 	Eigen::MatrixXd eigenvectors_reduced = eigenSolver.eigenvectors().real(); // Eigenvectors
 
+	// Filter and sort the eigenvalues (remove -nan(ind) values)
+	filter_eigenvalues_eigenvectors(eigenvalues, eigenvectors_reduced);
+
+	reducedDOF = eigenvectors_reduced.cols();
+
 	// sort the eigen value and eigen vector (ascending)
-	sort_eigen_values_vectors(eigenvalues, eigenvectors_reduced, reducedDOF);
+	// sort_eigen_values_vectors(eigenvalues, eigenvectors_reduced, reducedDOF);
 
 	stopwatch_elapsed_str.str("");
 	stopwatch_elapsed_str << stopwatch.elapsed();
 	std::cout << "Eigen values and Eigen vectors are sorted at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 
 	// Normailize eigen vectors
-	normalize_eigen_vectors(eigenvectors_reduced, reducedDOF);
+	normalize_eigen_vectors(eigenvectors_reduced);
 
 	stopwatch_elapsed_str.str("");
 	stopwatch_elapsed_str << stopwatch.elapsed();
@@ -570,6 +575,67 @@ void modal_analysis_solver::get_reduced_global_matrices(Eigen::MatrixXd& reduced
 }
 
 
+void modal_analysis_solver::filter_eigenvalues_eigenvectors(Eigen::VectorXd& eigenvalues,
+	Eigen::MatrixXd& eigenvectors)
+{
+	// Store the indices of valid eigenvalues
+	std::vector<int> valid_indices;
+
+	for (int i = 0; i < eigenvalues.size(); ++i)
+	{
+		double val = eigenvalues(i);
+		double nat_freq = std::sqrt(val) / (2.0 * m_pi);
+
+		if (std::isfinite(nat_freq) == true && nat_freq > -1.0)  // excludes NaN, +Inf, -Inf
+		{
+			valid_indices.push_back(i);
+		}
+	}
+
+	// Create filtered eigenvalues and eigenvectors
+	Eigen::VectorXd filtered_eigenvalues(valid_indices.size());
+	Eigen::MatrixXd filtered_eigenvectors(eigenvectors.rows(), valid_indices.size());
+
+	for (size_t i = 0; i < valid_indices.size(); ++i)
+	{
+		int idx = valid_indices[i];
+		filtered_eigenvalues(i) = eigenvalues(idx);
+		filtered_eigenvectors.col(i) = eigenvectors.col(idx);
+	}
+
+	//_____________________________________________________________________________________________
+	int n = filtered_eigenvalues.size();
+
+	// Create index vector [0, 1, ..., n-1]
+	std::vector<int> indices(n);
+
+	for (int i = 0; i < n; ++i)
+	{
+		indices[i] = i;
+	}
+
+
+	// Sort the indices based on eigenvalues
+	std::sort(indices.begin(), indices.end(),
+		[&](int i1, int i2) { return filtered_eigenvalues(i1) < filtered_eigenvalues(i2); });
+
+	// Create sorted eigenvalues and eigenvectors
+	Eigen::VectorXd sorted_eigenvalues(n);
+	Eigen::MatrixXd sorted_eigenvectors(eigenvectors.rows(), n);
+
+	for (int i = 0; i < n; ++i)
+	{
+		sorted_eigenvalues(i) = filtered_eigenvalues(indices[i]);
+		sorted_eigenvectors.col(i) = filtered_eigenvectors.col(indices[i]);
+	}
+
+
+	// Replace input with filtered versions
+	eigenvalues = sorted_eigenvalues;
+	eigenvectors = sorted_eigenvectors;
+
+}
+
 
 void modal_analysis_solver::sort_eigen_values_vectors(Eigen::VectorXd& eigenvalues,
 	Eigen::MatrixXd& eigenvectors,
@@ -605,20 +671,19 @@ void modal_analysis_solver::sort_eigen_values_vectors(Eigen::VectorXd& eigenvalu
 }
 
 
-void modal_analysis_solver::normalize_eigen_vectors(Eigen::MatrixXd& eigenvectors,
-	const int& m_size)
+void modal_analysis_solver::normalize_eigen_vectors(Eigen::MatrixXd& eigenvectors)
 {
 	// Normalize eigen vectors
-	int p = 0;
-	int q = 0;
+	int col_size = eigenvectors.cols();
+	int row_size = eigenvectors.rows();
 
 	// loop throught each column
-	for (p = 0; p < m_size; p++)
+	for (int p = 0; p < col_size; p++)
 	{
 		double max_modal_vector = 0.0;
 
 		// Loop through each row
-		for (q = 0; q < m_size; q++)
+		for (int q = 0; q < row_size; q++)
 		{
 			if (std::abs(eigenvectors(q, p)) > max_modal_vector)
 			{
@@ -628,7 +693,7 @@ void modal_analysis_solver::normalize_eigen_vectors(Eigen::MatrixXd& eigenvector
 		}
 
 		// Normalize the column using maximum modal vector
-		for (q = 0; q < m_size; q++)
+		for (int q = 0; q < row_size; q++)
 		{
 			eigenvectors(q, p) = eigenvectors(q, p) / max_modal_vector;
 
@@ -636,6 +701,7 @@ void modal_analysis_solver::normalize_eigen_vectors(Eigen::MatrixXd& eigenvector
 			eigenvectors(q, p) = std::round(eigenvectors(q, p) * 1000000) / 1000000;
 		}
 	}
+
 
 }
 

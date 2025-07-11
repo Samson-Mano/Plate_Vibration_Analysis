@@ -1251,11 +1251,12 @@ void geom_store::paint_modal_analysis_results()
 		{
 			// Update the Drawing objects buffers (Depends on the selected)
 			// mesh_modal_rslt_data.update_buffer(modal_solver_window->selected_modal_option);
-			modal_result_nodes.update_modal_response(modal_solver_window->selected_modal_option, modal_solver_window->deformation_scale);
-
-
+			
 			modal_solver_window->is_mode_selection_changed = false;
 		}
+
+		modal_result_nodes.update_modal_response(modal_solver_window->selected_modal_option, modal_solver_window->deformation_scale,
+			std::abs(modal_solver_window->normailzed_defomation_scale));
 
 		// Update the deflection scale
 		geom_param.normalized_defl_scale = std::abs(modal_solver_window->normailzed_defomation_scale);

@@ -54,7 +54,7 @@ void rslt_nodes_list_store::set_max_displacement(const double& rslt_maxdispl)
 
 }
 
-void rslt_nodes_list_store::update_modal_response(const int& mode_number, const double& ampl)
+void rslt_nodes_list_store::update_modal_response(const int& mode_number, const double& ampl, const double& normalized_ampl)
 {
 	// Update the node point for modal response 
 	for (const auto& nd : rslt_nodeMap)

@@ -140,13 +140,16 @@ private:
 
 
 
+	void filter_eigenvalues_eigenvectors(Eigen::VectorXd& eigenvalues,
+		Eigen::MatrixXd& eigenvectors);
+
+
 	void sort_eigen_values_vectors(Eigen::VectorXd& eigenvalues,
 		Eigen::MatrixXd& eigenvectors,
 		const int& m_size);
 
 
-	void normalize_eigen_vectors(Eigen::MatrixXd& eigenvectors,
-		const int& m_size);
+	void normalize_eigen_vectors(Eigen::MatrixXd& eigenvectors);
 
 
 	void get_globalized_eigen_vector_matrix(Eigen::MatrixXd& global_eigenvectors,

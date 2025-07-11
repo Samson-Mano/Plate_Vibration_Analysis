@@ -257,13 +257,13 @@ void modal_analysis_window::render_window()
 
 		// Animation is playing 
 		normailzed_defomation_scale = std::sin(time_val * animation_speed); // Varies between 0 and 1
-		deformation_scale = normailzed_defomation_scale * deformation_scale_max;
+		deformation_scale = normailzed_defomation_scale * deformation_scale_max * 0.1;
 		time_val = time_val + 0.0002f;
 	}
 	else if (animate_pause == true)
 	{
 		normailzed_defomation_scale = std::sin(time_val * animation_speed); // Varies between 0 and 1
-		deformation_scale = normailzed_defomation_scale * deformation_scale_max;
+		deformation_scale = normailzed_defomation_scale * deformation_scale_max * 0.1;
 	}
 
 

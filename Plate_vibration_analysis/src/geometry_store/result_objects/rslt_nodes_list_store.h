@@ -26,7 +26,7 @@ public:
 		const std::vector<double>& node_displ_magnitude);
 	void set_max_displacement(const double& rslt_maxdispl);
 
-	void update_modal_response(const int& mode_number, const double& ampl);
+	void update_modal_response(const int& mode_number, const double& ampl, const double& normalized_ampl);
 	void update_pulse_response(const int& time_step);
 	void clear_results();
 
