@@ -12,6 +12,8 @@ struct point_store
 	double y_coord = 0.0; // y coordinate
 	double z_coord = 0.0; // z coordinate
 
+	double normalized_defl_scale = 0.0; // Normalized deflection scale
+
 	glm::vec3 pt_normal = glm::vec3(0); // Point normal for visualization
 
 	glm::vec3 pt_coord() const
@@ -35,7 +37,8 @@ public:
 	void add_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord);
 	point_store* get_point(const int& point_id);
 
-	void update_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord);
+	void update_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord, 
+		const double& normalized_defl_scale);
 
 	void set_buffer();
 	void update_buffer();

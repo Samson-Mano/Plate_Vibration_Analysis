@@ -60,12 +60,12 @@ void rslt_nodes_list_store::update_modal_response(const int& mode_number, const 
 	for (const auto& nd : rslt_nodeMap)
 	{
 		glm::vec3 node_displacement =  nd.second.node_displ[mode_number] * static_cast<float>( ampl);
-		double node_displacement_mag = nd.second.node_displ_magnitude[mode_number];
+		double node_displacement_mag = nd.second.node_displ_magnitude[mode_number] * normalized_ampl;
 
 		// Displacement offset
 		glm::vec3 node_pt_offset = nd.second.node_pt + node_displacement;
 
-		this->mesh_data->update_mesh_point(nd.second.node_id, node_pt_offset.x, node_pt_offset.y, node_pt_offset.z);
+		this->mesh_data->update_mesh_point(nd.second.node_id, node_pt_offset.x, node_pt_offset.y, node_pt_offset.z, node_displacement_mag);
 
 	}
 	
@@ -83,7 +83,7 @@ void rslt_nodes_list_store::update_pulse_response(const int& time_step)
 		// Displacement offset
 		glm::vec3 node_pt_offset = nd.second.node_pt + node_displacement;
 
-		this->mesh_data->update_mesh_point(nd.second.node_id, node_pt_offset.x, node_pt_offset.y, node_pt_offset.z);
+		this->mesh_data->update_mesh_point(nd.second.node_id, node_pt_offset.x, node_pt_offset.y, node_pt_offset.z, node_displacement_mag);
 
 	}
 

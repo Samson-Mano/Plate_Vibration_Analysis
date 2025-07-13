@@ -14,6 +14,8 @@ layout(location = 3) in float deflscale; // Deflection scale value = normalized_
 
 out vec3 vertNormal;
 out vec3 v_Color;
+out float v_is_dynamic;
+out float v_deflscale;
 
 void main()
 {

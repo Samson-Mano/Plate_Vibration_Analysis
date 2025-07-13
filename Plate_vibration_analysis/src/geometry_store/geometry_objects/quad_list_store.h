@@ -48,6 +48,9 @@ private:
 	gBuffers quad_buffer;
 	Shader quad_shader;
 
+	float is_dynamic = 0.0;
+
+
 	void update_buffer();
 	void get_quad_vertex_buffer(quad_store* quad, float* quad_vertices, unsigned int& quad_v_index);
 	void get_quad_index_buffer(unsigned int* quad_vertex_indices, unsigned int& quad_i_index);

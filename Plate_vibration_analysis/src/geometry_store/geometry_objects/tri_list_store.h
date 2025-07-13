@@ -45,6 +45,8 @@ private:
 	gBuffers tri_buffer;
 	Shader tri_shader;
 
+	float is_dynamic = 0.0;
+
 
 	void update_buffer();
 	void get_tri_vertex_buffer(tri_store* tri, float* tri_vertices, unsigned int& tri_v_index);

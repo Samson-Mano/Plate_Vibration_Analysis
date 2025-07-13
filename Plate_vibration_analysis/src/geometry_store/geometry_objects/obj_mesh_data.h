@@ -39,7 +39,8 @@ public:
 	void update_mesh_point(const int& point_id,
 		const double& x_coord,
 		const double& y_coord, 
-		const double& z_coord);
+		const double& z_coord,
+		const double& normalized_defl_scale);
 
 	void set_mesh_node_normals();
 

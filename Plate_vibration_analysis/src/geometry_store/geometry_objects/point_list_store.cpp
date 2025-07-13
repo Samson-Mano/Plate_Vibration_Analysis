@@ -40,7 +40,8 @@ void point_list_store::add_point(const int& point_id, const double& x_coord, con
 }
 
 
-void point_list_store::update_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord)
+void point_list_store::update_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord, 
+	const double& normalized_defl_scale)
 {
 	// Get the point associated with the point_id
 	point_store* pt = get_point(point_id);
@@ -52,6 +53,8 @@ void point_list_store::update_point(const int& point_id, const double& x_coord, 
 		pt->x_coord = x_coord;
 		pt->y_coord = y_coord;
 		pt->z_coord = z_coord;
+
+		pt->normalized_defl_scale = normalized_defl_scale;
 	}
 	else
 	{

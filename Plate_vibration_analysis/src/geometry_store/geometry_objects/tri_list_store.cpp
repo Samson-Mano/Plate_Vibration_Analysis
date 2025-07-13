@@ -96,10 +96,11 @@ void tri_list_store::set_buffer()
 	VertexBufferLayout tri_pt_layout;
 	tri_pt_layout.AddFloat(3);  // Node center
 	tri_pt_layout.AddFloat(3);  // Node normal
+	tri_pt_layout.AddFloat(1);  // Is Dynamic data
+	tri_pt_layout.AddFloat(1);  // Normalized deflection scale
 
-
-	// Define the tri vertices of the model for a node 3 * (3 position & 3 normal)  
-	const unsigned int tri_vertex_count = 3 * 6 * tri_count;
+	// Define the tri vertices of the model for a node 3 * (3 position + 3 normal + 2 dynamic data)  
+	const unsigned int tri_vertex_count = 3 * 8 * tri_count;
 	unsigned int tri_vertex_size = tri_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the triangle dynamic buffers
@@ -124,6 +125,7 @@ void tri_list_store::paint_static_triangles()
 	// Paint all the triangles
 	tri_shader.Bind();
 	tri_buffer.Bind();
+	is_dynamic = 0.0;
 	glDrawElements(GL_TRIANGLES, (3 * tri_count), GL_UNSIGNED_INT, 0);
 	tri_buffer.UnBind();
 	tri_shader.UnBind();
@@ -137,6 +139,7 @@ void tri_list_store::paint_dynamic_triangles()
 	tri_buffer.Bind();
 
 	// Update the tri buffer data for dynamic drawing
+	is_dynamic = 1.0;
 	update_buffer();
 
 	glDrawElements(GL_TRIANGLES, (3 * tri_count), GL_UNSIGNED_INT, 0);
@@ -148,8 +151,8 @@ void tri_list_store::paint_dynamic_triangles()
 void tri_list_store::update_buffer()
 {
 
-	// Define the tri vertices of the model for a point 3 * (3 position & 3 normal) 
-	const unsigned int tri_vertex_count = 3 * 6 * tri_count;
+	// Define the tri vertices of the model for a point 3 * (3 position & 3 normal + 2 dynamic data) 
+	const unsigned int tri_vertex_count = 3 * 8 * tri_count;
 	float* tri_vertices = new float[tri_vertex_count];
 
 	unsigned int tri_v_index = 0;
@@ -229,8 +232,14 @@ void tri_list_store::get_tri_vertex_buffer(tri_store* tri, float* tri_vertices, 
 	tri_vertices[tri_v_index + 4] = tri->face_normal.y;
 	tri_vertices[tri_v_index + 5] = tri->face_normal.z;
 
+	// Is dynamic point
+	tri_vertices[tri_v_index + 6] = is_dynamic;
+
+	// Normalized deflection scale
+	tri_vertices[tri_v_index + 7] = tri->edge1->start_pt->normalized_defl_scale;
+
 	// Iterate
-	tri_v_index = tri_v_index + 6;
+	tri_v_index = tri_v_index + 8;
 
 	// Point 2
 	// Point location
@@ -243,8 +252,14 @@ void tri_list_store::get_tri_vertex_buffer(tri_store* tri, float* tri_vertices, 
 	tri_vertices[tri_v_index + 4] = tri->face_normal.y;
 	tri_vertices[tri_v_index + 5] = tri->face_normal.z;
 
+	// Is dynamic point
+	tri_vertices[tri_v_index + 6] = is_dynamic;
+
+	// Normalized deflection scale
+	tri_vertices[tri_v_index + 7] = tri->edge2->start_pt->normalized_defl_scale;
+
 	// Iterate
-	tri_v_index = tri_v_index + 6;
+	tri_v_index = tri_v_index + 8;
 
 	// Point 3
 	// Point location
@@ -257,8 +272,15 @@ void tri_list_store::get_tri_vertex_buffer(tri_store* tri, float* tri_vertices, 
 	tri_vertices[tri_v_index + 4] = tri->face_normal.y;
 	tri_vertices[tri_v_index + 5] = tri->face_normal.z;
 
+	// Is dynamic point
+	tri_vertices[tri_v_index + 6] = is_dynamic;
+
+	// Normalized deflection scale
+	tri_vertices[tri_v_index + 7] = tri->edge3->start_pt->normalized_defl_scale;
+
 	// Iterate
-	tri_v_index = tri_v_index + 6;
+	tri_v_index = tri_v_index + 8;
+
 }
 
 void tri_list_store::get_tri_index_buffer(unsigned int* tri_vertex_indices, unsigned int& tri_i_index)

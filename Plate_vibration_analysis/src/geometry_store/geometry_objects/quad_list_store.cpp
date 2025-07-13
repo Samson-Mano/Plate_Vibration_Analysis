@@ -152,9 +152,12 @@ void quad_list_store::set_buffer()
 	VertexBufferLayout quad_pt_layout;
 	quad_pt_layout.AddFloat(3);  // Node center
 	quad_pt_layout.AddFloat(3);  // Node normal
+	quad_pt_layout.AddFloat(1);  // Is Dynamic data
+	quad_pt_layout.AddFloat(1);  // Normalized deflection scale
 
-	// Define the tri vertices of the model for a node 6 * (3 position & 3 normal)  
-	const unsigned int quad_vertex_count = 6 * 6 * quad_count;
+
+	// Define the tri vertices of the model for a node 6 * (3 position + 3 normal + 2 dynamic data)   
+	const unsigned int quad_vertex_count = 6 * 8 * quad_count;
 	unsigned int quad_vertex_size = quad_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the quadrilateral buffers
@@ -181,6 +184,7 @@ void quad_list_store::paint_static_quadrilaterals()
 	// Paint all the quadrilaterals
 	quad_shader.Bind();
 	quad_buffer.Bind();
+	is_dynamic = 0.0;
 	glDrawElements(GL_TRIANGLES, (6 * quad_count), GL_UNSIGNED_INT, 0);
 	quad_buffer.UnBind();
 	quad_shader.UnBind();
@@ -195,6 +199,7 @@ void quad_list_store::paint_dynamic_quadrilaterals()
 	quad_buffer.Bind();
 
 	// Update the tri buffer data for dynamic drawing
+	is_dynamic = 1.0;
 	update_buffer();
 
 	glDrawElements(GL_TRIANGLES, (6 * quad_count), GL_UNSIGNED_INT, 0);
@@ -207,8 +212,8 @@ void quad_list_store::paint_dynamic_quadrilaterals()
 void quad_list_store::update_buffer()
 {
 
-	// Define the tri vertices of the model for a point 6 * (3 position & 3 normal)   
-	const unsigned int quad_vertex_count = 6 * 6 * quad_count;
+	// Define the tri vertices of the model for a point 6 * (3 position + 3 normal + 2 dynamic data)     
+	const unsigned int quad_vertex_count = 6 * 8 * quad_count;
 	float* quad_vertices = new float[quad_vertex_count];
 
 	unsigned int quad_v_index = 0;
@@ -292,8 +297,14 @@ void quad_list_store::get_quad_vertex_buffer(quad_store* quad, float* quad_verti
 	quad_vertices[quad_v_index + 4] = quad->face_normal.y;
 	quad_vertices[quad_v_index + 5] = quad->face_normal.z;
 
+	// Is dynamic point
+	quad_vertices[quad_v_index + 6] = is_dynamic;
+
+	// Normalized deflection scale
+	quad_vertices[quad_v_index + 7] = quad->tri123->edge1->start_pt->normalized_defl_scale;
+
 	// Iterate
-	quad_v_index = quad_v_index + 6;
+	quad_v_index = quad_v_index + 8;
 
 	// Point 2
 	// Point location
@@ -306,8 +317,14 @@ void quad_list_store::get_quad_vertex_buffer(quad_store* quad, float* quad_verti
 	quad_vertices[quad_v_index + 4] = quad->face_normal.y;
 	quad_vertices[quad_v_index + 5] = quad->face_normal.z;
 
+	// Is dynamic point
+	quad_vertices[quad_v_index + 6] = is_dynamic;
+
+	// Normalized deflection scale
+	quad_vertices[quad_v_index + 7] = quad->tri123->edge2->start_pt->normalized_defl_scale;
+
 	// Iterate
-	quad_v_index = quad_v_index + 6;
+	quad_v_index = quad_v_index + 8;
 
 	// Point 3
 	// Point location
@@ -320,8 +337,14 @@ void quad_list_store::get_quad_vertex_buffer(quad_store* quad, float* quad_verti
 	quad_vertices[quad_v_index + 4] = quad->face_normal.y;
 	quad_vertices[quad_v_index + 5] = quad->face_normal.z;
 
+	// Is dynamic point
+	quad_vertices[quad_v_index + 6] = is_dynamic;
+
+	// Normalized deflection scale
+	quad_vertices[quad_v_index + 7] = quad->tri341->edge1->start_pt->normalized_defl_scale;
+
 	// Iterate
-	quad_v_index = quad_v_index + 6;
+	quad_v_index = quad_v_index + 8;
 
 	// Point 4
 	// Point location
@@ -334,8 +357,14 @@ void quad_list_store::get_quad_vertex_buffer(quad_store* quad, float* quad_verti
 	quad_vertices[quad_v_index + 4] = quad->face_normal.y;
 	quad_vertices[quad_v_index + 5] = quad->face_normal.z;
 
+	// Is dynamic point
+	quad_vertices[quad_v_index + 6] = is_dynamic;
+
+	// Normalized deflection scale
+	quad_vertices[quad_v_index + 7] = quad->tri341->edge2->start_pt->normalized_defl_scale;
+
 	// Iterate
-	quad_v_index = quad_v_index + 6;
+	quad_v_index = quad_v_index + 8;
 
 }
 

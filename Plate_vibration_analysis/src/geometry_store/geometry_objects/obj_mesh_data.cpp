@@ -495,10 +495,11 @@ void obj_mesh_data::set_mesh_normal_vector(quad_store* quad)
 }
 
 
-void obj_mesh_data::update_mesh_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord)
+void obj_mesh_data::update_mesh_point(const int& point_id, const double& x_coord, const double& y_coord, const double& z_coord,
+	const double& normalized_defl_scale)
 {
 	// Update the point with new - coordinates
-	this->mesh_points.update_point(point_id, x_coord, y_coord, z_coord);
+	this->mesh_points.update_point(point_id, x_coord, y_coord, z_coord, normalized_defl_scale);
 
 }
 

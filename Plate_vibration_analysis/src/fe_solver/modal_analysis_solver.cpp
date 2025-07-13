@@ -795,6 +795,31 @@ void modal_analysis_solver::map_modal_analysis_results(const nodes_list_store& m
 	rslt_elementtri_list_store& modal_result_trielements,
 	rslt_elementquad_list_store& modal_result_quadelements)
 {
+	// Step 1: Compute max displacement magnitude for each mode
+	std::vector<double> max_mode_displacements(number_of_modes, 0.0);
+
+		for (int i = 0; i < number_of_modes; i++)
+	{
+		const std::vector<double>& globalEigenVector = m_eigenvectors[i];
+
+		for (auto& nd_m : model_nodes.nodeMap)
+		{
+			int node_id = nd_m.first;
+			int matrix_index = nodeid_map[node_id];
+
+			glm::vec3 modal_displ(
+				globalEigenVector[(matrix_index * 6) + 0],
+				globalEigenVector[(matrix_index * 6) + 1],
+				globalEigenVector[(matrix_index * 6) + 2]);
+
+			double mag = glm::length(modal_displ);
+
+			if (mag > max_mode_displacements[i])
+				max_mode_displacements[i] = mag;
+		}
+	}
+
+
 
 	// Map the results to modal_result_nodes
 
@@ -813,18 +838,22 @@ void modal_analysis_solver::map_modal_analysis_results(const nodes_list_store& m
 		{
 			// Get the mode result list
 			std::vector<double> globalEigenVector = m_eigenvectors[i];
+			double max_displ = max_mode_displacements[i];
 
 			// get the appropriate modal displacement of this particular node
 			glm::vec3 modal_displ = glm::vec3(globalEigenVector[(matrix_index * 6) + 0],
 				globalEigenVector[(matrix_index * 6) + 1],
 				globalEigenVector[(matrix_index * 6) + 2]);
 
+			if (max_displ > 1e-12)
+				modal_displ /= max_displ;
+
 			double displ_magnitude = glm::length(modal_displ);
 
 
 			// add to modal result of this node
 			node_modal_displ.push_back(modal_displ);
-			node_modal_displ_magnitude.push_back(std::abs(displ_magnitude));
+			node_modal_displ_magnitude.push_back(displ_magnitude);
 		}
 
 		// Create the modal analysis result node
