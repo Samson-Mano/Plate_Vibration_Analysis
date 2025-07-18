@@ -26,7 +26,7 @@ class point_list_store
 {
 	// Store all the points
 public:
-	geom_parameters* geom_param_ptr = nullptr;
+
 	unsigned int point_count = 0;
 	std::unordered_map<int, unsigned int> pointId_Map;
 	std::unordered_map<unsigned int, point_store> pointMap;
@@ -51,8 +51,12 @@ public:
 	void update_opengl_uniforms(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency);
 
 private:
+	geom_parameters* geom_param_ptr = nullptr;
+
 	gBuffers point_buffer;
 	Shader point_shader;
+
+	float is_dynamic = 0.0;
 
 	void get_point_vertex_buffer(point_store& pt, float* point_vertices, unsigned int& point_v_index);
 	void get_point_index_buffer(unsigned int* point_indices, unsigned int& point_i_index);

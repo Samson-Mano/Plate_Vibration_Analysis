@@ -1277,8 +1277,11 @@ void geom_store::paint_modal_analysis_results()
 		if (modal_solver_window->show_result_lines == true)
 		{
 			// Paint the modal lines (mesh boundaries)
+			glLineWidth(geom_param.selected_line_width);
+
 			mesh_modal_rslt_data.paint_dynamic_mesh_boundaries();
 
+			glLineWidth(geom_param.line_width);
 		}
 
 		if (modal_solver_window->show_result_nodes == true)
@@ -1417,77 +1420,78 @@ void geom_store::paint_pulse_analysis_results()
 	//}
 
 
-	//if (pulse_solver_window->execute_pulse_open == true)
-	//{
-	//	// Execute the open sequence
-	//	if (modal_solver.is_modal_analysis_complete == false)
-	//	{
-	//		// Exit the window (when modal analysis is not complete)
-	//		pulse_solver_window->is_show_window = false;
-	//	}
-	//	else
-	//	{
-	//		// Modal analysis Results
-	//		// pulse_solver_window->number_of_modes = static_cast<int>(modal_solver.m_eigenvalues.size());
-	//		pulse_solver_window->modal_first_frequency = modal_solver.angular_freq_vector.coeff(0) / (2.0 * m_pi);
-	//		pulse_solver_window->modal_end_frequency = modal_solver.angular_freq_vector.coeff(modal_solver.matrix_size - 1) / (2.0 * m_pi);
-	//		pulse_solver_window->mode_result_str = modal_solver.mode_result_str;
+	if (pulse_solver_window->execute_pulse_open == true)
+	{
+		// Execute the open sequence
+		if (modal_solver.is_modal_analysis_complete == false)
+		{
+			// Exit the window (when modal analysis is not complete)
+			pulse_solver_window->is_show_window = false;
+		}
+		else
+		{
+			// Modal analysis Results
+			// pulse_solver_window->number_of_modes = static_cast<int>(modal_solver.m_eigenvalues.size());
+			// int modal_frequency_count = static_cast<int>(modal_solver.angular_freq_vector.size());
+			pulse_solver_window->modal_first_frequency = modal_solver.angular_freq_vector.coeff(0) / (2.0 * m_pi);
+			pulse_solver_window->modal_end_frequency = modal_solver.angular_freq_vector.coeff(modal_solver.number_of_modes - 1) / (2.0 * m_pi);
+			pulse_solver_window->mode_result_str = modal_solver.mode_result_str;
 
-	//		// Modal analysis is complete (check whether frequency response analysis is complete or not)
-	//		if (pulse_solver.is_pulse_analysis_complete == true)
-	//		{
-	//			// Set the pulse response analysis result
-	//			pulse_solver_window->time_interval_atrun = pulse_solver.time_interval;
-	//			pulse_solver_window->time_step_count = pulse_solver.time_step_count;
+			// Modal analysis is complete (check whether frequency response analysis is complete or not)
+			if (pulse_solver.is_pulse_analysis_complete == true)
+			{
+				// Set the pulse response analysis result
+				pulse_solver_window->time_interval_atrun = pulse_solver.time_interval;
+				pulse_solver_window->time_step_count = pulse_solver.time_step_count;
 
-	//			// Pulse response analysis is complete
-	//			update_model_transperency(true);
-	//		}
+				// Pulse response analysis is complete
+				update_model_transperency(true);
+			}
 
-	//	}
-	//	pulse_solver_window->execute_pulse_open = false;
-	//}
+		}
+		pulse_solver_window->execute_pulse_open = false;
+	}
 
-	//if (pulse_solver_window->execute_pulse_analysis == true)
-	//{
-	//	mesh_pulse_rslt_data.clear_mesh();
+	if (pulse_solver_window->execute_pulse_analysis == true)
+	{
+		mesh_pulse_rslt_data.clear_mesh();
 
-	//	// Execute the Pulse response Analysis
-	//	pulse_solver.pulse_analysis_start(model_nodes,
-	//		model_trielements,
-	//		model_quadelements,
-	//		node_loads,
-	//		node_inldispl,
-	//		node_inlvelo,
-	//		mat_data,
-	//		modal_solver,
-	//		pulse_solver_window->total_simulation_time,
-	//		pulse_solver_window->time_interval,
-	//		pulse_solver_window->damping_ratio,
-	//		pulse_solver_window->selected_pulse_option,
-	//		pulse_result_nodes,
-	//		pulse_result_trielements,
-	//		pulse_result_quadelements);
+		// Execute the Pulse response Analysis
+		pulse_solver.pulse_analysis_start(model_nodes,
+			model_trielements,
+			model_quadelements,
+			node_loads,
+			node_inldispl,
+			node_inlvelo,
+			mat_window->material_list,
+			modal_solver,
+			pulse_solver_window->total_simulation_time,
+			pulse_solver_window->time_interval,
+			pulse_solver_window->damping_ratio,
+			pulse_solver_window->selected_pulse_option,
+			pulse_result_nodes,
+			pulse_result_trielements,
+			pulse_result_quadelements);
 
-	//	// Check whether the modal analysis is complete or not
-	//	if (pulse_solver.is_pulse_analysis_complete == true)
-	//	{
-	//		// Set the pulse response analysis result
-	//		pulse_solver_window->time_interval_atrun = pulse_solver.time_interval;
-	//		pulse_solver_window->time_step_count = pulse_solver.time_step_count;
+		// Check whether the modal analysis is complete or not
+		if (pulse_solver.is_pulse_analysis_complete == true)
+		{
+			// Set the pulse response analysis result
+			pulse_solver_window->time_interval_atrun = pulse_solver.time_interval;
+			pulse_solver_window->time_step_count = pulse_solver.time_step_count;
 
-	//		mesh_pulse_rslt_data.set_mesh_wireframe();
+			mesh_pulse_rslt_data.set_mesh_wireframe();
 
-	//		// Reset the buffers for pulse result nodes, lines and quads/ tris
-	//		mesh_pulse_rslt_data.set_buffer();
+			// Reset the buffers for pulse result nodes, lines and quads/ tris
+			mesh_pulse_rslt_data.set_buffer();
 
-	//		std::cout << "Pulse analysis complete " << std::endl;
+			std::cout << "Pulse analysis complete " << std::endl;
 
-	//		// Pulse response analysis is complete
-	//		update_model_transperency(true);
-	//	}
-	//	pulse_solver_window->execute_pulse_analysis = false;
-	//}
+			// Pulse response analysis is complete
+			update_model_transperency(true);
+		}
+		pulse_solver_window->execute_pulse_analysis = false;
+	}
 
 }
 

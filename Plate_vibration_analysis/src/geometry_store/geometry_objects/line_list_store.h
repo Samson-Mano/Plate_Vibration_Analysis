@@ -48,6 +48,9 @@ private:
 	gBuffers line_buffer;
 	Shader line_shader;
 
+	float is_dynamic = 0.0;
+
+
 	void get_line_vertex_buffer(line_store& ln, float* line_vertices, unsigned int& line_v_index);
 	void get_line_index_buffer(unsigned int* line_vertex_indices, unsigned int& line_i_index);
 

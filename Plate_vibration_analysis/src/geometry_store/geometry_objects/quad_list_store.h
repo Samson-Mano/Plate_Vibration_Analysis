@@ -20,7 +20,6 @@ struct quad_store
 class quad_list_store
 {
 public:
-	geom_parameters* geom_param_ptr = nullptr;
 	unsigned int quad_count = 0;
 	std::unordered_map<int, int> quadId_Map;
 	std::vector<quad_store*> quadMap;
@@ -45,6 +44,8 @@ public:
 	void clear_quadrilaterals();
 	void update_opengl_uniforms(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency);
 private:
+	geom_parameters* geom_param_ptr = nullptr;
+
 	gBuffers quad_buffer;
 	Shader quad_shader;
 

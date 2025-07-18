@@ -18,11 +18,11 @@ void nodecnst_list_store::init(geom_parameters* geom_param_ptr)
 	this->geom_param_ptr = geom_param_ptr;
 
 	// Set the geometry parameter for the points
-	ndcnst_points.init(geom_param_ptr);
-	ndcnst_lines.init(geom_param_ptr);
+	ndcnst_points.init(this->geom_param_ptr);
+	ndcnst_lines.init(this->geom_param_ptr);
 
-	ndcnst_points.set_point_color(geom_param_ptr->geom_colors.constraint_color);
-	ndcnst_lines.set_line_color(geom_param_ptr->geom_colors.constraint_color);
+	ndcnst_points.set_point_color(this->geom_param_ptr->geom_colors.constraint_color);
+	ndcnst_lines.set_line_color(this->geom_param_ptr->geom_colors.constraint_color);
 
 	ndcnstMap.clear();
 	ndcnst_count = 0;

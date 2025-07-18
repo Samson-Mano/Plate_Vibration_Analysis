@@ -54,7 +54,7 @@ public:
 		const nodeload_list_store& node_loads,
 		const nodeinlcond_list_store& node_inldispl,
 		const nodeinlcond_list_store& node_inlvelo,
-		const material_data& mat_data,
+		std::unordered_map<int, material_data>& material_list,
 		const modal_analysis_solver& modal_solver,
 		const double total_simulation_time,
 		const double time_interval,

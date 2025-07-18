@@ -252,7 +252,7 @@ void quad_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_view
 	if (set_modelmatrix == true)
 	{
 		// set the transparency
-		quad_shader.setUniform("vertexTransparency", 1.0f);
+		quad_shader.setUniform("vertexTransparency", static_cast<float>(geom_param_ptr->geom_transparency));
 
 		// set the projection matrix
 		quad_shader.setUniform("projectionMatrix", geom_param_ptr->projectionMatrix, false);

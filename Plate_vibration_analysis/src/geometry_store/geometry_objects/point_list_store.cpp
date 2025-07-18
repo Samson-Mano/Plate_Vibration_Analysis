@@ -102,9 +102,11 @@ void point_list_store::set_buffer()
 	VertexBufferLayout node_layout;
 	node_layout.AddFloat(3);  // Node center
 	node_layout.AddFloat(3);  // Node normal
+	node_layout.AddFloat(1);  // Is Dynamic data
+	node_layout.AddFloat(1);  // Normalized deflection scale
 
-	// Define the node vertices of the model for a node (3 position & 3 normal) 
-	const unsigned int point_vertex_count = 6 * point_count;
+	// Define the node vertices of the model for a node (3 position & 3 normal + 2 dynamic data) 
+	const unsigned int point_vertex_count = 8 * point_count;
 	unsigned int point_vertex_size = point_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the point dynamic buffers
@@ -132,6 +134,7 @@ void point_list_store::paint_static_points()
 	// Paint all the static points
 	point_shader.Bind();
 	point_buffer.Bind();
+	is_dynamic = 0.0;
 	glDrawElements(GL_POINTS, point_count, GL_UNSIGNED_INT, 0);
 	point_buffer.UnBind();
 	point_shader.UnBind();
@@ -145,6 +148,7 @@ void point_list_store::paint_dynamic_points()
 	point_buffer.Bind();
 
 	// Update the point buffer data for dynamic drawing
+	is_dynamic = 1.0;
 	update_buffer();
 
 	glDrawElements(GL_POINTS, point_count, GL_UNSIGNED_INT, 0);
@@ -156,8 +160,8 @@ void point_list_store::paint_dynamic_points()
 
 void point_list_store::update_buffer()
 {
-	// Define the node vertices of the model for a node (3 position & 3 normal) 
-	const unsigned int point_vertex_count = 6 * point_count;
+	// Define the node vertices of the model for a node (3 position & 3 normal + 2 dynamic data)  
+	const unsigned int point_vertex_count = 8 * point_count;
 	float* point_vertices = new float[point_vertex_count];
 
 	unsigned int point_v_index = 0;
@@ -236,8 +240,12 @@ void point_list_store::get_point_vertex_buffer(point_store& pt, float* point_ver
 	point_vertices[point_v_index + 4] = pt.pt_normal.y;
 	point_vertices[point_v_index + 5] = pt.pt_normal.z;
 
+	point_vertices[point_v_index + 6] = is_dynamic;
+
+	point_vertices[point_v_index + 7] = pt.normalized_defl_scale;
+
 	// Iterate
-	point_v_index = point_v_index + 6;
+	point_v_index = point_v_index + 8;
 
 }
 

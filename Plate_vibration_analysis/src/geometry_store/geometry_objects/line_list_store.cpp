@@ -81,9 +81,11 @@ void line_list_store::set_buffer()
 	VertexBufferLayout line_pt_layout;
 	line_pt_layout.AddFloat(3);  // Node center
 	line_pt_layout.AddFloat(3);  // Node normal
+	line_pt_layout.AddFloat(1);  // Is Dynamic data
+	line_pt_layout.AddFloat(1);  // Normalized deflection scale
 
-	// Define the line vertices of the model for a point 2 * (3 position & 3 normal) 
-	const unsigned int line_vertex_count = 2 * 6 * line_count;
+	// Define the line vertices of the model for a point 2 * (3 position & 3 normal + 2 dynamic data) 
+	const unsigned int line_vertex_count = 2 * 8 * line_count;
 	unsigned int line_vertex_size = line_vertex_count * sizeof(float); // Size of the node_vertex
 
 	// Create the line dynamic buffers
@@ -110,6 +112,7 @@ void line_list_store::paint_static_lines()
 	// Paint all the points
 	line_shader.Bind();
 	line_buffer.Bind();
+	is_dynamic = 0.0;
 	glDrawElements(GL_LINES, (2 * line_count), GL_UNSIGNED_INT, 0);
 	line_buffer.UnBind();
 	line_shader.UnBind();
@@ -122,6 +125,7 @@ void line_list_store::paint_dynamic_lines()
 	line_buffer.Bind();
 
 	// Update the line buffer data for dynamic drawing
+	is_dynamic = 1.0;
 	update_buffer();
 
 	glDrawElements(GL_LINES, (2 * line_count), GL_UNSIGNED_INT, 0);
@@ -134,8 +138,8 @@ void line_list_store::paint_dynamic_lines()
 void line_list_store::update_buffer()
 {
 
-	// Define the line vertices of the model for a point 2 * (3 position & 3 normal) 
-	const unsigned int line_vertex_count = 2 * 6 * line_count;
+	// Define the line vertices of the model for a point 2 * (3 position & 3 normal + 2 dynamic data) 
+	const unsigned int line_vertex_count = 2 * 8 * line_count;
 	float* line_vertices = new float[line_vertex_count];
 
 	unsigned int line_v_index = 0;
@@ -216,8 +220,14 @@ void line_list_store::get_line_vertex_buffer(line_store& ln, float* line_vertice
 	line_vertices[line_v_index + 4] = ln.line_normal.y;
 	line_vertices[line_v_index + 5] = ln.line_normal.z;
 
+	// Is dynamic point
+	line_vertices[line_v_index + 6] = is_dynamic;
+
+	// Normalized deflection scale
+	line_vertices[line_v_index + 7] = ln.start_pt->normalized_defl_scale;
+
 	// Iterate
-	line_v_index = line_v_index + 6;
+	line_v_index = line_v_index + 8;
 
 	// End Point
 	// Point location
@@ -230,8 +240,14 @@ void line_list_store::get_line_vertex_buffer(line_store& ln, float* line_vertice
 	line_vertices[line_v_index + 4] = ln.line_normal.y;
 	line_vertices[line_v_index + 5] = ln.line_normal.z;
 
+	// Is dynamic point
+	line_vertices[line_v_index + 6] = is_dynamic;
+
+	// Normalized deflection scale
+	line_vertices[line_v_index + 7] = ln.end_pt->normalized_defl_scale;
+
 	// Iterate
-	line_v_index = line_v_index + 6;
+	line_v_index = line_v_index + 8;
 
 }
 

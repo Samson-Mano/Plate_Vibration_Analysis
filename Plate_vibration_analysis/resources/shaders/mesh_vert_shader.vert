@@ -16,6 +16,7 @@ out vec3 vertNormal;
 out vec3 v_Color;
 out float v_is_dynamic;
 out float v_deflscale;
+out float v_Transparency;
 
 void main()
 {
@@ -27,6 +28,7 @@ void main()
 
     // Set the point color and transparency
     v_Color = vertexColor;
+    v_Transparency = vertexTransparency;
 
     // Final position with projection matrix (fixes clipping issues)
     gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(node_position, 1.0);

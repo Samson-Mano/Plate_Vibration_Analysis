@@ -16,8 +16,8 @@ void nodeinlcond_list_store::init(geom_parameters* geom_param_ptr)
 	this->geom_param_ptr = geom_param_ptr;
 
 	// Set the geometry parameter for the points
-	inlcond_points.init(geom_param_ptr);
-	inlcond_lines.init(geom_param_ptr);
+	inlcond_points.init(this->geom_param_ptr);
+	inlcond_lines.init(this->geom_param_ptr);
 
 	inlcondMap.clear();
 	inlcond_count = 0;

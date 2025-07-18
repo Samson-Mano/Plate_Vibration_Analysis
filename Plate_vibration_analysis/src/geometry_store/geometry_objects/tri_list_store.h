@@ -21,7 +21,6 @@ struct tri_store
 class tri_list_store
 {
 public:
-	geom_parameters* geom_param_ptr = nullptr;
 	unsigned int tri_count = 0;
 	std::unordered_map<int, int> triId_Map;
 	std::vector<tri_store*> triMap;
@@ -41,7 +40,10 @@ public:
 
 	void clear_triangles();
 	void update_opengl_uniforms(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency);
+
 private:
+	geom_parameters* geom_param_ptr = nullptr;
+
 	gBuffers tri_buffer;
 	Shader tri_shader;
 

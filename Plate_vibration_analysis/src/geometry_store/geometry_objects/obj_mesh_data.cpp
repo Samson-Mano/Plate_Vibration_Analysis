@@ -28,26 +28,26 @@ void obj_mesh_data::init(geom_parameters* geom_param_ptr)
 	this->geom_param_ptr = geom_param_ptr;
 
 	// Nodes
-	this->mesh_points.init(geom_param_ptr);
-	this->selected_mesh_points.init(geom_param_ptr);
-	this->selected_mesh_points.set_point_color(geom_param_ptr->geom_colors.selection_color);
+	this->mesh_points.init(this->geom_param_ptr);
+	this->selected_mesh_points.init(this->geom_param_ptr);
+	this->selected_mesh_points.set_point_color(this->geom_param_ptr->geom_colors.selection_color);
 
 	// Mesh boundaries & mesh normals
-	this->mesh_boundaries.init(geom_param_ptr);
-	this->mesh_normals.init(geom_param_ptr);
+	this->mesh_boundaries.init(this->geom_param_ptr);
+	this->mesh_normals.init(this->geom_param_ptr);
 
 	// Mesh data
-	this->mesh_tris.init(geom_param_ptr);
-	this->selected_mesh_tris.init(geom_param_ptr);
-	this->selected_mesh_tris.set_tri_color(geom_param_ptr->geom_colors.selection_color, 1.0f);
+	this->mesh_tris.init(this->geom_param_ptr);
+	this->selected_mesh_tris.init(this->geom_param_ptr);
+	this->selected_mesh_tris.set_tri_color(this->geom_param_ptr->geom_colors.selection_color, 1.0f);
 
-	this->mesh_quads.init(geom_param_ptr);
-	this->selected_mesh_quads.init(geom_param_ptr);
-	this->selected_mesh_quads.set_quad_color(geom_param_ptr->geom_colors.selection_color, 1.0f);
+	this->mesh_quads.init(this->geom_param_ptr);
+	this->selected_mesh_quads.init(this->geom_param_ptr);
+	this->selected_mesh_quads.set_quad_color(this->geom_param_ptr->geom_colors.selection_color, 1.0f);
 
 	// Mesh material ID data
-	this->mesh_tri_material_ids.init(geom_param_ptr);
-	this->mesh_quad_material_ids.init(geom_param_ptr);
+	this->mesh_tri_material_ids.init(this->geom_param_ptr);
+	this->mesh_quad_material_ids.init(this->geom_param_ptr);
 
 }
 
@@ -720,10 +720,10 @@ void obj_mesh_data::paint_mesh_materialids()
 void obj_mesh_data::update_opengl_uniforms(bool set_modelmatrix, bool set_viewmatrix, bool set_transparency)
 {
 	// Update the openGl uniform matrices
-	this->mesh_quads.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, false); // do not use default transparency 
-	this->mesh_tris.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, false); // do not use default transparency 
-	this->selected_mesh_quads.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, false); // do not use default transparency 
-	this->selected_mesh_tris.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, false); // do not use default transparency 
+	this->mesh_quads.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency); // do not use default transparency 
+	this->mesh_tris.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency); // do not use default transparency 
+	this->selected_mesh_quads.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency); // do not use default transparency 
+	this->selected_mesh_tris.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency); // do not use default transparency 
 
 	this->mesh_normals.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);
 	this->mesh_boundaries.update_opengl_uniforms(set_modelmatrix, set_viewmatrix, set_transparency);

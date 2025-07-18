@@ -18,11 +18,11 @@ void nodeload_list_store::init(geom_parameters* geom_param_ptr)
 	// load_value_labels.init(geom_param_ptr);
 
 	// Set the geometry parameter for the lines showing loads
-	load_points.init(geom_param_ptr);
-	load_lines.init(geom_param_ptr);
+	load_points.init(this->geom_param_ptr);
+	load_lines.init(this->geom_param_ptr);
 	
-	load_points.set_point_color(geom_param_ptr->geom_colors.load_color);
-	load_lines.set_line_color(geom_param_ptr->geom_colors.load_color);
+	load_points.set_point_color(this->geom_param_ptr->geom_colors.load_color);
+	load_lines.set_line_color(this->geom_param_ptr->geom_colors.load_color);
 
 
 	// Clear the loads

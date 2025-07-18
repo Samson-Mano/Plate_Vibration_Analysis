@@ -5,7 +5,7 @@ in vec3 vertNormal;
 in vec3 v_Color;
 in float v_is_dynamic;
 in float v_deflscale; // Deflection scale value = normalized_deflscale (varies 0 to 1) * max deformation
-
+in float v_Transparency; 
 
 out vec4 f_Color; // Final color output
 
@@ -56,7 +56,7 @@ void main()
 
     // Tone mapping
     finalColor = unreal(finalColor);
-    f_Color = vec4(finalColor, 1.0f ); // v_Transparency
+    f_Color = vec4(finalColor, v_Transparency); // v_Transparency
 }
 
 
