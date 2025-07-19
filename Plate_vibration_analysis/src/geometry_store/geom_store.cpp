@@ -1341,8 +1341,6 @@ void geom_store::paint_modal_analysis_results()
 			// Set the buffer (nodes, mesh boundaries, tria/ quad)
 			mesh_modal_rslt_data.set_buffer(); // Set the node buffer
 
-			std::cout << "Modal Analysis Complete" << std::endl;
-
 			modal_solver_window->is_mode_selection_changed = true;
 
 			// Modal analysis is already complete so set the transparency for the model
@@ -1431,8 +1429,7 @@ void geom_store::paint_pulse_analysis_results()
 		else
 		{
 			// Modal analysis Results
-			// pulse_solver_window->number_of_modes = static_cast<int>(modal_solver.m_eigenvalues.size());
-			// int modal_frequency_count = static_cast<int>(modal_solver.angular_freq_vector.size());
+			pulse_solver_window->number_of_modes = modal_solver.number_of_modes;
 			pulse_solver_window->modal_first_frequency = modal_solver.angular_freq_vector.coeff(0) / (2.0 * m_pi);
 			pulse_solver_window->modal_end_frequency = modal_solver.angular_freq_vector.coeff(modal_solver.number_of_modes - 1) / (2.0 * m_pi);
 			pulse_solver_window->mode_result_str = modal_solver.mode_result_str;

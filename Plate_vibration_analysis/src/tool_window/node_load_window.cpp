@@ -39,7 +39,7 @@ void node_load_window::render_window()
 	get_load_endtime_input();
 
 	// Display the Load frequency
-	ImGui::Text("Load frequency = %.3f Hz", 1.0f / (load_end_time - load_start_time));
+	ImGui::Text("Load frequency = %.6f Hz", 1.0f / (load_end_time - load_start_time));
 
 	//_________________________________________________________________________________________
 
@@ -139,7 +139,7 @@ void node_load_window::get_load_value_input()
 
 	// Text for load value
 	ImGui::SameLine();
-	ImGui::Text("Load = %.2f", load_input);
+	ImGui::Text("Load = %.4f", load_input);
 }
 
 
@@ -156,7 +156,7 @@ void node_load_window::get_load_starttime_input()
 		if (ImGui::Button("Input Start Time"))
 		{
 			loadstarttime_input_mode = true;
-			snprintf(loadstarttime_str, 16, "%.3f", loadstarttime_input); // set the buffer to current load start time
+			snprintf(loadstarttime_str, 16, "%.5f", loadstarttime_input); // set the buffer to current load start time
 		}
 	}
 	else // input mode
@@ -181,7 +181,7 @@ void node_load_window::get_load_starttime_input()
 
 	// Text for load start time
 	ImGui::SameLine();
-	ImGui::Text("Start Time = %.3f", loadstarttime_input);
+	ImGui::Text("Start Time = %.5f", loadstarttime_input);
 }
 
 
@@ -198,7 +198,7 @@ void node_load_window::get_load_endtime_input()
 		if (ImGui::Button("Input End Time"))
 		{
 			loadendtime_input_mode = true;
-			snprintf(loadendtime_str, 16, "%.3f", loadendtime_input); // set the buffer to current load End Time
+			snprintf(loadendtime_str, 16, "%.5f", loadendtime_input); // set the buffer to current load End Time
 		}
 	}
 	else // input mode
@@ -230,7 +230,7 @@ void node_load_window::get_load_endtime_input()
 
 	// Text for load End Time
 	ImGui::SameLine();
-	ImGui::Text("End Time = %.3f", loadendtime_input);
+	ImGui::Text("End Time = %.5f", loadendtime_input);
 }
 
 void node_load_window::add_to_node_list(const std::vector<int>& selected_nodes, const bool& is_right)

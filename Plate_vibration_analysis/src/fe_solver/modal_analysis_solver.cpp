@@ -154,12 +154,12 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 
 	// Get the eigenvalues and eigenvectors_reduced
 	Eigen::VectorXd eigenvalues = eigenSolver.eigenvalues().real(); // Eigenvalues
-	Eigen::MatrixXd eigenvectors_reduced = eigenSolver.eigenvectors().real(); // Eigenvectors
+	this->reduced_eigenvectors = eigenSolver.eigenvectors().real(); // Eigenvectors
 
 	// Filter and sort the eigenvalues (remove -nan(ind) values)
-	filter_eigenvalues_eigenvectors(eigenvalues, eigenvectors_reduced);
+	filter_eigenvalues_eigenvectors(eigenvalues, this->reduced_eigenvectors);
 
-	reducedDOF = eigenvectors_reduced.cols();
+	reducedDOF = this->reduced_eigenvectors.cols();
 
 	// sort the eigen value and eigen vector (ascending)
 	// sort_eigen_values_vectors(eigenvalues, eigenvectors_reduced, reducedDOF);
@@ -169,7 +169,7 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	std::cout << "Eigen values and Eigen vectors are sorted at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 
 	// Normailize eigen vectors
-	normalize_eigen_vectors(eigenvectors_reduced);
+	normalize_eigen_vectors(this->reduced_eigenvectors);
 
 	stopwatch_elapsed_str.str("");
 	stopwatch_elapsed_str << stopwatch.elapsed();
@@ -181,7 +181,10 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	global_eigenvectors.resize(numDOF, reducedDOF);
 	global_eigenvectors.setZero();
 
-	get_globalized_eigen_vector_matrix(global_eigenvectors, eigenvectors_reduced, globalDOFMatrix, numDOF, reducedDOF);
+	get_globalized_eigen_vector_matrix(global_eigenvectors, this->reduced_eigenvectors, globalDOFMatrix, numDOF, reducedDOF);
+
+
+	eigen_vectors_matrix = global_eigenvectors;
 
 	stopwatch_elapsed_str.str("");
 	stopwatch_elapsed_str.clear();
@@ -213,10 +216,17 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	// Store the results
 
 	// Clear the modal results
-	number_of_modes = 0; // Number of modes
+	this->number_of_modes = 0; // Number of modes
 	mode_result_str.clear(); // Result string list
 	m_eigenvalues.clear(); // Eigen values
 	m_eigenvectors.clear(); // Eigen vectors
+
+	eigen_values_vector.resize(reducedDOF);
+	eigen_values_vector.setZero();
+
+	angular_freq_vector.resize(reducedDOF);
+	angular_freq_vector.setZero();
+
 
 	// Add the eigen values and eigen vectors
 	for (int i = 0; i < reducedDOF; i++)
@@ -234,8 +244,15 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 		// Add to the Eigen vectors storage 
 		m_eigenvectors.insert({ i, eigen_vec });
 
+		// Get the eigen values
+		double t_eigen = eigenvalues.coeff(i);
+
+		// Add to the global variable
+		eigen_values_vector.coeffRef(i) = t_eigen;
+		angular_freq_vector.coeffRef(i) = std::sqrt(t_eigen);
+
 		// Frequency
-		double nat_freq = std::sqrt(eigenvalues.coeff(i)) / (2.0 * m_pi);
+		double nat_freq = std::sqrt(t_eigen) / (2.0 * m_pi);
 
 		// Modal results
 		std::stringstream ss, mf;
@@ -285,7 +302,7 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 
 	get_modal_matrices(reduced_modalMass,
 		reduced_modalStiff,
-		eigenvectors_reduced,
+		this->reduced_eigenvectors,
 		reduced_globalMassMatrix,
 		reduced_globalStiffnessMatrix,
 		reducedDOF);

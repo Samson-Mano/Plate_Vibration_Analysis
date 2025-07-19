@@ -89,7 +89,6 @@ public:
 	Eigen::VectorXd eigen_values_vector;
 
 	// Eigen vector matrices
-	// Eigen::MatrixXd displ_vectors_matrix;
 	Eigen::MatrixXd eigen_vectors_matrix;
 
 	bool is_modal_analysis_complete = false;
