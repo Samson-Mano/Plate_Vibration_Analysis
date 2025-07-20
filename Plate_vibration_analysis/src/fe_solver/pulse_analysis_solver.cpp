@@ -82,12 +82,12 @@ void pulse_analysis_solver::pulse_analysis_start(const nodes_list_store& model_n
 
 	//____________________________________________________________________________________________________________________
 	// Step: 1 Create the initial displacement matrix (Modal Transformed initial displacement matrix)
-	Eigen::VectorXd modal_reducedInitialDisplacementMatrix(reducedDOF);
-	Eigen::VectorXd modal_reducedInitialVelocityMatrix(reducedDOF);
+	Eigen::VectorXd modal_InitialDisplacementMatrix(numDOF);
+	Eigen::VectorXd modal_InitialVelocityMatrix(numDOF);
 
 
-	create_initial_condition_matrices(modal_reducedInitialDisplacementMatrix,
-		modal_reducedInitialVelocityMatrix,
+	create_initial_condition_matrices(modal_InitialDisplacementMatrix,
+		modal_InitialVelocityMatrix,
 		model_nodes,
 		node_inldispl,
 		node_inlvelo);
@@ -143,11 +143,11 @@ void pulse_analysis_solver::pulse_analysis_start(const nodes_list_store& model_n
 		double time_t = i * time_interval;
 
 		// Displacement amplitude matrix
-		Eigen::VectorXd modal_displ_ampl_respMatrix(reducedDOF);
+		Eigen::VectorXd modal_displ_ampl_respMatrix(numDOF);
 		modal_displ_ampl_respMatrix.setZero();
 
 		// 1D results for modal transformed Simple Harmonic Motion
-		for (int i = 0; i < reducedDOF; i++)
+		for (int i = 0; i < numDOF; i++)
 		{
 			double modal_mass = 1.0;
 			double modal_stiff = eigen_values_vector.coeff(i);
@@ -156,14 +156,14 @@ void pulse_analysis_solver::pulse_analysis_start(const nodes_list_store& model_n
 			double displ_resp_initial = 0.0;
 
 			// Get the steady state displacemetn response for the initial condition
-			if (std::abs(modal_reducedInitialDisplacementMatrix.coeff(i)) > epsilon ||
-				std::abs(modal_reducedInitialVelocityMatrix.coeff(i)) > epsilon)
+			if (std::abs(modal_InitialDisplacementMatrix.coeff(i)) > epsilon ||
+				std::abs(modal_InitialVelocityMatrix.coeff(i)) > epsilon)
 			{
 				displ_resp_initial = get_steady_state_initial_condition_soln(time_t,
 					modal_mass,
 					modal_stiff,
-					modal_reducedInitialDisplacementMatrix.coeff(i),
-					modal_reducedInitialVelocityMatrix.coeff(i));
+					modal_InitialDisplacementMatrix.coeff(i),
+					modal_InitialVelocityMatrix.coeff(i));
 			}
 
 			//_______________________________________________________________________
@@ -263,7 +263,7 @@ void pulse_analysis_solver::pulse_analysis_start(const nodes_list_store& model_n
 
 
 		// Transform the modal displacement to the global displacement
-		Eigen::VectorXd global_displ_ampl_respMatrix(reducedDOF);
+		Eigen::VectorXd global_displ_ampl_respMatrix(numDOF);
 
 		global_displ_ampl_respMatrix = this->eigen_vectors_matrix * modal_displ_ampl_respMatrix;
 
@@ -349,59 +349,89 @@ void pulse_analysis_solver::pulse_analysis_start(const nodes_list_store& model_n
 
 }
 
-void pulse_analysis_solver::create_initial_condition_matrices(Eigen::VectorXd& modal_reducedInitialDisplacementMatrix,
-	Eigen::VectorXd& modal_reducedInitialVelocityMatrix,
+void pulse_analysis_solver::create_initial_condition_matrices(Eigen::VectorXd& modal_InitialDisplacementMatrix,
+	Eigen::VectorXd& modal_InitialVelocityMatrix,
 	const nodes_list_store& model_nodes,
 	const nodeinlcond_list_store& node_inldispl,
 	const nodeinlcond_list_store& node_inlvelo)
 {
-	// Modal reduction of global initial displacement
-	// Modal vector transformation 
-	modal_reducedInitialDisplacementMatrix.setZero();
-	modal_reducedInitialVelocityMatrix.setZero();
 
-	// Fixed  - Fixed Condition so skip the first and last node
-	Eigen::VectorXd global_reducedInitialDisplacementMatrix(reducedDOF);
-	Eigen::VectorXd global_reducedInitialVelocityMatrix(reducedDOF);
+
+	// Create a global initial condition matrix
+	Eigen::VectorXd global_InitialDisplacementMatrix(numDOF);
+	Eigen::VectorXd global_InitialVelocityMatrix(numDOF);
+
+	global_InitialDisplacementMatrix.setZero();
+	global_InitialVelocityMatrix.setZero();
 
 	// Set the initial condition - Displacement
 	int matrix_index = 0;
-	global_reducedInitialDisplacementMatrix.setZero();
 
 	for (auto& inlc_m : node_inldispl.inlcondMap)
 	{
 		nodeinl_condition_data inlc = inlc_m.second;
 
-
 		// Node is un-constrained
 		// get the matrix index
 		matrix_index = this->nodeid_map[inlc.node_id]; // get the ordered map of the start node ID
 
-		global_reducedInitialDisplacementMatrix.coeffRef(matrix_index) = inlc.inl_amplitude_z;
+		// unit normal of the initial condition normal
+		glm::vec3 unit_normal = glm::normalize(inlc.inlcond_normals);
+
+		// Compute the scaled vector
+		glm::vec3 resolved_vector = static_cast<float>(inlc.inl_amplitude_z) * unit_normal;
+
+		// Create a node initial displacement matrix
+		Eigen::MatrixXd nodeinitialDisplacementMatrix(3, 1);
+		nodeinitialDisplacementMatrix.setZero();
+
+		nodeinitialDisplacementMatrix.coeffRef(0, 0) = resolved_vector.x;
+		nodeinitialDisplacementMatrix.coeffRef(1, 0) = resolved_vector.y;
+		nodeinitialDisplacementMatrix.coeffRef(2, 0) = resolved_vector.z;
+
+		// global initial displacement matrix
+		global_InitialDisplacementMatrix.block<3, 1>(matrix_index * 6, 0) += nodeinitialDisplacementMatrix.block<3, 1>(0, 0);
 
 	}
 
-	// Set the initial condition - Velocity
-	matrix_index = 0;
-	global_reducedInitialVelocityMatrix.setZero();
 
 	for (auto& inlc_m : node_inlvelo.inlcondMap)
 	{
 		nodeinl_condition_data inlc = inlc_m.second;
 
-
 		// Node is un-constrained
 		// get the matrix index
 		matrix_index = this->nodeid_map[inlc.node_id]; // get the ordered map of the start node ID
 
-		global_reducedInitialVelocityMatrix.coeffRef(matrix_index) = inlc.inl_amplitude_z;
+		// unit normal of the initial condition normal
+		glm::vec3 unit_normal = glm::normalize(inlc.inlcond_normals);
+
+		// Compute the scaled vector
+		glm::vec3 resolved_vector = static_cast<float>(inlc.inl_amplitude_z) * unit_normal;
+
+
+		// Create a node initial velocity matrix
+		Eigen::MatrixXd nodeinitialVelocityMatrix(2, 1);
+		nodeinitialVelocityMatrix.setZero();
+
+		nodeinitialVelocityMatrix.coeffRef(0, 0) = inlc.inlcond_normals.x;
+		nodeinitialVelocityMatrix.coeffRef(1, 0) = inlc.inlcond_normals.y;
+		nodeinitialVelocityMatrix.coeffRef(2, 0) = inlc.inlcond_normals.z;
+
+		// global initial velocity matrix
+		global_InitialVelocityMatrix.block<3, 1>(matrix_index * 6, 0) += nodeinitialVelocityMatrix.block<3, 1>(0, 0);
 
 	}
 
 
+	// Modal reduction of global initial displacement
+	// Modal vector transformation 
+	modal_InitialDisplacementMatrix.setZero();
+	modal_InitialVelocityMatrix.setZero();
+
 	// Apply modal Transformation
-	modal_reducedInitialDisplacementMatrix = this->eigen_vectors_matrix.transpose() * global_reducedInitialDisplacementMatrix;
-	modal_reducedInitialVelocityMatrix = this->eigen_vectors_matrix.transpose() * global_reducedInitialVelocityMatrix;
+	modal_InitialDisplacementMatrix = this->eigen_vectors_matrix.transpose() * global_InitialDisplacementMatrix;
+	modal_InitialVelocityMatrix = this->eigen_vectors_matrix.transpose() * global_InitialVelocityMatrix;
 
 
 
@@ -430,25 +460,39 @@ void pulse_analysis_solver::create_pulse_load_matrices(pulse_load_data& pulse_ld
 	// Create Pulse load matrix
 	// Modal vector transformation
 	int matrix_index = 0;
-	Eigen::VectorXd global_reducedLoadMatrix(reducedDOF);
-	global_reducedLoadMatrix.setZero();
+	Eigen::VectorXd global_LoadMatrix(numDOF);
+	global_LoadMatrix.setZero();
 
 
-	for (auto& nd_id : ld.node_ids)
+	for (int i = 0; i < static_cast<int>(ld.node_ids.size()); i++)
 	{
+		int nd_id = ld.node_ids[i];
+		glm::vec3 load_normal = ld.load_normals[i];
+
 		// get the matrix index
 		matrix_index = this->nodeid_map[nd_id]; // get the ordered map of the start node ID
 
-		global_reducedLoadMatrix.coeffRef(matrix_index) = -1.0 * ld.load_value;
+		// unit normal of the initial condition normal
+		glm::vec3 unit_normal = glm::normalize(load_normal);
+
+		// Compute the scaled vector
+		glm::vec3 resolved_vector = static_cast<float>(-1.0 * ld.load_value) * unit_normal;
+
+
+		global_LoadMatrix.coeffRef((nd_id * 6) + 0) += resolved_vector.x;
+		global_LoadMatrix.coeffRef((nd_id * 6) + 1) += resolved_vector.y;
+		global_LoadMatrix.coeffRef((nd_id * 6) + 2) += resolved_vector.z;
+
 	}
 
-	// Apply modal Transformation
-	Eigen::VectorXd modal_reducedLoadMatrix(reducedDOF);
 
-	modal_reducedLoadMatrix = this->eigen_vectors_matrix.transpose() * global_reducedLoadMatrix;
+	// Apply modal Transformation
+	Eigen::VectorXd modal_LoadMatrix(numDOF);
+
+	modal_LoadMatrix = this->eigen_vectors_matrix.transpose() * global_LoadMatrix;
 
 	// Store the modal amplitude matrix
-	pulse_ld.modal_LoadamplMatrix = modal_reducedLoadMatrix;
+	pulse_ld.modal_LoadamplMatrix = modal_LoadMatrix;
 
 }
 

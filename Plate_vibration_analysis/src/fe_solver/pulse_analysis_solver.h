@@ -74,8 +74,8 @@ private:
 	Eigen::VectorXd eigen_values_vector; // omega n squared
 	Eigen::MatrixXd eigen_vectors_matrix;
 
-	void create_initial_condition_matrices(Eigen::VectorXd& modal_reducedInitialDisplacementMatrix,
-		Eigen::VectorXd& modal_reducedInitialVelocityMatrix,
+	void create_initial_condition_matrices(Eigen::VectorXd& modal_InitialDisplacementMatrix,
+		Eigen::VectorXd& modal_InitialVelocityMatrix,
 		const nodes_list_store& model_nodes,
 		const nodeinlcond_list_store& node_inldispl,
 		const nodeinlcond_list_store& node_inlvelo);
