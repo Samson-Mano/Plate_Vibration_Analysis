@@ -134,27 +134,81 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	stopwatch_elapsed_str << stopwatch.elapsed();
 	std::cout << "Global stiffness, Global Point mass matrices are reduced at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 
+	const int generalized_eigen_solver = 0;
 
-	//___________________________________________________________________________________________________________________
-	// Solve the generalized eigenvalue problem: [K] * [phi] = lambda * [M] * [phi]
-	Eigen::GeneralizedEigenSolver<Eigen::MatrixXd> eigenSolver;
-	eigenSolver.compute(reduced_globalStiffnessMatrix, reduced_globalMassMatrix);
+	Eigen::VectorXd eigenvalues(reducedDOF);
 
-
-	if (eigenSolver.info() != Eigen::Success)
+	if (generalized_eigen_solver == 1)
 	{
-		// Eigenvalue problem failed to converge
-		std::cout << "Eigenvalue problem failed to converge !!!!! " << std::endl;
-		return;
+		// Use generalized eigen solve
+
+		//___________________________________________________________________________________________________________________
+		// Solve the generalized eigenvalue problem: [K] * [phi] = lambda * [M] * [phi]
+		Eigen::GeneralizedEigenSolver<Eigen::MatrixXd> eigenSolver;
+		eigenSolver.compute(reduced_globalStiffnessMatrix, reduced_globalMassMatrix);
+
+
+		if (eigenSolver.info() != Eigen::Success)
+		{
+			// Eigenvalue problem failed to converge
+			std::cout << "Eigenvalue problem failed to converge !!!!! " << std::endl;
+			return;
+		}
+
+		stopwatch_elapsed_str.str("");
+		stopwatch_elapsed_str << stopwatch.elapsed();
+		std::cout << "Eigen value problem solved at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
+
+		// Get the eigenvalues and eigenvectors_reduced
+		eigenvalues = eigenSolver.eigenvalues().real(); // Eigenvalues
+		this->reduced_eigenvectors = eigenSolver.eigenvectors().real(); // Eigenvectors
+
+	}
+	else
+	{
+		//___________________________________________________________________________________________________________________
+		// Convert generalized eigen value problem -> standard eigen value problem
+		// Find the inverse square root of diagonal mass matrix (which is the inverse of cholesky decomposition L-matrix)
+
+		Eigen::MatrixXd invsqrt_globalMassMatrix(reducedDOF, reducedDOF);
+		invsqrt_globalMassMatrix.setZero();
+
+		// Return the inverse square root of Mass matrix
+		for (int i = 0; i < reducedDOF; i++)
+		{
+			if (sqrt(reduced_globalMassMatrix.coeff(i, i)) != 0.0)
+			{
+				invsqrt_globalMassMatrix.coeffRef(i, i) = (1.0 / sqrt(reduced_globalMassMatrix.coeff(i, i)));
+			}
+			else
+			{
+				// int stop = 1;
+
+			}
+		}
+
+
+		Eigen::MatrixXd Z_matrix(reducedDOF, reducedDOF);
+		Z_matrix.setZero();
+
+		Z_matrix = invsqrt_globalMassMatrix * reduced_globalStiffnessMatrix * invsqrt_globalMassMatrix.transpose();
+
+		//___________________________________________________________________________________________________________________
+		// Solve the Eigen value problem: Compute the eigenvalues and eigenvectors
+		Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(Z_matrix);
+
+		if (eigenSolver.info() != Eigen::Success) {
+			// Eigenvalue problem failed to converge
+			std::cout << "Eigenvalue problem failed to converge !!!!! " << std::endl;
+			return;
+		}
+
+		// Get the eigenvalues and eigenvectors
+		eigenvalues = eigenSolver.eigenvalues(); // Eigenvalues
+		this->reduced_eigenvectors = invsqrt_globalMassMatrix.transpose() * eigenSolver.eigenvectors(); // Eigenvectors
+
 	}
 
-	stopwatch_elapsed_str.str("");
-	stopwatch_elapsed_str << stopwatch.elapsed();
-	std::cout << "Eigen value problem solved at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
-
-	// Get the eigenvalues and eigenvectors_reduced
-	Eigen::VectorXd eigenvalues = eigenSolver.eigenvalues().real(); // Eigenvalues
-	this->reduced_eigenvectors = eigenSolver.eigenvectors().real(); // Eigenvectors
 
 	// Filter and sort the eigenvalues (remove -nan(ind) values)
 	filter_eigenvalues_eigenvectors(eigenvalues, this->reduced_eigenvectors);
@@ -590,6 +644,7 @@ void modal_analysis_solver::get_reduced_global_matrices(Eigen::MatrixXd& reduced
 	// reduction complete
 
 }
+
 
 
 void modal_analysis_solver::filter_eigenvalues_eigenvectors(Eigen::VectorXd& eigenvalues,

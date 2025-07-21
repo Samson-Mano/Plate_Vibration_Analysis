@@ -138,7 +138,6 @@ private:
 		const int& reducedDOF);
 
 
-
 	void filter_eigenvalues_eigenvectors(Eigen::VectorXd& eigenvalues,
 		Eigen::MatrixXd& eigenvectors);
 

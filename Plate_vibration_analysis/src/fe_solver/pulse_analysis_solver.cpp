@@ -143,11 +143,11 @@ void pulse_analysis_solver::pulse_analysis_start(const nodes_list_store& model_n
 		double time_t = i * time_interval;
 
 		// Displacement amplitude matrix
-		Eigen::VectorXd modal_displ_ampl_respMatrix(numDOF);
+		Eigen::VectorXd modal_displ_ampl_respMatrix(reducedDOF);
 		modal_displ_ampl_respMatrix.setZero();
 
 		// 1D results for modal transformed Simple Harmonic Motion
-		for (int i = 0; i < numDOF; i++)
+		for (int i = 0; i < reducedDOF; i++)
 		{
 			double modal_mass = 1.0;
 			double modal_stiff = eigen_values_vector.coeff(i);
