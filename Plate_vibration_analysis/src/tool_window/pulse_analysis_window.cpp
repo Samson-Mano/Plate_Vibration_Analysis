@@ -110,7 +110,7 @@ void pulse_analysis_window::render_window()
 		if (ImGui::Button("Time Interval"))
 		{
 			timeinterval_input_mode = true;
-			snprintf(timeinterval_str, 16, "%.3f", timeinterval_input); // set the buffer to current load End Time
+			snprintf(timeinterval_str, 16, "%.8f", timeinterval_input); // set the buffer to current load End Time
 		}
 	}
 	else // input mode
@@ -136,7 +136,7 @@ void pulse_analysis_window::render_window()
 
 	// Text for Time Interval
 	ImGui::SameLine();
-	ImGui::Text("Time Interval = %.3f", time_interval);
+	ImGui::Text("Time Interval = %.8f", time_interval);
 	//_________________________________________________________________________________________
 
 	// Dropdown list 3 Pulse Type

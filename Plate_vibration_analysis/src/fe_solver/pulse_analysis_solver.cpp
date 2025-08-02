@@ -182,7 +182,12 @@ void pulse_analysis_solver::pulse_analysis_start(const nodes_list_store& model_n
 					if (selected_pulse_option == 0)
 					{
 						// Half sine pulse
-
+						
+						if (time_t > pulse_load.load_start_time && time_t <= pulse_load.load_end_time)
+						{
+							// Stop for debug
+							double f_ampl = pulse_load.modal_LoadamplMatrix(i);	
+						}
 						at_force_displ_resp = get_steady_state_half_sine_pulse_soln(time_t,
 							modal_mass,
 							modal_stiff,
@@ -285,7 +290,16 @@ void pulse_analysis_solver::pulse_analysis_start(const nodes_list_store& model_n
 			int matrix_index = nodeid_map[node_id];
 
 			// get the nodal displacement at time t
-			node_displ = glm::normalize(node_pt) * static_cast<float>(global_displ_ampl_respMatrix.coeff(matrix_index));
+			float amplitude = static_cast<float>(global_displ_ampl_respMatrix.coeff(matrix_index));
+			if (glm::length(node_pt) > 1e-6f && amplitude > 1e-6f)  // Check for non-zero vector and non-zero amplitude
+			{
+				node_displ = glm::normalize(node_pt) * amplitude;
+			}
+			else
+			{
+				node_displ = glm::vec3(0.0f);  // Assign zero displacement
+			}
+
 			displ_magnitude = std::abs(global_displ_ampl_respMatrix.coeff(matrix_index));
 
 

@@ -134,7 +134,7 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	stopwatch_elapsed_str << stopwatch.elapsed();
 	std::cout << "Global stiffness, Global Point mass matrices are reduced at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 
-	const int generalized_eigen_solver = 0;
+	const int generalized_eigen_solver = 1;
 
 	Eigen::VectorXd eigenvalues(reducedDOF);
 

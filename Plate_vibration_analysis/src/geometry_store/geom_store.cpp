@@ -1356,66 +1356,70 @@ void geom_store::paint_modal_analysis_results()
 
 void geom_store::paint_pulse_analysis_results()
 {
-	//// Paint the pulse analysis results
-	//// Check closing sequence for Pulse response analysis window
-	//if (pulse_solver_window->execute_pulse_close == true)
-	//{
-	//	// Execute the close sequence
-	//	if (pulse_solver.is_pulse_analysis_complete == true)
-	//	{
-	//		// Pulse response analysis is complete
-	//		update_model_transperency(false);
-	//	}
+	// Paint the pulse analysis results
+	// Check closing sequence for Pulse response analysis window
+	if (pulse_solver_window->execute_pulse_close == true)
+	{
+		// Execute the close sequence
+		if (pulse_solver.is_pulse_analysis_complete == true)
+		{
+			// Pulse response analysis is complete
+			update_model_transperency(false);
+		}
 
-	//	pulse_solver_window->execute_pulse_close = false;
-	//}
+		pulse_solver_window->execute_pulse_close = false;
+	}
 
-	//// Check whether the modal analysis solver window is open or not
-	//if (pulse_solver_window->is_show_window == false)
-	//{
-	//	return;
-	//}
-
-
-	//// Paint the pulse analysis result
-	//if (pulse_solver.is_pulse_analysis_complete == true)
-	//{
-	//	// Update the buffer of the selected
-	//	mesh_pulse_rslt_data.update_buffer(pulse_solver_window->time_step);
-
-	//	// Update the deflection scale
-	//	geom_param.normalized_defl_scale = 1.0f;
-	//	geom_param.defl_scale = pulse_solver_window->deformation_scale_max;
-
-	//	// Update the deflection scale
-	//	mesh_pulse_rslt_data.update_opengl_uniforms(false, false, false, false, false, true);
-
-	//	// ______________________________________________________________________________________
-
-	//	if (pulse_solver_window->show_result_quads == true)
-	//	{
-	//		// Paint the pulse quads 
-	//		mesh_pulse_rslt_data.paint_triangles();
-	//		mesh_pulse_rslt_data.paint_quadrilaterals();
-
-	//	}
+	// Check whether the modal analysis solver window is open or not
+	if (pulse_solver_window->is_show_window == false)
+	{
+		return;
+	}
 
 
-	//	if (pulse_solver_window->show_result_lines == true)
-	//	{
-	//		// Paint the pulse lines (mesh boundaries)
-	//		mesh_pulse_rslt_data.paint_mesh_edges();
+	// Paint the pulse analysis result
+	if (pulse_solver.is_pulse_analysis_complete == true)
+	{
+		// Update the buffer of the selected
+		pulse_result_nodes.update_pulse_response(pulse_solver_window->time_step);
 
-	//	}
 
-	//	if (pulse_solver_window->show_result_nodes == true)
-	//	{
-	//		// Paint the pulse nodes
-	//		mesh_pulse_rslt_data.paint_points();
+		// Update the deflection scale
+		geom_param.normalized_defl_scale = 1.0f;
+		geom_param.defl_scale = pulse_solver_window->deformation_scale_max;
 
-	//	}
+		// Update the deflection scale
+		// mesh_pulse_rslt_data.update_opengl_uniforms(false, false, false, false, false, true);
 
-	//}
+		// ______________________________________________________________________________________
+
+		if (pulse_solver_window->show_result_quads == true)
+		{
+			// Paint the pulse result quads & pulse result tris
+			mesh_pulse_rslt_data.paint_dynamic_mesh();
+			
+		}
+
+
+		if (pulse_solver_window->show_result_lines == true)
+		{
+			// Paint the pulse lines (mesh boundaries)
+			glLineWidth(geom_param.selected_line_width);
+
+			mesh_pulse_rslt_data.paint_dynamic_mesh_boundaries();
+
+			glLineWidth(geom_param.line_width);
+
+		}
+
+		if (pulse_solver_window->show_result_nodes == true)
+		{
+			// Paint the pulse nodes
+			// mesh_pulse_rslt_data.paint_points();
+
+		}
+
+	}
 
 
 	if (pulse_solver_window->execute_pulse_open == true)
