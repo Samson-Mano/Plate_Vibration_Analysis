@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <unordered_map>
 #include "geometry_buffers/font_atlas.h"
+#include <string>
+#include <cctype>
 
 // Stopwatch
 #include "../events_handler/Stopwatch_events.h"
@@ -79,7 +81,7 @@ class geom_parameters
 {
 public:
 	// Standard sizes
-	const float font_size = static_cast<float>(8.0f * std::pow(10, -7));
+	const float font_size = static_cast<float>(10.0f * std::pow(10, -5)); // static_cast<float>(8.0f * std::pow(10, -7));
 	const float node_circle_radii = 0.005f;
 
 	// Geometry size
@@ -196,6 +198,8 @@ public:
 	static glm::vec3 get_face_normal(const glm::vec3& pt1, const glm::vec3& pt2, const glm::vec3& pt3, const glm::vec3& pt4);
 
 	static glm::vec3 average_normal(const std::vector<glm::vec3>& connected_mesh_normals);
+
+	static std::string trim(const std::string& str);
 
 private:
 	static double HueToRGB(double v1, double v2, double vH);

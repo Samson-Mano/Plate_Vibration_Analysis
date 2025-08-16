@@ -501,6 +501,25 @@ glm::vec3 geom_parameters::average_normal(const std::vector<glm::vec3>& connecte
 
 
 
+std::string geom_parameters::trim(const std::string& str)
+{
+
+	// To remove leading and trailing whitespace (including tabs) from a std::string in C++
+	size_t first = 0;
+	while (first < str.size() && std::isspace(static_cast<unsigned char>(str[first]))) {
+		++first;
+	}
+
+	size_t last = str.size();
+	while (last > first && std::isspace(static_cast<unsigned char>(str[last - 1]))) {
+		--last;
+	}
+
+	return str.substr(first, last - first);
+}
+
+
+
 //// Stop watch
 //void Stopwatch::reset_time()
 //{

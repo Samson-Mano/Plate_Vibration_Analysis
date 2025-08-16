@@ -242,7 +242,7 @@ void text_list_store::update_opengl_uniforms(bool set_modelmatrix, bool set_view
 
 void text_list_store::get_label_vertex_buffer(text_store& txt, float* text_vertices, unsigned int& text_v_index)
 {
-	float font_scale = static_cast<float>(geom_param_ptr->font_size / geom_param_ptr->geom_scale);
+	float font_scale = static_cast<float>(geom_param_ptr->font_size); // static_cast<float>(geom_param_ptr->font_size / geom_param_ptr->geom_scale);
 	float x = 0; // To advance the character width
 
 	for (int i = 0; txt.label[i] != '\0'; ++i)

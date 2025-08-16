@@ -524,7 +524,7 @@ void obj_mesh_data::update_tri_material_ids(const std::vector<int>& selected_tri
 		// Add the material ID
 		glm::vec3 temp_str_color = geom_parameters::get_standard_color(material_id);
 		std::string	temp_str = "[" + std::to_string(material_id) + "]";
-		mesh_tri_material_ids.add_text(tri_id, temp_str, tri_mid_pt, temp_str_color);
+		mesh_tri_material_ids.update_text(tri_id, temp_str, tri_mid_pt, temp_str_color);
 
 	}
 

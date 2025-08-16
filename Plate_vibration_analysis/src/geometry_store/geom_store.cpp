@@ -290,7 +290,7 @@ void geom_store::import_model(std::ifstream& input_file)
 					material_data temp_material;
 
 					temp_material.material_id = std::stoi(splitValues[0]); // Material ID
-					temp_material.material_name = splitValues[1].substr(4); // Material name
+					temp_material.material_name =geom_param.trim(splitValues[1]); // Material name
 					temp_material.material_youngsmodulus = std::stod(splitValues[2]); // material youngs modulus
 					temp_material.material_shearmodulus = std::stod(splitValues[3]); // material shear modulus
 					temp_material.material_density = std::stod(splitValues[4]); // material density
