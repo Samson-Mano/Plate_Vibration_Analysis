@@ -109,7 +109,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\openGL\boost_1_84_0;C:\openGL\eigen-3.4.0;C:\openGL\glfw-3.3.8.bin.WIN64\include\;C:\openGL\glew-2.2.0\include\;C:\openGL\glm;C:\openGL\freetype-windows-binaries\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\openGL\boost_1_84_0;C:\openGL\eigen-3.4.0;C:\openGL\glfw-3.3.8.bin.WIN64\include\;C:\openGL\glew-2.2.0\include\;C:\openGL\glm;C:\openGL\freetype-windows-binaries\include;C:\openGL\eigen-3.4.0\unsupported\</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <OpenMPSupport>true</OpenMPSupport>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -120,13 +120,13 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\openGL\glew-2.2.0\lib\Release\x64;C:\openGL\glfw-3.3.8.bin.WIN64\lib-vc2022;C:\openGL\freetype-windows-binaries\release dll\win64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glew32.lib;glfw3.lib;opengl32.lib;freetype.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glew32.lib;glfw3.lib;opengl32.lib;freetype.lib;libarpack.lib;lapack.lib;openblas.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\openGL\boost_1_84_0;C:\openGL\eigen-3.4.0;C:\openGL\glfw-3.3.8.bin.WIN64\include\;C:\openGL\glew-2.2.0\include\;C:\openGL\glm;C:\openGL\freetype-windows-binaries\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\openGL\boost_1_84_0;C:\openGL\eigen-3.4.0;C:\openGL\glfw-3.3.8.bin.WIN64\include\;C:\openGL\glew-2.2.0\include\;C:\openGL\glm;C:\openGL\freetype-windows-binaries\include;C:\openGL\eigen-3.4.0\unsupported\</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -137,7 +137,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>C:\openGL\glew-2.2.0\lib\Release\x64;C:\openGL\glfw-3.3.8.bin.WIN64\lib-vc2022;C:\openGL\freetype-windows-binaries\release dll\win64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glew32.lib;glfw3.lib;opengl32.lib;freetype.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glew32.lib;glfw3.lib;opengl32.lib;freetype.lib;libarpack.lib;lapack.lib;openblas.lib</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
     </Link>

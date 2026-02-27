@@ -150,7 +150,7 @@ void app_window::app_render()
 
 	// Z Clamping
 	glEnable(GL_DEPTH_CLAMP);
-	// glEnable(GL_DEPTH_TEST); // Enable depth testing
+	glEnable(GL_DEPTH_TEST); // Enable depth testing
 
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

@@ -50,7 +50,7 @@ public:
 private:
 	int viewType = 1;
 
-	void pan_operation(glm::vec2& current_translataion);
+	void pan_operation(glm::vec2& current_translation);
 	void rotation_operation(glm::vec2& loc);
 	void select_operation(glm::vec2& click_loc, glm::vec2& current_loc);
 

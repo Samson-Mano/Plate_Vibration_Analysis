@@ -30,7 +30,7 @@ void elementtri_list_store::add_elementtriangle(int& tri_id, node_store* nd1, no
 	temp_tri.nd2 = nd2;
 	temp_tri.nd3 = nd3;
 
-	// Check whether the node_id is already there
+	// Check whether the tri_id is already there
 	if (elementtriMap.find(tri_id) != elementtriMap.end())
 	{
 		// Element ID already exist (do not add)
@@ -134,7 +134,7 @@ std::vector<int> elementtri_list_store::is_tri_selected(const glm::vec2& corner_
 		glm::vec4 md_pt_12_fp = geom_param_ptr->projectionMatrix * viewMatrix * geom_param_ptr->modelMatrix * glm::vec4(md_pt_12.x, md_pt_12.y, md_pt_12.z, 1.0f);
 		glm::vec4 md_pt_23_fp = geom_param_ptr->projectionMatrix * viewMatrix * geom_param_ptr->modelMatrix * glm::vec4(md_pt_23.x, md_pt_23.y, md_pt_23.z, 1.0f);
 		glm::vec4 md_pt_31_fp = geom_param_ptr->projectionMatrix * viewMatrix * geom_param_ptr->modelMatrix * glm::vec4(md_pt_31.x, md_pt_31.y, md_pt_31.z, 1.0f);
-		glm::vec2 tri_midpt_fp = geom_param_ptr->projectionMatrix * viewMatrix * geom_param_ptr->modelMatrix * glm::vec4(tri_midpt.x, tri_midpt.y, tri_midpt.z, 1.0f);
+		glm::vec4 tri_midpt_fp = geom_param_ptr->projectionMatrix * viewMatrix * geom_param_ptr->modelMatrix * glm::vec4(tri_midpt.x, tri_midpt.y, tri_midpt.z, 1.0f);
 
 
 

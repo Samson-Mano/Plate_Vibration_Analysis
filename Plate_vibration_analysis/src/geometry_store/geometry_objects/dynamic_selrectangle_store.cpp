@@ -56,7 +56,7 @@ void dynamic_selrectangle_store::set_boundaryline_buffer()
 	const unsigned int line_vertex_count = 2 * 4;
 	unsigned int line_vertex_size = line_vertex_count * sizeof(float); // Size of the node_vertex
 
-	// Create the Node Deflection buffers
+	// Create the Selection Rectangle buffers
 	dyn_selrect_bndry_buffer.CreateDynamicBuffers(line_vertex_size, line_vertex_indices, line_indices_count, line_pt_layout);
 
 	// Delete the dynamic array
@@ -87,7 +87,7 @@ void dynamic_selrectangle_store::set_shadedtriangle_buffer()
 	const unsigned int tri_vertex_count = 2 * 4;
 	unsigned int tri_vertex_size = tri_vertex_count * sizeof(float); // Size of the node_vertex
 
-	// Create the Node Deflection buffers
+	// Create the Select Rectangle Interior buffers
 	dyn_selrect_interior_buffer.CreateDynamicBuffers(tri_vertex_size, tri_vertex_indices, tri_indices_count, tri_pt_layout);
 
 	// Delete the dynamic array

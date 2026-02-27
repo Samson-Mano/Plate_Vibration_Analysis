@@ -17,12 +17,17 @@
 #include "triCKZ_element.h"
 #include "quadMITC4_element.h"
 
+#include <Eigen/Sparse>
+#include <Eigen/ArpackSupport>
+
 
 // Stop watch
 #include "../events_handler/Stopwatch_events.h"
 
 #include <cmath>
 #include <boost/math/special_functions/bessel.hpp>
+
+
 
 #pragma warning(push)
 #pragma warning (disable : 26451)
@@ -129,14 +134,19 @@ private:
 		int& reducedDOF);
 
 
-	void get_reduced_global_matrices(Eigen::MatrixXd& reduced_globalStiffnessMatrix,
-		Eigen::MatrixXd& reduced_globalMassMatrix,
+	void get_reduced_global_matrices(Eigen::SparseMatrix<double>& reduced_globalStiffnessMatrix,
+		Eigen::SparseMatrix<double>& reduced_globalMassMatrix,
 		const Eigen::MatrixXd& globalStiffnessMatrix,
 		const Eigen::MatrixXd& globalMassMatrix,
 		const Eigen::VectorXi& globalDOFMatrix,
 		const int& numDOF,
 		const int& reducedDOF);
 
+
+	void solveEigen(Eigen::VectorXd& eigenvalues,
+		Eigen::MatrixXd& eigenvectors,
+		const Eigen::SparseMatrix<double>& K,
+		const Eigen::SparseMatrix<double>& M);
 
 	void filter_eigenvalues_eigenvectors(Eigen::VectorXd& eigenvalues,
 		Eigen::MatrixXd& eigenvectors);
