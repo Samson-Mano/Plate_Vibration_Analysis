@@ -135,10 +135,12 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	std::cout << "Global stiffness, Global Point mass matrices are reduced at " << stopwatch_elapsed_str.str() << " secs" << std::endl;
 
 	// const int generalized_eigen_solver = 1;
+	this->number_of_modes = std::min(reducedDOF, 20); // Number of modes
 
-	Eigen::VectorXd eigenvalues(reducedDOF);
 
-	solveEigen(eigenvalues, this->reduced_eigenvectors, reduced_globalStiffnessMatrix, reduced_globalMassMatrix);
+	Eigen::VectorXd eigenvalues(this->number_of_modes);
+
+	solveEigen(eigenvalues, this->reduced_eigenvectors, this->number_of_modes, reduced_globalStiffnessMatrix, reduced_globalMassMatrix);
 
 
 	//if (generalized_eigen_solver == 1)
@@ -216,7 +218,7 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	// Filter and sort the eigenvalues (remove -nan(ind) values)
 	filter_eigenvalues_eigenvectors(eigenvalues, this->reduced_eigenvectors);
 
-	reducedDOF = this->reduced_eigenvectors.cols();
+	// reducedDOF = this->reduced_eigenvectors.cols();
 
 	// sort the eigen value and eigen vector (ascending)
 	// sort_eigen_values_vectors(eigenvalues, eigenvectors_reduced, reducedDOF);
@@ -235,10 +237,10 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 
 	//____________________________________________________________________________________________________________________
 	// Convert the reduced transformed eigenvectors to eigen vectors for the whole model (including the nodes with supports)
-	global_eigenvectors.resize(numDOF, reducedDOF);
+	global_eigenvectors.resize(numDOF, this->number_of_modes);
 	global_eigenvectors.setZero();
 
-	get_globalized_eigen_vector_matrix(global_eigenvectors, this->reduced_eigenvectors, globalDOFMatrix, numDOF, reducedDOF);
+	get_globalized_eigen_vector_matrix(global_eigenvectors, this->reduced_eigenvectors, globalDOFMatrix, numDOF, this->number_of_modes);
 
 
 	eigen_vectors_matrix = global_eigenvectors;
@@ -254,14 +256,14 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	// Calculate the effective mass participation factor & Cummulative effective mass participation factor
 	// effective mass participation factor = percentage of the system mass that participates in a particular mode
 
-	Eigen::VectorXd participation_factor(reducedDOF);
+	Eigen::VectorXd participation_factor(this->number_of_modes);
 	participation_factor.setZero();
 
 	get_modal_participation_factor(participation_factor,
 		globalMassMatrix,
 		global_eigenvectors,
 		numDOF,
-		reducedDOF);
+		this->number_of_modes);
 
 	stopwatch_elapsed_str.str("");
 	stopwatch_elapsed_str << stopwatch.elapsed();
@@ -273,20 +275,20 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 	// Store the results
 
 	// Clear the modal results
-	this->number_of_modes = 0; // Number of modes
+
 	mode_result_str.clear(); // Result string list
 	m_eigenvalues.clear(); // Eigen values
 	m_eigenvectors.clear(); // Eigen vectors
 
-	eigen_values_vector.resize(reducedDOF);
+	eigen_values_vector.resize(this->number_of_modes);
 	eigen_values_vector.setZero();
 
-	angular_freq_vector.resize(reducedDOF);
+	angular_freq_vector.resize(this->number_of_modes);
 	angular_freq_vector.setZero();
 
 
 	// Add the eigen values and eigen vectors
-	for (int i = 0; i < reducedDOF; i++)
+	for (int i = 0; i < this->number_of_modes; i++)
 	{
 		std::vector<double> eigen_vec; // Eigen vectors of all nodes (including constrainded)
 
@@ -320,7 +322,7 @@ void modal_analysis_solver::modal_analysis_start(const nodes_list_store& model_n
 		mode_result_str.push_back("Mode " + std::to_string(i + 1) + " = " + ss.str() + " Hz , Modal mass = " + mf.str());
 	}
 
-	number_of_modes = reducedDOF; // total number of modes
+	// number_of_modes = reducedDOF; // total number of modes
 
 
 	stopwatch_elapsed_str.str("");
@@ -658,28 +660,42 @@ void modal_analysis_solver::get_reduced_global_matrices(Eigen::SparseMatrix<doub
 
 void modal_analysis_solver::solveEigen(Eigen::VectorXd& eigenvalues,
 	Eigen::MatrixXd& eigenvectors,
+	int number_of_modes,
 	const Eigen::SparseMatrix<double>& K,
 	const Eigen::SparseMatrix<double>& M)
 {
-	int nev = K.rows();
+	int nev = number_of_modes; // std::min(static_cast<int>(K.rows()), 20); // Don't compute all eigenvalues! Use a reasonable number
+	int ncv = std::min(2 * nev + 1, static_cast<int>(K.rows())); // Number of Lanczos vectors
 
 	std::cout << "K size: " << K.rows() << " x " << K.cols() << "\n";
 	std::cout << "M size: " << M.rows() << " x " << M.cols() << "\n";
+	std::cout << "Computing " << nev << " eigenvalues\n";
 
+	std::cout << std::boolalpha;
 	std::cout << "K symmetric? " << K.isApprox(K.transpose()) << "\n";
 	std::cout << "M symmetric? " << M.isApprox(M.transpose()) << "\n";
 
-
+	// Use the correct solver type
 	Eigen::ArpackGeneralizedSelfAdjointEigenSolver<Eigen::SparseMatrix<double>> solver;
-	solver.compute(K, M, nev, "SM");
 
+	// The compute() method expects: matrix K, matrix M, number of eigenvalues, 
+	// spectrum type, and optionally ncv
+	solver.compute(K, M, nev, "SM", Eigen::ComputeEigenvectors, ncv);
 
+	// Check ARPACK's convergence status
+	if (solver.info() != Eigen::Success) {
+		std::cout << "ARPACK info: " << solver.info() << std::endl;
+		throw std::runtime_error("ARPACK failed to converge.");
+	}
 
-	if (solver.info() != Eigen::Success)
-		throw std::runtime_error("ARPACK failed.");
+	// Check if eigenvectors were computed
+	if (!solver.eigenvectors().size()) {
+		throw std::runtime_error("Eigenvectors not computed.");
+	}
 
 	eigenvalues = solver.eigenvalues();
 	eigenvectors = solver.eigenvectors();
+
 
 
 }

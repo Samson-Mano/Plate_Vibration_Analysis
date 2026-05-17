@@ -1202,7 +1202,13 @@ void geom_store::paint_model()
 		nd_cnst_window->is_show_window == true || mat_window->is_show_window == true)
 	{
 		// Paint the selection rectangle (last)
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_DEPTH_CLAMP);
+
 		selection_rectangle.paint_selection_rectangle();
+
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_DEPTH_CLAMP);
 	}
 
 

@@ -149,14 +149,26 @@ void app_window::app_render()
 	imgui_font = io.Fonts->AddFontFromFileTTF("./resources/fonts/FreeSans.ttf", 18);
 
 	// Z Clamping
-	glEnable(GL_DEPTH_CLAMP);
-	glEnable(GL_DEPTH_TEST); // Enable depth testing
+	// glEnable(GL_DEPTH_CLAMP);
+	// glEnable(GL_DEPTH_TEST); // Enable depth testing
 
 
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	// TRANSPARENCY SETUP
 	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	// Depth testing for opaque objects
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);  // Allow writing to depth buffer
+	glDepthFunc(GL_LESS);   // Standard depth comparison
+
+	// Z Clamping
+	glEnable(GL_DEPTH_CLAMP);
+
+	// Anti-aliasing
 	glEnable(GL_MULTISAMPLE);
 	glEnable(GL_LINE_SMOOTH);
+
 
 	// Set the point size and line width
 	// Set the point size

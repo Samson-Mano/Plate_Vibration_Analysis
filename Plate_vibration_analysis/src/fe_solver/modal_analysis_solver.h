@@ -145,6 +145,7 @@ private:
 
 	void solveEigen(Eigen::VectorXd& eigenvalues,
 		Eigen::MatrixXd& eigenvectors,
+		int number_of_modes,
 		const Eigen::SparseMatrix<double>& K,
 		const Eigen::SparseMatrix<double>& M);
 
