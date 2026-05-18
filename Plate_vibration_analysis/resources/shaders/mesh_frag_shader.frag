@@ -20,6 +20,21 @@ vec3 jetHeatmap(float value)
     return clamp(vec3(1.5) - abs(4.0 * vec3(value) + vec3(-3, -2, -1)), vec3(0), vec3(1));
 }
 
+void main() 
+{
+    vec3 c_v_Color = v_Color;
+
+    if(v_is_dynamic == 1.0f)
+    {
+        // Set the contour color
+        c_v_Color = jetHeatmap(v_deflscale);
+    }
+
+     f_Color = vec4(c_v_Color, v_Transparency); // v_Transparency
+
+}
+
+/*
 
 void main() 
 {
@@ -59,7 +74,7 @@ void main()
     f_Color = vec4(finalColor, v_Transparency); // v_Transparency
 }
 
-
+*/
 
 
 

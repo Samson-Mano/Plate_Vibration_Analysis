@@ -612,49 +612,71 @@ void modal_analysis_solver::get_reduced_global_matrices(Eigen::SparseMatrix<doub
 	const int& reducedDOF)
 {
 
-	// Curtailment of Global stiffness and Global Point mass matrix based on DOF
-	// Get the reduced global stiffness matrix
-	int r = 0;
-	int s = 0;
+	// Create mapping
+	Eigen::VectorXi dofMapping(numDOF);
+	int reducedIndex = 0;
 
-	for (int k = 0; k < reduced_globalMassMatrix.rows(); ++k)
+	for (int i = 0; i < numDOF; i++) 
 	{
-		reduced_globalMassMatrix.coeffRef(k, k) += 1e-4; // or set to a small positive mass
+		dofMapping(i) = (globalDOFMatrix.coeff(i) != 0) ? reducedIndex++ : -1;
 	}
 
-
-
-	// Loop throug the Degree of freedom of indices
-	for (int i = 0; i < numDOF; i++)
+	// Count non-zeros first for efficient reservation
+	int estimatedNonZeros = 0;
+	for (int i = 0; i < numDOF; i++) 
 	{
-		if (globalDOFMatrix.coeff(i) == 0)
+		if (dofMapping(i) == -1) continue;
+		for (int j = 0; j < numDOF; j++) 
 		{
-			// constrained row index, so skip
-			continue;
-		}
-		else
-		{
-			s = 0;
-			for (int j = 0; j < numDOF; j++)
+			if (dofMapping(j) != -1) 
 			{
-				if (globalDOFMatrix.coeff(j) == 0)
-				{
-					// constrained column index, so skip
-					continue;
-				}
-				else
-				{
-					// Get the reduced matrices
-					reduced_globalStiffnessMatrix.coeffRef(r, s) = globalStiffnessMatrix.coeff(i, j);
-					reduced_globalMassMatrix.coeffRef(r, s) = globalMassMatrix.coeff(i, j);
-					s++;
-				}
+				estimatedNonZeros++;
 			}
-			r++;
 		}
 	}
-	// reduction complete
 
+	// Reserve memory
+	std::vector<Eigen::Triplet<double>> stiffnessTriplets;
+	std::vector<Eigen::Triplet<double>> massTriplets;
+	stiffnessTriplets.reserve(estimatedNonZeros);
+	massTriplets.reserve(estimatedNonZeros);
+
+	// Fill triplets
+	for (int i = 0; i < numDOF; i++) 
+	{
+		int r = dofMapping(i);
+		if (r == -1) continue;
+
+		// Use const references for better performance
+		const auto& stiffRow = globalStiffnessMatrix.row(i);
+		const auto& massRow = globalMassMatrix.row(i);
+
+		for (int j = 0; j < numDOF; j++) 
+		{
+			int s = dofMapping(j);
+			if (s == -1) continue;
+
+			double stiffVal = stiffRow(j);
+			double massVal = massRow(j);
+
+			if (stiffVal != 0.0) stiffnessTriplets.emplace_back(r, s, stiffVal);
+			if (massVal != 0.0) massTriplets.emplace_back(r, s, massVal);
+		}
+	}
+
+	// Build matrices
+	reduced_globalStiffnessMatrix.resize(reducedDOF, reducedDOF);
+	reduced_globalMassMatrix.resize(reducedDOF, reducedDOF);
+	reduced_globalStiffnessMatrix.setFromTriplets(stiffnessTriplets.begin(), stiffnessTriplets.end());
+	reduced_globalMassMatrix.setFromTriplets(massTriplets.begin(), massTriplets.end());
+
+	// Add small mass to diagonal incase zero
+	for (int i = 0; i < reducedDOF; i++) 
+	{
+		if(reduced_globalMassMatrix.coeffRef(i, i)< 1e-3)
+			reduced_globalMassMatrix.coeffRef(i, i) += 1e-3;
+	}
+	//
 }
 
 

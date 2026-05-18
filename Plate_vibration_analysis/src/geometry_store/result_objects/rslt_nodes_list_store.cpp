@@ -57,9 +57,12 @@ void rslt_nodes_list_store::set_max_displacement(const double& rslt_maxdispl)
 void rslt_nodes_list_store::update_modal_response(const int& mode_number, const double& ampl, const double& normalized_ampl)
 {
 	// Update the node point for modal response 
+	float deform_scale = static_cast<float>(ampl * normalized_ampl);
+
+
 	for (const auto& nd : rslt_nodeMap)
 	{
-		glm::vec3 node_displacement =  nd.second.node_displ[mode_number] * static_cast<float>( ampl);
+		glm::vec3 node_displacement =  nd.second.node_displ[mode_number] * deform_scale;
 		double node_displacement_mag = nd.second.node_displ_magnitude[mode_number] * normalized_ampl;
 
 		// Displacement offset
